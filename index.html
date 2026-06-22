@@ -132,6 +132,7 @@
     <div id="scanWrap" class="hidden">
       <video id="scanVideo" playsinline></video>
       <div class="scanline"></div>
+      <div id="scanStatus" style="display:none;text-align:center;font-size:12px;color:var(--muted);padding:6px 0"></div>
     </div>
     <button class="btn-ghost btn-block hidden" id="btnStopScan" style="margin-top:8px">Parar leitura</button>
     <div id="searchMsg" style="margin-top:10px;font-size:13px"></div>
@@ -268,7 +269,7 @@ let LOCS=[], MOTIVOS=[], COMISSOES=[], SITS=[], ESTS=[];
 let current=null;          // bem em edição {bem, lev}
 let currentFotos=[];       // fotos novas (dataURL) a enviar
 let codeReader=null, photoStream=null;
-let scanReaderCore=null, scanStream=null, scanCanvas=null, scanActive=false, scanRAF=null;
+let scanReaderCore=null, scanStream=null, scanCanvas=null, scanActive=false, scanRAF=null, scanTries=0;
 let statsCache={done:0,total:0};
 
 const toast=(m,ms=2400)=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);};
@@ -356,52 +357,64 @@ $('#btnStopScan').addEventListener('click',stopScan);
 async function startScan(){
   if(!window.ZXing){toast('Leitor indisponível.');return;}
   $('#scanWrap').classList.remove('hidden');$('#btnStopScan').classList.remove('hidden');
+  setScanStatus('Iniciando câmera...');
   try{
-    // Hints: focar nos formatos LINEARES usados em placas de patrimônio
     const hints=new Map();
     const fmts=[
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.ITF,
-      ZXing.BarcodeFormat.CODE_93,
-      ZXing.BarcodeFormat.CODABAR,
-      ZXing.BarcodeFormat.EAN_13,
-      ZXing.BarcodeFormat.EAN_8
+      ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.ITF,
+      ZXing.BarcodeFormat.CODE_93, ZXing.BarcodeFormat.CODABAR,
+      ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8
     ];
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
     hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    scanReaderCore=new ZXing.MultiFormatReader();
-    scanReaderCore.setHints(hints);
 
-    // Câmera traseira em alta resolução com foco contínuo
+    // LEITOR NATIVO do ZXing — no iOS é a forma que funciona (lê o vídeo internamente)
+    codeReader=new ZXing.BrowserMultiFormatReader(hints, 120);
+
     const constraints={ audio:false, video:{
       facingMode:{ ideal:'environment' },
-      width:{ ideal:1920 }, height:{ ideal:1080 },
-      advanced:[ {focusMode:'continuous'} ]
+      width:{ ideal:1280 }, height:{ ideal:720 }
     }};
-    scanStream=await navigator.mediaDevices.getUserMedia(constraints);
     const video=document.getElementById('scanVideo');
-    video.srcObject=scanStream; video.setAttribute('playsinline','true');
-    await video.play();
 
-    // tenta forçar foco contínuo via track (alguns aparelhos exigem)
-    try{
-      const track=scanStream.getVideoTracks()[0];
-      if(track&&track.getCapabilities){
-        const caps=track.getCapabilities();
-        if(caps.focusMode&&caps.focusMode.includes('continuous'))
-          track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
+    scanTries=0; scanActive=true;
+    setScanStatus('Procurando código...');
+    codeReader.decodeFromConstraints(constraints, video, (result, err)=>{
+      if(result){
+        const txt=result.getText();
+        stopScan();
+        $('#plateInput').value=txt;
+        if(navigator.vibrate)navigator.vibrate(120);
+        openByPlate(txt);
+        return;
       }
-    }catch(_){}
+      scanTries++;
+      if(scanTries%8===0) setScanStatus('Procurando código... ('+scanTries+' tentativas)');
+    });
 
+    setTimeout(()=>{
+      try{
+        const s=video.srcObject; const track=s&&s.getVideoTracks&&s.getVideoTracks()[0];
+        if(track&&track.getCapabilities){
+          const caps=track.getCapabilities();
+          if(caps.focusMode&&caps.focusMode.includes('continuous'))
+            track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
+        }
+      }catch(_){}
+    },900);
+
+    // REFORÇO paralelo: tenta o quadro binarizado via canvas (ajuda com reflexo)
     scanCanvas=document.createElement('canvas');
-    scanActive=true;
-    scanLoop(video);
-  }catch(e){toast('Não foi possível acessar a câmera');stopScan();}
+    scanLoopReforco(video);
+  }catch(e){ setScanStatus(''); toast('Não foi possível acessar a câmera'); stopScan(); }
 }
 
-// Laço de leitura: tenta a imagem inteira; se falhar, tenta uma versão binarizada (vence reflexo)
-function scanLoop(video){
+function setScanStatus(msg){
+  const el=document.getElementById('scanStatus');
+  if(el){ el.textContent=msg||''; el.style.display=msg?'block':'none'; }
+}
+
+function scanLoopReforco(video){
   if(!scanActive) return;
   try{
     const vw=video.videoWidth, vh=video.videoHeight;
@@ -409,49 +422,50 @@ function scanLoop(video){
       scanCanvas.width=vw; scanCanvas.height=vh;
       const ctx=scanCanvas.getContext('2d',{willReadFrequently:true});
       ctx.drawImage(video, 0, 0, vw, vh);
-
-      let txt=tryDecodeCanvas(scanCanvas);
-
-      // fallback: binariza (preto/branco) e tenta de novo — ajuda com reflexo/etiqueta clara
-      if(!txt){
-        const img=ctx.getImageData(0,0,vw,vh); const d=img.data;
+      const img=ctx.getImageData(0,0,vw,vh); const d=img.data;
+      let soma=0; for(let i=0;i<d.length;i+=4000){ soma+=d[i]; }
+      if(soma>0){
         for(let i=0;i<d.length;i+=4){
           const v=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
           const bw=v>110?255:0; d[i]=d[i+1]=d[i+2]=bw;
         }
         ctx.putImageData(img,0,0);
-        txt=tryDecodeCanvas(scanCanvas);
-      }
-
-      if(txt){
-        stopScan();
-        $('#plateInput').value=txt;
-        if(navigator.vibrate)navigator.vibrate(120);
-        openByPlate(txt);
-        return;
+        const txt=tryDecodeCanvas(scanCanvas);
+        if(txt){
+          stopScan();
+          $('#plateInput').value=txt;
+          if(navigator.vibrate)navigator.vibrate(120);
+          openByPlate(txt);
+          return;
+        }
       }
     }
   }catch(_){}
-  scanRAF=setTimeout(()=>scanLoop(video), 120);
+  scanRAF=setTimeout(()=>scanLoopReforco(video), 400);
 }
 
 function tryDecodeCanvas(canvas){
   try{
+    const hints=new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.CODABAR,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    const reader=new ZXing.MultiFormatReader();
+    reader.setHints(hints);
     const lum=new ZXing.HTMLCanvasElementLuminanceSource(canvas);
     const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-    const r=scanReaderCore.decode(bmp);
+    const r=reader.decode(bmp);
     return r?r.getText():null;
   }catch(_){ return null; }
-  finally{ try{scanReaderCore.reset();}catch(_){} }
 }
 
 function stopScan(){
   scanActive=false;
+  setScanStatus('');
   if(scanRAF){clearTimeout(scanRAF);scanRAF=null;}
-  if(scanStream){try{scanStream.getTracks().forEach(t=>t.stop());}catch(_){}scanStream=null;}
-  const v=document.getElementById('scanVideo'); if(v){try{v.pause();}catch(_){} v.srcObject=null;}
-  scanReaderCore=null; scanCanvas=null;
   if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;}
+  if(scanStream){try{scanStream.getTracks().forEach(t=>t.stop());}catch(_){}scanStream=null;}
+  const v=document.getElementById('scanVideo'); if(v){try{v.pause();}catch(_){}}
+  scanReaderCore=null; scanCanvas=null;
   $('#scanWrap').classList.add('hidden');$('#btnStopScan').classList.add('hidden');
 }
 
