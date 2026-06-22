@@ -169,7 +169,7 @@
     <div id="locSelected" class="loc-selected hidden"></div>
 
     <div id="movWrap" class="hidden" style="background:rgba(194,65,12,.06);border:1px solid var(--accent-2);border-radius:10px;padding:12px;margin-bottom:14px">
-      <label style="color:var(--accent-2)">Motivo da movimentação <span style="text-transform:none">(troca de localização)</span></label>
+      <label style="color:var(--accent-2)">Motivo da movimentação <span style="text-transform:none">(padrão do levantamento)</span></label>
       <select id="fMotivo"><option value="">— selecione o motivo —</option></select>
     </div>
 
@@ -260,6 +260,7 @@ const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
+const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -414,7 +415,7 @@ function openDetail(bem, lev){
   current.nova_local     = L.localizacao     ?? bem.localizacao;
   current.novo_estado_cod= L.cod_estado      ?? bem.cod_estado;
   current.nova_sit_cod   = L.cod_situacao    ?? bem.cod_situacao;
-  current.cod_motivo     = L.cod_motivo || '';
+  current.cod_motivo     = L.cod_motivo || MOTIVO_PADRAO;
   current.cod_comissao   = L.cod_comissao || '';
   current.data_mov       = L.data_movimento || '';
   current.concluido      = !!L.concluido;
@@ -459,9 +460,8 @@ function ensureEstSit(bem){
 function updateMovComVisibility(){
   if(!current)return;
   const b=current.bem;
-  const locMudou=(current.nova_local_cod!==b.cod_localizacao);
   const estMudou=(current.novo_estado_cod!==b.cod_estado);
-  $('#movWrap').classList.toggle('hidden',!locMudou);
+  $('#movWrap').classList.remove('hidden');   // motivo é fixo do levantamento: sempre visível
   $('#comWrap').classList.toggle('hidden',!estMudou);
 }
 
@@ -565,7 +565,7 @@ async function saveItem(){
       cod_localizacao:current.nova_local_cod||null, localizacao:current.nova_local||null,
       cod_situacao:current.nova_sit_cod||null, situacao:sitDesc||null,
       cod_estado:current.novo_estado_cod||null, estado:estDesc||null,
-      cod_motivo:locMudou?(current.cod_motivo||null):null,
+      cod_motivo:(current.cod_motivo||MOTIVO_PADRAO),
       cod_comissao:estMudou?(current.cod_comissao||null):null,
       data_movimento:locMudou?(current.data_mov||new Date().toISOString()):null,
       concluido:current.concluido, atualizado_em:new Date().toISOString()
@@ -676,7 +676,7 @@ async function exportAtualiza(){
         codLocal, b.cod_classificacao, codSit, codEstado,
         dataBR(b.data_ingresso), b.tipo_ingresso, b.cod_fornecedor, b.cod_convenio, valorBR(b.valor_atual),
         b.contabil, b.depreciavel, b.metodo_depreciacao, b.vida_util, valorBR(b.valor_residual),
-        dataBR(b.data_inicio_depreciacao), locMudou?(lev.cod_motivo||''):'', estMudou?(lev.cod_comissao||''):''
+        dataBR(b.data_inicio_depreciacao), (lev.cod_motivo||MOTIVO_PADRAO), estMudou?(lev.cod_comissao||''):''
       ].map(csvCell).join(','));
     }
     const csv='\uFEFF'+lines.join('\r\n');
