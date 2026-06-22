@@ -125,9 +125,9 @@
     <div class="row" style="margin-bottom:14px">
       <button class="btn" id="btnScan">📷 Ler código de barras</button>
     </div>
-    <label>Buscar pelo número da placa</label>
+    <label>Buscar por placa ou código</label>
     <div class="row">
-      <input type="search" id="plateInput" inputmode="numeric" placeholder="Digite a placa..." style="margin:0">
+      <input type="search" id="plateInput" inputmode="text" placeholder="Digite a placa ou o código..." style="margin:0">
       <button class="btn-2" id="btnSearch" style="flex:none">Buscar</button>
     </div>
     <div id="scanWrap" class="hidden">
@@ -147,6 +147,15 @@
         <div class="plate-num" id="dPlaca"></div>
       </div>
       <span class="pill" id="dStatus"></span>
+    </div>
+
+    <div id="semPlacaWrap" class="hidden" style="background:rgba(180,83,9,.08);border:1px solid var(--warn);border-radius:10px;padding:12px;margin-bottom:14px">
+      <label style="color:var(--warn)">Item sem placa — informe a placa encontrada</label>
+      <div class="row">
+        <input type="text" id="fPlacaNova" inputmode="text" placeholder="Digite ou escaneie a placa..." style="margin:0">
+        <button class="btn-2" id="btnScanPlacaNova" style="flex:none" title="Escanear">📷</button>
+      </div>
+      <small style="color:var(--muted);display:block;margin-top:6px">Deixe em branco se o item realmente não tiver placa.</small>
     </div>
 
     <div class="grid2" style="margin-bottom:14px">
@@ -290,7 +299,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-4'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-5'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -298,7 +307,7 @@ let LOCS=[], MOTIVOS=[], COMISSOES=[], SITS=[], ESTS=[];
 let current=null;          // bem em edição {bem, lev}
 let currentFotos=[];       // fotos novas (dataURL) a enviar
 let codeReader=null, photoStream=null;
-let scanReaderCore=null, scanStream=null, scanCanvas=null, scanActive=false, scanRAF=null, scanTries=0;
+let scanReaderCore=null, scanStream=null, scanCanvas=null, scanActive=false, scanRAF=null, scanTries=0, scanDestino='busca';
 let statsCache={done:0,total:0};
 
 const toast=(m,ms=2400)=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);};
@@ -365,24 +374,51 @@ async function refreshStats(){
 $('#btnSearch').addEventListener('click',()=>{const v=$('#plateInput').value;if(v)openByPlate(v);});
 $('#plateInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=$('#plateInput').value;if(v)openByPlate(v);}});
 
-async function openByPlate(plate){
-  const placa=stripZeros(onlyDigits(plate));
-  if(!placa){toast('Digite uma placa');return;}
-  $('#searchMsg').innerHTML='<span class="spin"></span> Buscando placa '+placa+'...';
+async function openByPlate(termo){
+  const texto=(termo||'').toString().trim();
+  if(!texto){toast('Digite a placa ou o código');return;}
+  $('#searchMsg').innerHTML='<span class="spin"></span> Buscando '+texto+'...';
   try{
-    const {data:bem,error}=await sb.from('bens').select('*').eq('placa',placa).maybeSingle();
-    if(error)throw error;
-    if(!bem){$('#searchMsg').innerHTML='<span class="err">Placa '+placa+' não encontrada.</span>';return;}
-    // busca levantamento existente (se já foi feito por alguém)
-    const {data:lev}=await sb.from('levantamento').select('*').eq('placa',placa).maybeSingle();
+    // tenta primeiro pela PLACA (com e sem zeros à esquerda), depois pelo CÓDIGO
+    const placaNum=stripZeros(onlyDigits(texto));
+    const codigoNum=stripZeros(texto);
+    let bem=null;
+
+    // 1) por placa exata (texto como veio) ou placa numérica
+    let r=await sb.from('bens').select('*').or(`placa.eq.${texto},placa.eq.${placaNum}`).limit(1).maybeSingle();
+    if(r.data) bem=r.data;
+
+    // 2) se não achou, tenta por código
+    if(!bem){
+      r=await sb.from('bens').select('*').or(`codigo.eq.${texto},codigo.eq.${codigoNum}`).limit(1).maybeSingle();
+      if(r.data) bem=r.data;
+    }
+
+    if(!bem){$('#searchMsg').innerHTML='<span class="err">Nada encontrado para "'+texto+'" (placa ou código).</span>';return;}
+
+    // busca levantamento existente deste bem (pelo código)
+    const {data:lev}=await sb.from('levantamento').select('*').eq('codigo',bem.codigo).maybeSingle();
     $('#searchMsg').innerHTML='';
     openDetail(bem,lev||null);
   }catch(e){ $('#searchMsg').innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
 }
 
 /* ====================== SCANNER ====================== */
-$('#btnScan').addEventListener('click',startScan);
+$('#btnScan').addEventListener('click',()=>{ scanDestino='busca'; startScan(); });
 $('#btnStopScan').addEventListener('click',stopScan);
+// botão 📷 do bloco "sem placa": escaneia e joga no campo de placa nova
+document.addEventListener('click',(e)=>{
+  if(e.target&&e.target.id==='btnScanPlacaNova'){ scanDestino='placaNova'; startScan(); }
+});
+// trata o texto lido conforme o destino atual do scanner
+function onScanResult(txt){
+  if(scanDestino==='placaNova'){
+    const campo=$('#fPlacaNova'); if(campo){ campo.value=stripZeros(txt.trim()); }
+    scanDestino='busca';
+  }else{
+    openByPlate(txt);
+  }
+}
 async function startScan(){
   if(!window.ZXing){toast('Leitor indisponível.');return;}
   $('#scanWrap').classList.remove('hidden');$('#btnStopScan').classList.remove('hidden');
@@ -464,7 +500,7 @@ function scanLoopReforco(video){
           stopScan();
           $('#plateInput').value=txt;
           if(navigator.vibrate)navigator.vibrate(120);
-          openByPlate(txt);
+          onScanResult(txt);
           return;
         }
       }
@@ -517,14 +553,21 @@ function openDetail(bem, lev){
   current.cod_comissao   = L.cod_comissao || '';
   current.data_mov       = L.data_movimento || '';
   current.concluido      = !!L.concluido;
+  current.placa_nova     = L.placa_nova || '';   // placa informada em campo
   current.fotosExist     = []; // fotos já no storage (carregadas adiante)
 
   $('#searchCard').classList.add('hidden'); $('#toolsCard').classList.add('hidden');
   $('#detailCard').classList.remove('hidden');
-  const placa=bem.placa||'—', el=$('#dPlaca'); el.textContent=placa;
-  const n=placa.length;
+  const temPlaca=!!(bem.placa&&bem.placa.trim());
+  const placaMostrar = temPlaca ? bem.placa : (current.placa_nova || 'SEM PLACA');
+  const el=$('#dPlaca'); el.textContent=placaMostrar;
+  const n=placaMostrar.length;
   el.style.fontSize=n<=6?'':(n<=8?'28px':n<=10?'24px':n<=12?'20px':'17px');
   el.style.letterSpacing=n>10?'1px':'2px';
+  // bloco "informar placa" aparece quando o bem não tem placa cadastrada
+  current.temPlaca=temPlaca;
+  $('#semPlacaWrap').classList.toggle('hidden', temPlaca);
+  $('#fPlacaNova').value=current.placa_nova||'';
   $('#dCodigo').textContent=bem.codigo||'—';
   $('#dClassCod').textContent=bem.cod_classificacao||'—';
   $('#dDesc').textContent=bem.descricao||'—';
@@ -540,7 +583,7 @@ function openDetail(bem, lev){
   $('#fComissao').value=current.cod_comissao||'';
   $('#fDone').checked=current.concluido;
   renderLocField(); renderPhotos(); updateStatusPill(); updateMovComVisibility();
-  loadFotosExistentes(placa);
+  loadFotosExistentes(bem.codigo);
   window.scrollTo(0,0);
 }
 
@@ -639,6 +682,8 @@ async function saveItem(){
   current.cod_motivo=$('#fMotivo').value;
   current.cod_comissao=$('#fComissao').value;
   current.concluido=$('#fDone').checked;
+  // placa informada em campo (só para itens sem placa cadastrada)
+  if(!current.temPlaca){ current.placa_nova=stripZeros(($('#fPlacaNova').value||'').trim()); }
   const locMudou=(current.nova_local_cod!==b.cod_localizacao);
   // validações
   if(locMudou && !current.cod_motivo){ toast('Selecione o motivo da movimentação'); return; }
@@ -647,19 +692,20 @@ async function saveItem(){
 
   $('#btnSave').disabled=true; $('#btnSave').innerHTML='<span class="spin"></span> Salvando...';
   try{
-    // 1) envia fotos novas ao Storage
+    // 1) envia fotos novas ao Storage (pasta = código do bem)
     for(const dataUrl of currentFotos){
       const blob=dataURLtoBlob(dataUrl);
       const ts=Date.now()+'_'+Math.random().toString(36).slice(2,7);
-      const path=`${b.placa}/${ts}.jpg`;
+      const path=`${b.codigo}/${ts}.jpg`;
       const {error:upErr}=await sb.storage.from(FOTOS_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});
       if(upErr) throw new Error('Foto: '+upErr.message);
     }
-    // 2) grava levantamento (upsert por placa)
+    // 2) grava levantamento (upsert por código)
     const estDesc=(ESTS.find(x=>x.cod===current.novo_estado_cod)||{}).desc||'';
     const sitDesc=(SITS.find(x=>x.cod===current.nova_sit_cod)||{}).desc||'';
     const row={
-      placa:b.placa,
+      codigo:b.codigo,
+      placa_nova:(current.temPlaca?null:(current.placa_nova||null)),
       cod_localizacao:current.nova_local_cod||null, localizacao:current.nova_local||null,
       cod_situacao:current.nova_sit_cod||null, situacao:sitDesc||null,
       cod_estado:current.novo_estado_cod||null, estado:estDesc||null,
@@ -668,7 +714,7 @@ async function saveItem(){
       data_movimento:locMudou?(current.data_mov||new Date().toISOString()):null,
       concluido:current.concluido, atualizado_em:new Date().toISOString()
     };
-    const {error}=await sb.from('levantamento').upsert(row,{onConflict:'placa'});
+    const {error}=await sb.from('levantamento').upsert(row,{onConflict:'codigo'});
     if(error) throw error;
     toast('✓ Salvo na nuvem');
     await refreshStats();
@@ -702,11 +748,11 @@ function renderPhotos(){
   box.innerHTML=existHtml+novHtml;
   box.querySelectorAll('.x').forEach(btn=>btn.addEventListener('click',()=>{currentFotos.splice(+btn.dataset.i,1);renderPhotos();}));
 }
-async function loadFotosExistentes(placa){
+async function loadFotosExistentes(codigo){
   try{
-    const {data}=await sb.storage.from(FOTOS_BUCKET).list(placa,{limit:20});
+    const {data}=await sb.storage.from(FOTOS_BUCKET).list(codigo,{limit:20});
     if(!data||!data.length)return;
-    current.fotosExist=data.map(f=>sb.storage.from(FOTOS_BUCKET).getPublicUrl(placa+'/'+f.name).data.publicUrl);
+    current.fotosExist=data.map(f=>sb.storage.from(FOTOS_BUCKET).getPublicUrl(codigo+'/'+f.name).data.publicUrl);
     renderPhotos();
   }catch(e){}
 }
@@ -732,7 +778,7 @@ const IMPORT_CFG = {
   bens: {
     label:'Bens',
     table:'bens',
-    conflict:'placa',
+    conflict:'codigo',
     cols:['placa','codigo','descricao','descricao_reduzida','marca','modelo','cod_localizacao','localizacao','cod_classificacao','classificacao','cod_situacao','situacao','cod_estado','estado','data_ingresso','tipo_ingresso','cod_fornecedor','cod_convenio','valor_atual','contabil','depreciavel','metodo_depreciacao','vida_util','valor_residual','data_inicio_depreciacao'],
     aliases:{
       placa:['placa','Placa'],
@@ -766,9 +812,9 @@ const IMPORT_CFG = {
       const pick=(names)=>{ for(const n of names){ if(row[n]!=null && row[n]!=='') return row[n]; } return ''; };
       const r={};
       IMPORT_CFG.bens.cols.forEach(c=>{ r[c]=pick(al[c]||[c]).toString().trim(); });
-      r.placa=stripZeros(r.placa);
+      r.placa=stripZeros(r.placa);   // pode ficar vazia
       r.codigo=stripZeros(r.codigo);
-      return r.placa ? r : null;
+      return r.codigo ? r : null;    // CÓDIGO é obrigatório (chave); placa é opcional
     }
   },
 
@@ -860,7 +906,7 @@ async function importCSV(file, cfg){
   // 3) limpa a tabela (substituir tudo). Bens depende de levantamento → limpa levantamento antes.
   try{
     if(cfg.table==='bens'){
-      const delLev=await sb.from('levantamento').delete().neq('placa','__nunca__');
+      const delLev=await sb.from('levantamento').delete().neq('codigo','__nunca__');
       if(delLev.error) throw delLev.error;
     }
     const del=await sb.from(cfg.table).delete().neq(cfg.conflict,'__nunca__');
@@ -908,13 +954,13 @@ async function exportAtualiza(){
       from+=page;
     }
     if(!levs.length){toast('Nenhum item levantado ainda');return;}
-    // carrega os bens correspondentes em lotes (por placa)
-    const placas=levs.map(l=>l.placa);
+    // carrega os bens correspondentes em lotes (por código)
+    const codigos=levs.map(l=>l.codigo);
     const bensMap={};
-    for(let i=0;i<placas.length;i+=300){
-      const slice=placas.slice(i,i+300);
-      const {data}=await sb.from('bens').select('*').in('placa',slice);
-      (data||[]).forEach(b=>bensMap[b.placa]=b);
+    for(let i=0;i<codigos.length;i+=300){
+      const slice=codigos.slice(i,i+300);
+      const {data}=await sb.from('bens').select('*').in('codigo',slice);
+      (data||[]).forEach(b=>bensMap[b.codigo]=b);
     }
     const headers=['Data do Movimento','Placa','Descrição','Descrição Reduzida','Marca','Modelo',
       'Código Localização','Código Classificação','Código Situação','Código Estado Conservação',
@@ -924,15 +970,16 @@ async function exportAtualiza(){
     const lines=[headers.map(csvCell).join(',')];
     const hoje=hojeBR();
     for(const lev of levs){
-      const b=bensMap[lev.placa]; if(!b)continue;
+      const b=bensMap[lev.codigo]; if(!b)continue;
       const locMudou=(lev.cod_localizacao!=null && lev.cod_localizacao!==b.cod_localizacao);
       const estMudou=(lev.cod_estado!=null && lev.cod_estado!==b.cod_estado);
       const codLocal=lev.cod_localizacao||b.cod_localizacao;
       const codEstado=lev.cod_estado||b.cod_estado;
       const codSit=lev.cod_situacao||b.cod_situacao;
       const dataMov=locMudou?(dataBR(lev.data_movimento)||hoje):hoje;
+      const placaSaida=(b.placa&&b.placa.trim())?b.placa:(lev.placa_nova||'');
       lines.push([
-        dataMov, b.placa, b.descricao, b.descricao_reduzida, b.marca, b.modelo,
+        dataMov, placaSaida, b.descricao, b.descricao_reduzida, b.marca, b.modelo,
         codLocal, b.cod_classificacao, codSit, codEstado,
         dataBR(b.data_ingresso), b.tipo_ingresso, b.cod_fornecedor, b.cod_convenio, valorBR(b.valor_atual),
         b.contabil, b.depreciavel, b.metodo_depreciacao, b.vida_util, valorBR(b.valor_residual),
