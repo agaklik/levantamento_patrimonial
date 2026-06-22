@@ -24,6 +24,8 @@
   button:active{transform:scale(.97)}
   .btn{background:var(--accent);color:#fff}
   .btn-2{background:var(--surface2);color:var(--txt);border:1px solid var(--border)}
+  .seg-btn{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:8px;font-weight:600;font-size:14px;cursor:pointer}
+  .seg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
   .btn-ok{background:var(--ok);color:#fff}
   .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
   .btn-block{width:100%}
@@ -122,12 +124,17 @@
 <main>
   <!-- BUSCA / SCANNER -->
   <div class="card" id="searchCard">
-    <div class="row" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:14px;flex-direction:column;gap:8px">
       <button class="btn" id="btnScan">📷 Ler código de barras</button>
+      <button class="btn-2" id="btnOcr">🔢 Ler número (foto)</button>
     </div>
     <label>Buscar por placa ou código</label>
+    <div class="row" style="gap:6px;margin-bottom:8px">
+      <button type="button" class="seg-btn active" id="segPlaca" data-modo="placa" style="flex:1">Por placa</button>
+      <button type="button" class="seg-btn" id="segCodigo" data-modo="codigo" style="flex:1">Por código</button>
+    </div>
     <div class="row">
-      <input type="search" id="plateInput" inputmode="text" placeholder="Digite a placa ou o código..." style="margin:0">
+      <input type="search" id="plateInput" inputmode="text" placeholder="Digite a placa..." style="margin:0">
       <button class="btn-2" id="btnSearch" style="flex:none">Buscar</button>
     </div>
     <div id="scanWrap" class="hidden">
@@ -136,6 +143,19 @@
       <div id="scanStatus" style="display:none;text-align:center;font-size:12px;color:var(--muted);padding:6px 0"></div>
     </div>
     <button class="btn-ghost btn-block hidden" id="btnStopScan" style="margin-top:8px">Parar leitura</button>
+
+    <div id="ocrWrap" class="hidden">
+      <div style="position:relative">
+        <video id="ocrVideo" playsinline style="width:100%;border-radius:10px;display:block"></video>
+        <div id="ocrMira" style="position:absolute;left:10%;top:38%;width:80%;height:24%;border:3px solid var(--accent);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none"></div>
+      </div>
+      <div id="ocrStatus" style="text-align:center;font-size:13px;color:var(--muted);padding:8px 0"></div>
+      <div class="row" style="gap:8px">
+        <button class="btn" id="btnOcrCapture" style="flex:1">📸 Capturar número</button>
+        <button class="btn-ghost" id="btnOcrCancel" style="flex:none">Cancelar</button>
+      </div>
+      <small style="color:var(--muted);display:block;text-align:center;margin-top:6px">Encaixe apenas o número dentro da moldura.</small>
+    </div>
     <div id="searchMsg" style="margin-top:10px;font-size:13px"></div>
   </div>
 
@@ -300,7 +320,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-7'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-10'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -375,27 +395,47 @@ async function refreshStats(){
 $('#btnSearch').addEventListener('click',()=>{const v=$('#plateInput').value;if(v)openByPlate(v);});
 $('#plateInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=$('#plateInput').value;if(v)openByPlate(v);}});
 
-async function openByPlate(termo){
+// seletor de modo de busca: placa (padrão) ou código
+let modoBusca='placa';
+document.querySelectorAll('.seg-btn[data-modo]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    modoBusca=btn.getAttribute('data-modo');
+    $('#segPlaca').classList.toggle('active', modoBusca==='placa');
+    $('#segCodigo').classList.toggle('active', modoBusca==='codigo');
+    $('#plateInput').placeholder = modoBusca==='placa' ? 'Digite a placa...' : 'Digite o código...';
+    $('#plateInput').focus();
+  });
+});
+
+async function openByPlate(termo, origem){
   const texto=(termo||'').toString().trim();
   if(!texto){toast('Digite a placa ou o código');return;}
   $('#searchMsg').innerHTML='<span class="spin"></span> Buscando '+texto+'...';
   try{
-    // tenta primeiro pela PLACA (com e sem zeros à esquerda), depois pelo CÓDIGO
     const placaNum=stripZeros(onlyDigits(texto));
     const codigoNum=stripZeros(texto);
     let bem=null;
+    // a leitura de etiqueta (código de barras ou OCR) é SEMPRE placa.
+    // a busca manual segue o seletor (placa ou código).
+    const buscarPlaca = origem==='etiqueta' || modoBusca==='placa';
+    const buscarCodigo= origem!=='etiqueta' && modoBusca==='codigo';
 
-    // 1) por placa exata (texto como veio) ou placa numérica
-    let r=await sb.from('bens').select('*').or(`placa.eq.${texto},placa.eq.${placaNum}`).limit(1).maybeSingle();
-    if(r.data) bem=r.data;
-
-    // 2) se não achou, tenta por código
-    if(!bem){
-      r=await sb.from('bens').select('*').or(`codigo.eq.${texto},codigo.eq.${codigoNum}`).limit(1).maybeSingle();
+    // no modo placa (ou scan), tenta por placa
+    if(buscarPlaca){
+      let r=await sb.from('bens').select('*').or(`placa.eq.${texto},placa.eq.${placaNum}`).limit(1).maybeSingle();
+      if(r.data) bem=r.data;
+    }
+    // no modo código (ou scan, se ainda não achou), tenta por código
+    if(!bem && buscarCodigo){
+      let r=await sb.from('bens').select('*').or(`codigo.eq.${texto},codigo.eq.${codigoNum}`).limit(1).maybeSingle();
       if(r.data) bem=r.data;
     }
 
-    if(!bem){$('#searchMsg').innerHTML='<span class="err">Nada encontrado para "'+texto+'" (placa ou código).</span>';return;}
+    if(!bem){
+      const alvo = origem==='etiqueta' ? 'placa' : (modoBusca==='placa'?'placa':'código');
+      $('#searchMsg').innerHTML='<span class="err">Nada encontrado para "'+texto+'" ('+alvo+').</span>';
+      return;
+    }
 
     // busca levantamento existente deste bem (pelo código)
     const {data:lev}=await sb.from('levantamento').select('*').eq('codigo',bem.codigo).maybeSingle();
@@ -406,6 +446,83 @@ async function openByPlate(termo){
 
 /* ====================== SCANNER ====================== */
 $('#btnScan').addEventListener('click',()=>{ scanDestino='busca'; startScan(); });
+
+/* ====================== OCR (ler número impresso) ====================== */
+let ocrStream=null, ocrWorker=null, ocrBusy=false;
+const OCR_CDN='https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/tesseract.min.js';
+
+function setOcrStatus(msg){ const e=$('#ocrStatus'); if(e) e.textContent=msg||''; }
+
+function carregarTesseract(){
+  return new Promise((resolve,reject)=>{
+    if(window.Tesseract) return resolve();
+    const s=document.createElement('script');
+    s.src=OCR_CDN; s.async=true;
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error('Não foi possível baixar o leitor de números. Verifique a internet.'));
+    document.head.appendChild(s);
+  });
+}
+
+async function startOcr(){
+  $('#ocrWrap').classList.remove('hidden');
+  const row=$('#searchCard').querySelector('.row'); if(row) row.classList.add('hidden');
+  setOcrStatus('Abrindo câmera...');
+  try{
+    const constraints={ audio:false, video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} } };
+    ocrStream=await navigator.mediaDevices.getUserMedia(constraints);
+    const v=$('#ocrVideo'); v.srcObject=ocrStream; v.setAttribute('playsinline','true'); await v.play();
+    setOcrStatus('Enquadre o número e toque em "Capturar".');
+  }catch(e){ setOcrStatus(''); toast('Não foi possível acessar a câmera'); stopOcr(); }
+}
+
+function stopOcr(){
+  if(ocrStream){ try{ocrStream.getTracks().forEach(t=>t.stop());}catch(_){} ocrStream=null; }
+  const v=$('#ocrVideo'); if(v){ try{v.pause();}catch(_){} v.srcObject=null; }
+  $('#ocrWrap').classList.add('hidden');
+  const row=$('#searchCard').querySelector('.row'); if(row) row.classList.remove('hidden');
+  setOcrStatus('');
+}
+
+async function capturarOcr(){
+  if(ocrBusy) return;
+  const v=$('#ocrVideo'); if(!v||!v.videoWidth){ toast('Câmera ainda não pronta'); return; }
+  ocrBusy=true;
+  try{
+    setOcrStatus('Carregando leitor de números...');
+    await carregarTesseract();
+    const vw=v.videoWidth, vh=v.videoHeight;
+    // recorta exatamente a região da moldura (mesmas proporções do #ocrMira)
+    const rx=Math.floor(vw*0.10), ry=Math.floor(vh*0.38), rw=Math.floor(vw*0.80), rh=Math.floor(vh*0.24);
+    const esc=2; // amplia 2x para o OCR enxergar melhor dígitos pequenos
+    const c=document.createElement('canvas'); c.width=rw*esc; c.height=rh*esc;
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(v, rx, ry, rw, rh, 0, 0, rw*esc, rh*esc);
+    const img=ctx.getImageData(0,0,c.width,c.height), d=img.data;
+    for(let i=0;i<d.length;i+=4){ const g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; const bw=g>120?255:0; d[i]=d[i+1]=d[i+2]=bw; }
+    ctx.putImageData(img,0,0);
+    setOcrStatus('Lendo número...');
+    if(!ocrWorker){ ocrWorker=await Tesseract.createWorker('eng'); }
+    await ocrWorker.setParameters({ tessedit_char_whitelist:'0123456789', tessedit_pageseg_mode:'7' });
+    const { data }=await ocrWorker.recognize(c);
+    const num=(data&&data.text?data.text:'').replace(/\D/g,'');
+    if(!num){ setOcrStatus('Não consegui ler. Tente aproximar e segurar firme.'); ocrBusy=false; return; }
+    if(navigator.vibrate)navigator.vibrate(120);
+    const limpo=stripZeros(num);
+    stopOcr();
+    $('#plateInput').value=limpo;
+    openByPlate(limpo, 'etiqueta');
+  }catch(e){
+    setOcrStatus(e.message||'Falha ao ler o número.');
+  }finally{ ocrBusy=false; }
+}
+
+$('#btnOcr').addEventListener('click', startOcr);
+$('#btnOcrCapture').addEventListener('click', capturarOcr);
+$('#btnOcrCancel').addEventListener('click', stopOcr);
+
+
 $('#btnStopScan').addEventListener('click',stopScan);
 // botão 📷 do bloco "sem placa": escaneia e joga no campo de placa nova
 document.addEventListener('click',(e)=>{
@@ -430,7 +547,7 @@ function onScanResult(txt){
     scanDestino='busca';
     checarPlacaNovaAviso();
   }else{
-    openByPlate(txt);
+    openByPlate(txt, 'etiqueta');
   }
 }
 async function startScan(){
