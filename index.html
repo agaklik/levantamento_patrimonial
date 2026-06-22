@@ -156,6 +156,7 @@
         <button class="btn-2" id="btnScanPlacaNova" style="flex:none" title="Escanear">📷</button>
       </div>
       <small style="color:var(--muted);display:block;margin-top:6px">Deixe em branco se o item realmente não tiver placa.</small>
+      <div id="placaNovaAviso" style="display:none;margin-top:8px;font-size:13px;font-weight:600"></div>
     </div>
 
     <div class="grid2" style="margin-bottom:14px">
@@ -299,7 +300,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-5'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-7'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -410,11 +411,24 @@ $('#btnStopScan').addEventListener('click',stopScan);
 document.addEventListener('click',(e)=>{
   if(e.target&&e.target.id==='btnScanPlacaNova'){ scanDestino='placaNova'; startScan(); }
 });
+
+// aviso ao digitar/escanear a placa nova: verifica duplicidade quando o campo perde o foco
+async function checarPlacaNovaAviso(){
+  const av=$('#placaNovaAviso'); if(!av||!current) return;
+  const p=stripZeros(($('#fPlacaNova').value||'').trim());
+  if(!p){ av.style.display='none'; return; }
+  av.style.display='block'; av.style.color='var(--muted)'; av.textContent='Verificando placa...';
+  const conflito=await placaJaExiste(p, current.bem.codigo);
+  if(conflito){ av.style.color='var(--warn)'; av.textContent='⚠️ '+conflito; }
+  else{ av.style.color='var(--accent)'; av.textContent='✓ Placa '+p+' disponível.'; }
+}
+document.addEventListener('blur',(e)=>{ if(e.target&&e.target.id==='fPlacaNova') checarPlacaNovaAviso(); }, true);
 // trata o texto lido conforme o destino atual do scanner
 function onScanResult(txt){
   if(scanDestino==='placaNova'){
     const campo=$('#fPlacaNova'); if(campo){ campo.value=stripZeros(txt.trim()); }
     scanDestino='busca';
+    checarPlacaNovaAviso();
   }else{
     openByPlate(txt);
   }
@@ -568,6 +582,7 @@ function openDetail(bem, lev){
   current.temPlaca=temPlaca;
   $('#semPlacaWrap').classList.toggle('hidden', temPlaca);
   $('#fPlacaNova').value=current.placa_nova||'';
+  { const av=$('#placaNovaAviso'); if(av){ av.style.display='none'; av.textContent=''; } }
   $('#dCodigo').textContent=bem.codigo||'—';
   $('#dClassCod').textContent=bem.cod_classificacao||'—';
   $('#dDesc').textContent=bem.descricao||'—';
@@ -672,6 +687,32 @@ $('#btnBack').addEventListener('click',()=>{
 
 /* ---------- salvar (grava no banco) ---------- */
 $('#btnSave').addEventListener('click',saveItem);
+// Verifica se uma placa já existe em outro bem (campo placa) ou em outra placa nova informada.
+// Retorna uma descrição do conflito, ou null se a placa estiver livre.
+// 'codigoAtual' é o código do bem em edição (para ele não conflitar consigo mesmo).
+async function placaJaExiste(placa, codigoAtual){
+  const p=stripZeros((placa||'').trim());
+  if(!p) return null;
+  try{
+    // 1) placa cadastrada em algum bem
+    const r1=await sb.from('bens').select('codigo,placa,descricao').or(`placa.eq.${p},placa.eq.${placa.trim()}`).limit(1);
+    if(r1.data&&r1.data.length){
+      const b=r1.data[0];
+      if(b.codigo!==codigoAtual) return `Placa ${p} já pertence ao bem código ${b.codigo}${b.descricao?(' ('+b.descricao+')'):''}.`;
+    }
+    // 2) placa nova já informada em outro levantamento
+    const r2=await sb.from('levantamento').select('codigo,placa_nova').or(`placa_nova.eq.${p},placa_nova.eq.${placa.trim()}`).limit(2);
+    if(r2.data&&r2.data.length){
+      const outro=r2.data.find(x=>x.codigo!==codigoAtual);
+      if(outro) return `Placa ${p} já foi informada para o bem código ${outro.codigo}.`;
+    }
+    return null;
+  }catch(e){
+    // Em caso de erro de rede, não trava o fluxo aqui; o bloqueio ao salvar fará a checagem final.
+    return null;
+  }
+}
+
 async function saveItem(){
   if(!current)return;
   const b=current.bem;
@@ -684,6 +725,13 @@ async function saveItem(){
   current.concluido=$('#fDone').checked;
   // placa informada em campo (só para itens sem placa cadastrada)
   if(!current.temPlaca){ current.placa_nova=stripZeros(($('#fPlacaNova').value||'').trim()); }
+  // bloqueio: placa nova não pode repetir placa já existente
+  if(!current.temPlaca && current.placa_nova){
+    $('#btnSave').disabled=true; $('#btnSave').innerHTML='<span class="spin"></span> Verificando placa...';
+    const conflito=await placaJaExiste(current.placa_nova, b.codigo);
+    $('#btnSave').disabled=false; $('#btnSave').innerHTML='💾 Salvar item';
+    if(conflito){ toast('⚠️ '+conflito); return; }
+  }
   const locMudou=(current.nova_local_cod!==b.cod_localizacao);
   // validações
   if(locMudou && !current.cod_motivo){ toast('Selecione o motivo da movimentação'); return; }
@@ -969,6 +1017,7 @@ async function exportAtualiza(){
       'Data Início Depreciação','Código Motivo Movimentação','Código Comissão Avaliação'];
     const lines=[headers.map(csvCell).join(',')];
     const hoje=hojeBR();
+    const placasSaida=[]; // {placa, codigo} para conferir duplicidade antes de gerar
     for(const lev of levs){
       const b=bensMap[lev.codigo]; if(!b)continue;
       const locMudou=(lev.cod_localizacao!=null && lev.cod_localizacao!==b.cod_localizacao);
@@ -978,6 +1027,7 @@ async function exportAtualiza(){
       const codSit=lev.cod_situacao||b.cod_situacao;
       const dataMov=locMudou?(dataBR(lev.data_movimento)||hoje):hoje;
       const placaSaida=(b.placa&&b.placa.trim())?b.placa:(lev.placa_nova||'');
+      if(placaSaida&&placaSaida.trim()) placasSaida.push({placa:stripZeros(placaSaida.trim()), codigo:b.codigo});
       lines.push([
         dataMov, placaSaida, b.descricao, b.descricao_reduzida, b.marca, b.modelo,
         codLocal, b.cod_classificacao, codSit, codEstado,
@@ -985,6 +1035,20 @@ async function exportAtualiza(){
         b.contabil, b.depreciavel, b.metodo_depreciacao, b.vida_util, valorBR(b.valor_residual),
         dataBR(b.data_inicio_depreciacao), (lev.cod_motivo||MOTIVO_PADRAO), estMudou?(lev.cod_comissao||''):''
       ].map(csvCell).join(','));
+    }
+    // CONFERÊNCIA: placas repetidas no conjunto que vai ser exportado
+    const porPlaca={};
+    placasSaida.forEach(x=>{ (porPlaca[x.placa]=porPlaca[x.placa]||[]).push(x.codigo); });
+    const dups=Object.keys(porPlaca).filter(p=>porPlaca[p].length>1);
+    if(dups.length){
+      const detalhe=dups.slice(0,10).map(p=>`• Placa ${p} → bens ${porPlaca[p].join(', ')}`).join('\n');
+      const extra=dups.length>10?`\n…e mais ${dups.length-10} placa(s).`:'';
+      const segue=confirm(
+        `⚠️ Atenção: ${dups.length} placa(s) aparecem repetidas no arquivo:\n\n${detalhe}${extra}\n\n`+
+        `Placas repetidas podem ser recusadas pelo sistema de patrimônio.\n\n`+
+        `Deseja gerar o ATUALIZA.csv mesmo assim?`
+      );
+      if(!segue){ toast('Exportação cancelada. Corrija as placas repetidas.'); return; }
     }
     const csv='\uFEFF'+lines.join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
