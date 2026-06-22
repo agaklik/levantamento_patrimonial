@@ -290,7 +290,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-3'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-4'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -734,15 +734,44 @@ const IMPORT_CFG = {
     table:'bens',
     conflict:'placa',
     cols:['placa','codigo','descricao','descricao_reduzida','marca','modelo','cod_localizacao','localizacao','cod_classificacao','classificacao','cod_situacao','situacao','cod_estado','estado','data_ingresso','tipo_ingresso','cod_fornecedor','cod_convenio','valor_atual','contabil','depreciavel','metodo_depreciacao','vida_util','valor_residual','data_inicio_depreciacao'],
+    aliases:{
+      placa:['placa','Placa'],
+      codigo:['codigo','Código','Codigo'],
+      descricao:['descricao','Descrição Completa','Descricao Completa'],
+      descricao_reduzida:['descricao_reduzida','Descrição Reduzida','Descricao Reduzida'],
+      marca:['marca','MARCA'],
+      modelo:['modelo','MODELO'],
+      cod_localizacao:['cod_localizacao','Cód Localização','Cod Localizacao'],
+      localizacao:['localizacao','Localização','Localizacao'],
+      cod_classificacao:['cod_classificacao','Cód. Classificação','Cod. Classificacao'],
+      classificacao:['classificacao','Classificação','Classificacao'],
+      cod_situacao:['cod_situacao','Cód. Situação','Cod. Situacao'],
+      situacao:['situacao','Situação','Situacao'],
+      cod_estado:['cod_estado','Cód. EstadoConservação','Cod. EstadoConservacao'],
+      estado:['estado','Estado de Conservação','Estado de Conservacao'],
+      data_ingresso:['data_ingresso','Data do Ingresso'],
+      tipo_ingresso:['tipo_ingresso','Tipo de Ingresso'],
+      cod_fornecedor:['cod_fornecedor','Cód. Fornecedor','Cod. Fornecedor'],
+      cod_convenio:['cod_convenio','Cód. Convenio','Cod. Convenio'],
+      valor_atual:['valor_atual','Valor Atual'],
+      contabil:['contabil','Contábil','Contabil'],
+      depreciavel:['depreciavel','Depreciável','Depreciavel'],
+      metodo_depreciacao:['metodo_depreciacao','Método de Depreciação','Metodo de Depreciacao'],
+      vida_util:['vida_util','Vida Útil','Vida Util'],
+      valor_residual:['valor_residual','Valor Residual'],
+      data_inicio_depreciacao:['data_inicio_depreciacao','Data Inicio Depreciação','Data Inicio Depreciacao']
+    },
     map:(row)=>{
+      const al=IMPORT_CFG.bens.aliases;
+      const pick=(names)=>{ for(const n of names){ if(row[n]!=null && row[n]!=='') return row[n]; } return ''; };
       const r={};
-      IMPORT_CFG.bens.cols.forEach(c=>{ r[c]=(row[c]??'').toString().trim(); });
-      // placa é obrigatória (chave); remove zeros à esquerda
+      IMPORT_CFG.bens.cols.forEach(c=>{ r[c]=pick(al[c]||[c]).toString().trim(); });
       r.placa=stripZeros(r.placa);
       r.codigo=stripZeros(r.codigo);
       return r.placa ? r : null;
     }
   },
+
   localizacoes: {
     label:'Localizações', table:'localizacoes', conflict:'cod',
     map:(row)=>{
@@ -810,14 +839,23 @@ async function importCSV(file, cfg){
   }catch(err){ showImportProgress(0,'Erro ao ler o CSV: '+(err.message||err)); return; }
 
   // 2) normaliza linhas conforme a tabela
-  const registros=[];
+  let registros=[];
   for(const row of rows){
     const r=cfg.map(row);
     if(r) registros.push(r);
   }
   if(!registros.length){ showImportProgress(0,'Nenhuma linha válida encontrada no arquivo. Verifique os cabeçalhos.'); return; }
 
-  showImportProgress(8, `${registros.length} registros lidos. Limpando ${cfg.label}...`);
+  // remove duplicatas pela chave (a tabela tem chave única) — mantém a primeira ocorrência
+  const vistos=new Set(); const unicos=[];
+  for(const r of registros){
+    const k=r[cfg.conflict];
+    if(!vistos.has(k)){ vistos.add(k); unicos.push(r); }
+  }
+  const duplicadas=registros.length-unicos.length;
+  registros=unicos;
+
+  showImportProgress(8, `${registros.length} registros${duplicadas?` (${duplicadas} duplicados ignorados)`:''}. Limpando ${cfg.label}...`);
 
   // 3) limpa a tabela (substituir tudo). Bens depende de levantamento → limpa levantamento antes.
   try{
