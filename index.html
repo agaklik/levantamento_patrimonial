@@ -268,6 +268,7 @@ let LOCS=[], MOTIVOS=[], COMISSOES=[], SITS=[], ESTS=[];
 let current=null;          // bem em edição {bem, lev}
 let currentFotos=[];       // fotos novas (dataURL) a enviar
 let codeReader=null, photoStream=null;
+let scanReaderCore=null, scanStream=null, scanCanvas=null, scanActive=false, scanRAF=null;
 let statsCache={done:0,total:0};
 
 const toast=(m,ms=2400)=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);};
@@ -356,7 +357,7 @@ async function startScan(){
   if(!window.ZXing){toast('Leitor indisponível.');return;}
   $('#scanWrap').classList.remove('hidden');$('#btnStopScan').classList.remove('hidden');
   try{
-    // Hints: focar nos formatos LINEARES usados em placas de patrimônio (mais rápido e preciso)
+    // Hints: focar nos formatos LINEARES usados em placas de patrimônio
     const hints=new Map();
     const fmts=[
       ZXing.BarcodeFormat.CODE_128,
@@ -369,36 +370,90 @@ async function startScan(){
     ];
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
     hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    // tenta a cada 100ms (mais tentativas de decodificação por segundo)
-    codeReader=new ZXing.BrowserMultiFormatReader(hints, 100);
+    scanReaderCore=new ZXing.MultiFormatReader();
+    scanReaderCore.setHints(hints);
 
-    // Constraints de câmera: traseira, alta resolução e foco contínuo (essencial p/ código de barras)
+    // Câmera traseira em alta resolução com foco contínuo
     const constraints={ audio:false, video:{
       facingMode:{ ideal:'environment' },
       width:{ ideal:1920 }, height:{ ideal:1080 },
       advanced:[ {focusMode:'continuous'} ]
     }};
-
+    scanStream=await navigator.mediaDevices.getUserMedia(constraints);
     const video=document.getElementById('scanVideo');
-    codeReader.decodeFromConstraints(constraints, video, (result, err)=>{
-      if(result){const txt=result.getText();stopScan();$('#plateInput').value=txt;if(navigator.vibrate)navigator.vibrate(120);openByPlate(txt);}
-    });
+    video.srcObject=scanStream; video.setAttribute('playsinline','true');
+    await video.play();
 
-    // após o vídeo iniciar, tenta forçar foco contínuo via track (alguns aparelhos exigem)
-    setTimeout(()=>{
-      try{
-        const track=video.srcObject&&video.srcObject.getVideoTracks&&video.srcObject.getVideoTracks()[0];
-        if(track&&track.getCapabilities){
-          const caps=track.getCapabilities();
-          if(caps.focusMode&&caps.focusMode.includes('continuous')){
-            track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
-          }
-        }
-      }catch(_){}
-    },800);
+    // tenta forçar foco contínuo via track (alguns aparelhos exigem)
+    try{
+      const track=scanStream.getVideoTracks()[0];
+      if(track&&track.getCapabilities){
+        const caps=track.getCapabilities();
+        if(caps.focusMode&&caps.focusMode.includes('continuous'))
+          track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
+      }
+    }catch(_){}
+
+    scanCanvas=document.createElement('canvas');
+    scanActive=true;
+    scanLoop(video);
   }catch(e){toast('Não foi possível acessar a câmera');stopScan();}
 }
-function stopScan(){ if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;} $('#scanWrap').classList.add('hidden');$('#btnStopScan').classList.add('hidden'); }
+
+// Laço de leitura: tenta a imagem inteira; se falhar, tenta uma versão binarizada (vence reflexo)
+function scanLoop(video){
+  if(!scanActive) return;
+  try{
+    const vw=video.videoWidth, vh=video.videoHeight;
+    if(vw && vh){
+      scanCanvas.width=vw; scanCanvas.height=vh;
+      const ctx=scanCanvas.getContext('2d',{willReadFrequently:true});
+      ctx.drawImage(video, 0, 0, vw, vh);
+
+      let txt=tryDecodeCanvas(scanCanvas);
+
+      // fallback: binariza (preto/branco) e tenta de novo — ajuda com reflexo/etiqueta clara
+      if(!txt){
+        const img=ctx.getImageData(0,0,vw,vh); const d=img.data;
+        for(let i=0;i<d.length;i+=4){
+          const v=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+          const bw=v>110?255:0; d[i]=d[i+1]=d[i+2]=bw;
+        }
+        ctx.putImageData(img,0,0);
+        txt=tryDecodeCanvas(scanCanvas);
+      }
+
+      if(txt){
+        stopScan();
+        $('#plateInput').value=txt;
+        if(navigator.vibrate)navigator.vibrate(120);
+        openByPlate(txt);
+        return;
+      }
+    }
+  }catch(_){}
+  scanRAF=setTimeout(()=>scanLoop(video), 120);
+}
+
+function tryDecodeCanvas(canvas){
+  try{
+    const lum=new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+    const bmp=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+    const r=scanReaderCore.decode(bmp);
+    return r?r.getText():null;
+  }catch(_){ return null; }
+  finally{ try{scanReaderCore.reset();}catch(_){} }
+}
+
+function stopScan(){
+  scanActive=false;
+  if(scanRAF){clearTimeout(scanRAF);scanRAF=null;}
+  if(scanStream){try{scanStream.getTracks().forEach(t=>t.stop());}catch(_){}scanStream=null;}
+  const v=document.getElementById('scanVideo'); if(v){try{v.pause();}catch(_){} v.srcObject=null;}
+  scanReaderCore=null; scanCanvas=null;
+  if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;}
+  $('#scanWrap').classList.add('hidden');$('#btnStopScan').classList.add('hidden');
+}
 
 /* ====================== DETALHE ====================== */
 function fmtMoney(v){
