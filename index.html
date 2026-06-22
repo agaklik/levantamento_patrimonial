@@ -355,13 +355,46 @@ async function startScan(){
   if(!window.ZXing){toast('Leitor indisponível.');return;}
   $('#scanWrap').classList.remove('hidden');$('#btnStopScan').classList.remove('hidden');
   try{
-    codeReader=new ZXing.BrowserMultiFormatReader();
-    const devices=await codeReader.listVideoInputDevices();
-    const back=devices.find(d=>/back|traseira|rear|environment/i.test(d.label));
-    const devId=back?back.deviceId:(devices[devices.length-1]?.deviceId||null);
-    codeReader.decodeFromVideoDevice(devId,'scanVideo',(result)=>{
+    // Hints: focar nos formatos LINEARES usados em placas de patrimônio (mais rápido e preciso)
+    const hints=new Map();
+    const fmts=[
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.ITF,
+      ZXing.BarcodeFormat.CODE_93,
+      ZXing.BarcodeFormat.CODABAR,
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8
+    ];
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    // tenta a cada 100ms (mais tentativas de decodificação por segundo)
+    codeReader=new ZXing.BrowserMultiFormatReader(hints, 100);
+
+    // Constraints de câmera: traseira, alta resolução e foco contínuo (essencial p/ código de barras)
+    const constraints={ audio:false, video:{
+      facingMode:{ ideal:'environment' },
+      width:{ ideal:1920 }, height:{ ideal:1080 },
+      advanced:[ {focusMode:'continuous'} ]
+    }};
+
+    const video=document.getElementById('scanVideo');
+    codeReader.decodeFromConstraints(constraints, video, (result, err)=>{
       if(result){const txt=result.getText();stopScan();$('#plateInput').value=txt;if(navigator.vibrate)navigator.vibrate(120);openByPlate(txt);}
     });
+
+    // após o vídeo iniciar, tenta forçar foco contínuo via track (alguns aparelhos exigem)
+    setTimeout(()=>{
+      try{
+        const track=video.srcObject&&video.srcObject.getVideoTracks&&video.srcObject.getVideoTracks()[0];
+        if(track&&track.getCapabilities){
+          const caps=track.getCapabilities();
+          if(caps.focusMode&&caps.focusMode.includes('continuous')){
+            track.applyConstraints({advanced:[{focusMode:'continuous'}]}).catch(()=>{});
+          }
+        }
+      }catch(_){}
+    },800);
   }catch(e){toast('Não foi possível acessar a câmera');stopScan();}
 }
 function stopScan(){ if(codeReader){try{codeReader.reset();}catch(e){}codeReader=null;} $('#scanWrap').classList.add('hidden');$('#btnStopScan').classList.add('hidden'); }
