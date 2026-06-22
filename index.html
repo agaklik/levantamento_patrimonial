@@ -97,6 +97,7 @@
   <div class="login-card">
     <h2>Levantamento Patrimonial</h2>
     <p class="sub">Entre com seu e-mail e senha para começar.</p>
+    <div id="appVersion" style="text-align:center;font-size:12px;font-weight:600;color:var(--accent);background:rgba(15,118,110,.08);border:1px solid var(--accent);border-radius:8px;padding:6px;margin:0 0 16px"></div>
     <label>E-mail</label>
     <input type="email" id="loginEmail" autocomplete="username" inputmode="email" placeholder="voce@exemplo.com">
     <label>Senha</label>
@@ -262,6 +263,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
+const APP_VERSION = 'v2026.06.22-3'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -759,6 +761,7 @@ async function exportAtualiza(){
 }
 
 /* ====================== INÍCIO ====================== */
+(function(){ const el=document.getElementById('appVersion'); if(el) el.textContent='Versão '+APP_VERSION; })();
 initAuth();
 
 </script>
