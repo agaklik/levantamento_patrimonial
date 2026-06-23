@@ -348,7 +348,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-21'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-22'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -712,7 +712,31 @@ function openDetail(bem, lev){
   $('#fDone').checked=current.concluido;
   renderLocField(); renderPhotos(); updateStatusPill(); updateMovComVisibility();
   loadFotosExistentes(bem.codigo);
+  aplicarModoLeitura(origemDetalhe==='encontrados');
   window.scrollTo(0,0);
+}
+
+// modo só leitura: bloqueia campos e esconde o botão salvar (usado p/ itens já encontrados)
+function aplicarModoLeitura(somenteLeitura){
+  const campos=['#fPlacaNova','#fLocal','#fMotivo','#fEstado','#fSituacao','#fDone'];
+  campos.forEach(sel=>{ const el=$(sel); if(el){ el.disabled=!!somenteLeitura; } });
+  // botões de ação que alteram o item
+  ['#btnScanPlacaNova','#btnPhoto','#btnSave'].forEach(sel=>{ const el=$(sel); if(el){ el.style.display=somenteLeitura?'none':''; } });
+  // botão de trocar localização (✕) — criado dinamicamente
+  const locClear=$('#locClear'); if(locClear){ locClear.style.display=somenteLeitura?'none':''; }
+  // impede remover fotos no modo leitura (esconde os "x" das fotos)
+  document.querySelectorAll('#photoList .photo-del, #photoList .x').forEach(x=>{ x.style.display=somenteLeitura?'none':''; });
+  // aviso visual de modo leitura
+  let aviso=$('#leituraAviso');
+  if(somenteLeitura){
+    if(!aviso){
+      aviso=document.createElement('div'); aviso.id='leituraAviso';
+      aviso.style.cssText='background:rgba(15,118,110,.08);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:8px;margin-bottom:12px;font-size:13px;font-weight:600;text-align:center';
+      aviso.textContent='👁️ Item já encontrado — somente visualização';
+      const card=$('#detailCard'); card.insertBefore(aviso, card.firstChild);
+    }
+    aviso.style.display='block';
+  } else if(aviso){ aviso.style.display='none'; }
 }
 
 // Estado/Situação: como não temos tabela própria, usamos a lista distinta dos bens já vista +
