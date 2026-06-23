@@ -287,10 +287,12 @@
     <div id="comInfo" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
 
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
-    <h3 style="margin-top:0;font-size:15px">Itens não encontrados</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Bens que ainda não foram marcados como concluídos.</p>
-    <button class="btn-2 btn-block" id="btnVerNaoEncontrados">📋 Ver itens não encontrados</button>
-    <button class="btn-2 btn-block" id="btnBaixarNaoEncontrados" style="margin-top:8px">⬇️ Baixar lista (CSV)</button>
+    <h3 style="margin-top:0;font-size:15px">Acompanhamento do levantamento</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Listas de bens por situação. Toque em um item para abri-lo.</p>
+    <button class="btn-2 btn-block" id="btnVerNaoEncontrados">📋 Ver não encontrados</button>
+    <button class="btn-2 btn-block" id="btnBaixarNaoEncontrados" style="margin-top:8px">⬇️ Baixar não encontrados (CSV)</button>
+    <button class="btn-2 btn-block" id="btnVerEncontrados" style="margin-top:14px">✅ Ver encontrados</button>
+    <button class="btn-2 btn-block" id="btnBaixarEncontrados" style="margin-top:8px">⬇️ Baixar encontrados (CSV)</button>
     <div id="naoEncMsg" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
     <div id="naoEncLista" style="margin-top:10px"></div>
 
@@ -346,7 +348,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-20'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-21'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -363,6 +365,7 @@ function descUnidadeGestora(cod){
   return nome ? (c+' — '+nome) : c;
 }
 let current=null;          // bem em edição {bem, lev}
+let origemDetalhe=null;    // de onde o item foi aberto: 'naoEncontrados' | 'encontrados' | null
 let currentFotos=[];       // fotos novas (dataURL) a enviar
 let codeReader=null, photoStream=null;
 let scanReaderCore=null, scanStream=null, scanCanvas=null, scanActive=false, scanRAF=null, scanTries=0, scanDestino='busca';
@@ -456,8 +459,8 @@ function atualizarBarraProgresso(){
 }
 
 /* ====================== BUSCA DE PLACA (no banco) ====================== */
-$('#btnSearch').addEventListener('click',()=>{const v=$('#plateInput').value;if(v)openByPlate(v);});
-$('#plateInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=$('#plateInput').value;if(v)openByPlate(v);}});
+$('#btnSearch').addEventListener('click',()=>{const v=$('#plateInput').value;if(v){origemDetalhe=null;openByPlate(v);}});
+$('#plateInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=$('#plateInput').value;if(v){origemDetalhe=null;openByPlate(v);}}});
 
 // seletor de modo de busca: placa (padrão) ou código
 let modoBusca='placa';
@@ -537,6 +540,7 @@ function onScanResult(txt){
     scanDestino='busca';
     checarPlacaNovaAviso();
   }else{
+    origemDetalhe=null;
     openByPlate(txt, 'etiqueta');
   }
 }
@@ -807,8 +811,16 @@ function updateStatusPill(){
 $('#btnBack').addEventListener('click',()=>{
   stopPhoto();
   $('#detailCard').classList.add('hidden');
-  $('#searchCard').classList.remove('hidden');
-  $('#plateInput').value='';$('#searchMsg').innerHTML='';$('#plateInput').focus();
+  if(origemDetalhe==='naoEncontrados' || origemDetalhe==='encontrados'){
+    // voltou de um item aberto pela lista → reabre a tela de administração e a lista
+    $('#toolsCard').classList.remove('hidden');
+    const tipo=origemDetalhe;
+    origemDetalhe=null;
+    carregarLista(tipo);
+  }else{
+    $('#searchCard').classList.remove('hidden');
+    $('#plateInput').value='';$('#searchMsg').innerHTML='';$('#plateInput').focus();
+  }
 });
 
 /* ---------- salvar (grava no banco) ---------- */
@@ -975,10 +987,10 @@ function preencherComissaoForm(){
   } else { $('#comInfo').textContent='Nenhuma comissão cadastrada ainda.'; }
 }
 
-/* ====================== ITENS NÃO ENCONTRADOS ====================== */
-// retorna a lista de bens que NÃO têm levantamento concluído
-async function obterNaoEncontrados(){
-  // 1) códigos já concluídos (em lotes, paginando)
+/* ====================== ACOMPANHAMENTO (encontrados / não encontrados) ====================== */
+// retorna os bens conforme o tipo: 'naoEncontrados' (sem levantamento concluído) ou 'encontrados' (com)
+async function obterItens(tipo){
+  // 1) códigos concluídos (paginando)
   const concluidos=new Set();
   let from=0; const passo=1000;
   while(true){
@@ -988,67 +1000,81 @@ async function obterNaoEncontrados(){
     if(!data || data.length<passo) break;
     from+=passo;
   }
-  // 2) todos os bens (em lotes) e filtra os que não estão concluídos
-  const naoEnc=[]; from=0;
+  // 2) percorre os bens e separa conforme o tipo
+  const lista=[]; from=0;
   while(true){
     const {data,error}=await sb.from('bens').select('codigo,placa,descricao,localizacao').order('codigo').range(from,from+passo-1);
     if(error) throw error;
-    (data||[]).forEach(b=>{ if(!concluidos.has(b.codigo)) naoEnc.push(b); });
+    (data||[]).forEach(b=>{
+      const concl=concluidos.has(b.codigo);
+      if(tipo==='encontrados' ? concl : !concl) lista.push(b);
+    });
     if(!data || data.length<passo) break;
     from+=passo;
   }
-  return naoEnc;
+  return lista;
 }
 
-$('#btnVerNaoEncontrados').addEventListener('click',async()=>{
+// monta a lista na tela (tipo define a origem ao abrir um item)
+async function carregarLista(tipo){
   const msg=$('#naoEncMsg'), lista=$('#naoEncLista');
+  const rotulo = tipo==='encontrados' ? 'encontrado(s)' : 'não encontrado(s)';
   msg.textContent='Carregando...'; lista.innerHTML='';
   try{
-    const itens=await obterNaoEncontrados();
-    if(!itens.length){ msg.innerHTML='<span style="color:var(--ok)">✓ Todos os itens foram encontrados!</span>'; return; }
-    msg.textContent=`${itens.length} item(ns) não encontrado(s):`;
-    // mostra no máximo 200 na tela (a lista completa vai no CSV)
+    const itens=await obterItens(tipo);
+    if(!itens.length){
+      msg.innerHTML = tipo==='encontrados'
+        ? '<span style="color:var(--muted)">Nenhum item encontrado ainda.</span>'
+        : '<span style="color:var(--ok)">✓ Todos os itens foram encontrados!</span>';
+      return;
+    }
+    msg.textContent=`${itens.length} item(ns) ${rotulo}:`;
     const mostrar=itens.slice(0,200);
+    const cor = tipo==='encontrados' ? 'var(--ok)' : 'var(--warn)';
     lista.innerHTML=mostrar.map(b=>{
       const placa=(b.placa&&b.placa.trim())?b.placa:'sem placa';
-      return `<div class="ne-item" data-cod="${b.codigo}" style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;background:var(--surface2)">
+      return `<div class="ne-item" data-cod="${b.codigo}" style="padding:8px;border:1px solid var(--border);border-left:4px solid ${cor};border-radius:8px;margin-bottom:6px;cursor:pointer;background:var(--surface2)">
         <div style="font-weight:600">${b.codigo} · ${placa}</div>
         <div style="font-size:12px;color:var(--muted)">${(b.descricao||'').slice(0,50)}${b.localizacao?(' — '+b.localizacao.slice(0,30)):''}</div>
       </div>`;
     }).join('') + (itens.length>200?`<div style="font-size:12px;color:var(--muted);padding:6px">…e mais ${itens.length-200}. Baixe o CSV para a lista completa.</div>`:'');
-    // tocar num item abre ele
     lista.querySelectorAll('.ne-item').forEach(el=>{
       el.addEventListener('click',()=>{
         const cod=el.getAttribute('data-cod');
+        origemDetalhe=tipo;                 // lembra a lista de origem para o "voltar"
         $('#toolsCard').classList.add('hidden');
         modoBusca='codigo';
         openByPlate(cod);
       });
     });
   }catch(e){ msg.innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
-});
+}
 
-$('#btnBaixarNaoEncontrados').addEventListener('click',async()=>{
+// baixa o CSV conforme o tipo
+async function baixarLista(tipo){
   const msg=$('#naoEncMsg');
   msg.textContent='Gerando arquivo...';
   try{
-    const itens=await obterNaoEncontrados();
-    if(!itens.length){ msg.innerHTML='<span style="color:var(--ok)">✓ Todos os itens foram encontrados!</span>'; return; }
+    const itens=await obterItens(tipo);
+    if(!itens.length){ msg.textContent='Nenhum item para exportar.'; return; }
     const cab=['Código','Placa','Descrição','Localização'];
     const linhas=[cab.map(csvCell).join(',')];
-    itens.forEach(b=>{
-      linhas.push([b.codigo, (b.placa||''), (b.descricao||''), (b.localizacao||'')].map(csvCell).join(','));
-    });
+    itens.forEach(b=>{ linhas.push([b.codigo,(b.placa||''),(b.descricao||''),(b.localizacao||'')].map(csvCell).join(',')); });
     const csv='\uFEFF'+linhas.join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=url; a.download='itens_nao_encontrados.csv';
+    a.href=url; a.download = tipo==='encontrados' ? 'itens_encontrados.csv' : 'itens_nao_encontrados.csv';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     msg.textContent=`${itens.length} item(ns) exportado(s).`;
   }catch(e){ msg.innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
-});
+}
+
+$('#btnVerNaoEncontrados').addEventListener('click',()=>carregarLista('naoEncontrados'));
+$('#btnBaixarNaoEncontrados').addEventListener('click',()=>baixarLista('naoEncontrados'));
+$('#btnVerEncontrados').addEventListener('click',()=>carregarLista('encontrados'));
+$('#btnBaixarEncontrados').addEventListener('click',()=>baixarLista('encontrados'));
 
 $('#btnSalvarComissao').addEventListener('click',async()=>{
   const cod=($('#comCod').value||'').trim();
