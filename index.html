@@ -333,7 +333,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-14'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-15'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -911,6 +911,16 @@ async function saveItem(){
     };
     const {error}=await sb.from('levantamento').upsert(row,{onConflict:'codigo'});
     if(error) throw error;
+
+    // se o bem não tinha placa e o levantador informou uma placa nova,
+    // grava essa placa direto no cadastro do bem (passa a ter placa de verdade)
+    if(!current.temPlaca && current.placa_nova){
+      const {error:eb}=await sb.from('bens').update({placa:current.placa_nova}).eq('codigo',b.codigo);
+      if(eb) throw eb;
+      // atualiza o estado local para refletir que o bem agora tem placa
+      b.placa=current.placa_nova; current.temPlaca=true;
+    }
+
     toast('✓ Salvo na nuvem');
     await refreshStats();
     $('#btnBack').click();
