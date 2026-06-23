@@ -353,7 +353,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-23'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-24'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1137,9 +1137,13 @@ $('#btnSalvarComissao').addEventListener('click',async()=>{
     if(del.error) throw del.error;
     const ins=await sb.from('comissoes').insert([{cod, desc_:desc}]);
     if(ins.error) throw ins.error;
+    // atualiza TODOS os itens já cadastrados no levantamento com a nova comissão
+    btn.textContent='Atualizando itens...';
+    const upd=await sb.from('levantamento').update({cod_comissao:cod}).neq('codigo','__nunca__');
+    if(upd.error) throw upd.error;
     await loadAux();
     preencherComissaoForm();
-    toast('✓ Comissão salva');
+    toast('✓ Comissão salva e aplicada aos itens');
   }catch(e){ toast('Erro ao salvar comissão: '+(e.message||e)); }
   finally{ btn.disabled=false; btn.textContent=txt; }
 });
