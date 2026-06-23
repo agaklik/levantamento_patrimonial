@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Levantamento Patrimonial</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Patrimônio">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
     --bg:#f4f1ea; --surface:#ffffff; --surface2:#f0ebe0; --border:#d9d0bf;
@@ -64,7 +70,7 @@
   .filterbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
   .filterbar select,.filterbar input{margin:0}
   .err{color:var(--danger);font-size:13px}
-  .plate-box{flex:1;border:2.5px solid var(--accent-2);border-radius:12px;padding:10px 16px;background:linear-gradient(180deg,#fff,var(--surface2));box-shadow:inset 0 0 0 1px rgba(194,65,12,.12),0 2px 6px rgba(194,65,12,.12)}
+  .plate-box{display:inline-block;min-width:120px;border:2.5px solid var(--accent-2);border-radius:12px;padding:10px 16px;background:linear-gradient(180deg,#fff,var(--surface2));box-shadow:inset 0 0 0 1px rgba(194,65,12,.12),0 2px 6px rgba(194,65,12,.12)}
   .plate-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent-2)}
   .plate-num{font-weight:800;letter-spacing:2px;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1.05;word-break:break-all;font-size:clamp(20px,9vw,34px)}
   #locPicker{position:relative}
@@ -204,7 +210,7 @@
     </div>
     <div id="locSelected" class="loc-selected hidden"></div>
 
-    <div id="ugWrap" style="margin-top:10px">
+    <div id="ugWrap" style="margin:14px 0">
       <label>Unidade Gestora</label>
       <div id="dUnidadeGestora" style="font-weight:600;color:var(--txt);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px">—</div>
     </div>
@@ -214,7 +220,7 @@
       <select id="fMotivo"><option value="">— selecione o motivo —</option></select>
     </div>
 
-    <div class="grid2">
+    <div class="grid2" style="align-items:end">
       <div>
         <label>Estado de conservação</label>
         <select id="fEstado"><option value="">— estado —</option></select>
@@ -338,7 +344,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-17'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-18'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1279,6 +1285,10 @@ async function exportAtualiza(){
 }
 
 /* ====================== INÍCIO ====================== */
+// registra o service worker (permite instalar como app)
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 (function(){ const el=document.getElementById('appVersion'); if(el) el.textContent='Versão '+APP_VERSION; })();
 initAuth();
 
