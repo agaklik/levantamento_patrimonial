@@ -320,7 +320,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-10'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-11'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -365,11 +365,11 @@ $('#btnLogout').addEventListener('click',async()=>{ await sb.auth.signOut(); toa
 async function loadAux(){
   try{
     const [loc,mot,com]=await Promise.all([
-      sb.from('localizacoes').select('cod,desc_').order('cod'),
+      sb.from('localizacoes').select('cod,desc_,unidade_gestora').order('cod'),
       sb.from('motivos').select('cod,desc_').order('cod'),
       sb.from('comissoes').select('cod,desc_').order('cod'),
     ]);
-    LOCS=(loc.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
+    LOCS=(loc.data||[]).map(r=>({cod:r.cod,desc:r.desc_,ug:r.unidade_gestora||''}));
     MOTIVOS=(mot.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
     COMISSOES=(com.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
     fillSelect('#fMotivo',MOTIVOS,'— selecione o motivo —');
@@ -986,10 +986,11 @@ const IMPORT_CFG = {
   localizacoes: {
     label:'Localizações', table:'localizacoes', conflict:'cod',
     map:(row)=>{
-      // aceita cod/desc_ OU cdLocalReduzido/dsLocalizacao
+      // aceita cod/desc_ OU cdLocalReduzido/dsLocalizacao; unidade gestora opcional
       const cod=stripZeros((row.cod ?? row.cdLocalReduzido ?? '').toString().trim());
       const desc=(row.desc_ ?? row.dsLocalizacao ?? '').toString().trim();
-      return cod ? {cod, desc_:desc} : null;
+      const ug=(row.unidade_gestora ?? row.cdUnidadeGestora ?? '').toString().trim();
+      return cod ? {cod, desc_:desc, unidade_gestora:(ug||null)} : null;
     }
   },
   motivos: {
