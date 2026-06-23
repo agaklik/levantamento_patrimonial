@@ -299,7 +299,7 @@
     <button class="btn-2 btn-block" id="btnVerEncontrados" style="margin-top:14px">✅ Ver encontrados</button>
     <button class="btn-2 btn-block" id="btnBaixarEncontrados" style="margin-top:8px">⬇️ Baixar encontrados (CSV)</button>
     <div id="naoEncMsg" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
-    <div id="naoEncLista" style="margin-top:10px"></div>
+    <div id="naoEncLista" style="margin-top:10px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
 
     <button class="btn-ghost btn-block" id="btnCloseTools" style="margin-top:16px">Fechar</button>
   </div>
@@ -353,7 +353,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-24'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-25'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
