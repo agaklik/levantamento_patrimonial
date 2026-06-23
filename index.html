@@ -136,7 +136,6 @@
   <div class="card" id="searchCard">
     <div class="row" style="margin-bottom:14px;flex-direction:column;gap:8px">
       <button class="btn" id="btnScan">📷 Ler código de barras</button>
-      <button class="btn-2" id="btnOcr">🔢 Ler número (foto)</button>
     </div>
     <label>Buscar por placa ou código</label>
     <div class="row" style="gap:6px;margin-bottom:8px">
@@ -154,18 +153,7 @@
     </div>
     <button class="btn-ghost btn-block hidden" id="btnStopScan" style="margin-top:8px">Parar leitura</button>
 
-    <div id="ocrWrap" class="hidden">
-      <div style="position:relative">
-        <video id="ocrVideo" playsinline style="width:100%;border-radius:10px;display:block"></video>
-        <div id="ocrMira" style="position:absolute;left:10%;top:38%;width:80%;height:24%;border:3px solid var(--accent);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none"></div>
-      </div>
-      <div id="ocrStatus" style="text-align:center;font-size:13px;color:var(--muted);padding:8px 0"></div>
-      <div class="row" style="gap:8px">
-        <button class="btn" id="btnOcrCapture" style="flex:1">📸 Capturar número</button>
-        <button class="btn-ghost" id="btnOcrCancel" style="flex:none">Cancelar</button>
-      </div>
-      <small style="color:var(--muted);display:block;text-align:center;margin-top:6px">Encaixe apenas o número dentro da moldura.</small>
-    </div>
+    
     <div id="searchMsg" style="margin-top:10px;font-size:13px"></div>
   </div>
 
@@ -344,7 +332,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-18'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-19'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -494,80 +482,6 @@ async function openByPlate(termo, origem){
 /* ====================== SCANNER ====================== */
 $('#btnScan').addEventListener('click',()=>{ scanDestino='busca'; startScan(); });
 
-/* ====================== OCR (ler número impresso) ====================== */
-let ocrStream=null, ocrWorker=null, ocrBusy=false;
-const OCR_CDN='https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/tesseract.min.js';
-
-function setOcrStatus(msg){ const e=$('#ocrStatus'); if(e) e.textContent=msg||''; }
-
-function carregarTesseract(){
-  return new Promise((resolve,reject)=>{
-    if(window.Tesseract) return resolve();
-    const s=document.createElement('script');
-    s.src=OCR_CDN; s.async=true;
-    s.onload=()=>resolve();
-    s.onerror=()=>reject(new Error('Não foi possível baixar o leitor de números. Verifique a internet.'));
-    document.head.appendChild(s);
-  });
-}
-
-async function startOcr(){
-  $('#ocrWrap').classList.remove('hidden');
-  const row=$('#searchCard').querySelector('.row'); if(row) row.classList.add('hidden');
-  setOcrStatus('Abrindo câmera...');
-  try{
-    const constraints={ audio:false, video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} } };
-    ocrStream=await navigator.mediaDevices.getUserMedia(constraints);
-    const v=$('#ocrVideo'); v.srcObject=ocrStream; v.setAttribute('playsinline','true'); await v.play();
-    setOcrStatus('Enquadre o número e toque em "Capturar".');
-  }catch(e){ setOcrStatus(''); toast('Não foi possível acessar a câmera'); stopOcr(); }
-}
-
-function stopOcr(){
-  if(ocrStream){ try{ocrStream.getTracks().forEach(t=>t.stop());}catch(_){} ocrStream=null; }
-  const v=$('#ocrVideo'); if(v){ try{v.pause();}catch(_){} v.srcObject=null; }
-  $('#ocrWrap').classList.add('hidden');
-  const row=$('#searchCard').querySelector('.row'); if(row) row.classList.remove('hidden');
-  setOcrStatus('');
-}
-
-async function capturarOcr(){
-  if(ocrBusy) return;
-  const v=$('#ocrVideo'); if(!v||!v.videoWidth){ toast('Câmera ainda não pronta'); return; }
-  ocrBusy=true;
-  try{
-    setOcrStatus('Carregando leitor de números...');
-    await carregarTesseract();
-    const vw=v.videoWidth, vh=v.videoHeight;
-    // recorta exatamente a região da moldura (mesmas proporções do #ocrMira)
-    const rx=Math.floor(vw*0.10), ry=Math.floor(vh*0.38), rw=Math.floor(vw*0.80), rh=Math.floor(vh*0.24);
-    const esc=2; // amplia 2x para o OCR enxergar melhor dígitos pequenos
-    const c=document.createElement('canvas'); c.width=rw*esc; c.height=rh*esc;
-    const ctx=c.getContext('2d',{willReadFrequently:true});
-    ctx.imageSmoothingEnabled=true;
-    ctx.drawImage(v, rx, ry, rw, rh, 0, 0, rw*esc, rh*esc);
-    const img=ctx.getImageData(0,0,c.width,c.height), d=img.data;
-    for(let i=0;i<d.length;i+=4){ const g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; const bw=g>120?255:0; d[i]=d[i+1]=d[i+2]=bw; }
-    ctx.putImageData(img,0,0);
-    setOcrStatus('Lendo número...');
-    if(!ocrWorker){ ocrWorker=await Tesseract.createWorker('eng'); }
-    await ocrWorker.setParameters({ tessedit_char_whitelist:'0123456789', tessedit_pageseg_mode:'7' });
-    const { data }=await ocrWorker.recognize(c);
-    const num=(data&&data.text?data.text:'').replace(/\D/g,'');
-    if(!num){ setOcrStatus('Não consegui ler. Tente aproximar e segurar firme.'); ocrBusy=false; return; }
-    if(navigator.vibrate)navigator.vibrate(120);
-    const limpo=stripZeros(num);
-    stopOcr();
-    $('#plateInput').value=limpo;
-    openByPlate(limpo, 'etiqueta');
-  }catch(e){
-    setOcrStatus(e.message||'Falha ao ler o número.');
-  }finally{ ocrBusy=false; }
-}
-
-$('#btnOcr').addEventListener('click', startOcr);
-$('#btnOcrCapture').addEventListener('click', capturarOcr);
-$('#btnOcrCancel').addEventListener('click', stopOcr);
 
 
 $('#btnStopScan').addEventListener('click',stopScan);
