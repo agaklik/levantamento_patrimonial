@@ -126,6 +126,12 @@
   <div class="hdr-center">
     <h1>Levantamento Patrimonial</h1>
     <div class="stats" id="stats"></div>
+    <div id="progWrap" style="margin-top:6px">
+      <div style="height:8px;background:rgba(0,0,0,.12);border-radius:5px;overflow:hidden">
+        <div id="progBar" style="height:100%;width:0%;border-radius:5px;transition:width .4s,background-color .4s;background:#dc2626"></div>
+      </div>
+      <div id="progText" style="font-size:11px;color:#fff;margin-top:3px;text-align:center;opacity:.95"></div>
+    </div>
   </div>
   <button id="btnExport" class="hdr-icon" title="Exportar" aria-label="Exportar">⬇</button>
   <button id="btnLogout" class="hdr-icon" title="Sair" aria-label="Sair">⏏</button>
@@ -280,6 +286,14 @@
     <button class="btn-ok btn-block" id="btnSalvarComissao">Salvar comissão</button>
     <div id="comInfo" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
 
+    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
+    <h3 style="margin-top:0;font-size:15px">Itens não encontrados</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Bens que ainda não foram marcados como concluídos.</p>
+    <button class="btn-2 btn-block" id="btnVerNaoEncontrados">📋 Ver itens não encontrados</button>
+    <button class="btn-2 btn-block" id="btnBaixarNaoEncontrados" style="margin-top:8px">⬇️ Baixar lista (CSV)</button>
+    <div id="naoEncMsg" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    <div id="naoEncLista" style="margin-top:10px"></div>
+
     <button class="btn-ghost btn-block" id="btnCloseTools" style="margin-top:16px">Fechar</button>
   </div>
 </main>
@@ -332,7 +346,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-19'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-20'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -423,7 +437,22 @@ async function refreshStats(){
     const done=await sb.from('levantamento').select('*',{count:'exact',head:true}).eq('concluido',true);
     statsCache={done:done.count||0,total:total.count||0};
     $('#stats').innerHTML=`<b>${statsCache.done.toLocaleString('pt-BR')}</b> levantados`;
+    atualizarBarraProgresso();
   }catch(e){ $('#stats').textContent=''; }
+}
+
+// barra de progresso: largura = percentual; cor varia de vermelho (0%) a verde (100%)
+function atualizarBarraProgresso(){
+  const bar=$('#progBar'), txt=$('#progText'); if(!bar||!txt) return;
+  const total=statsCache.total||0, done=statsCache.done||0;
+  const pct = total>0 ? Math.round((done/total)*100) : 0;
+  bar.style.width=pct+'%';
+  // interpola a cor: 0%=vermelho(220,38,38) -> 50%=amarelo(234,179,8) -> 100%=verde(22,163,74)
+  let r,g,b;
+  if(pct<50){ const t=pct/50; r=Math.round(220+(234-220)*t); g=Math.round(38+(179-38)*t); b=Math.round(38+(8-38)*t); }
+  else{ const t=(pct-50)/50; r=Math.round(234+(22-234)*t); g=Math.round(179+(163-179)*t); b=Math.round(8+(74-8)*t); }
+  bar.style.backgroundColor=`rgb(${r},${g},${b})`;
+  txt.textContent=`${pct}% encontrados · ${done.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')}`;
 }
 
 /* ====================== BUSCA DE PLACA (no banco) ====================== */
@@ -945,6 +974,81 @@ function preencherComissaoForm(){
     $('#comInfo').textContent='Comissão atual: '+c.cod+' — '+c.desc;
   } else { $('#comInfo').textContent='Nenhuma comissão cadastrada ainda.'; }
 }
+
+/* ====================== ITENS NÃO ENCONTRADOS ====================== */
+// retorna a lista de bens que NÃO têm levantamento concluído
+async function obterNaoEncontrados(){
+  // 1) códigos já concluídos (em lotes, paginando)
+  const concluidos=new Set();
+  let from=0; const passo=1000;
+  while(true){
+    const {data,error}=await sb.from('levantamento').select('codigo').eq('concluido',true).range(from,from+passo-1);
+    if(error) throw error;
+    (data||[]).forEach(r=>concluidos.add(r.codigo));
+    if(!data || data.length<passo) break;
+    from+=passo;
+  }
+  // 2) todos os bens (em lotes) e filtra os que não estão concluídos
+  const naoEnc=[]; from=0;
+  while(true){
+    const {data,error}=await sb.from('bens').select('codigo,placa,descricao,localizacao').order('codigo').range(from,from+passo-1);
+    if(error) throw error;
+    (data||[]).forEach(b=>{ if(!concluidos.has(b.codigo)) naoEnc.push(b); });
+    if(!data || data.length<passo) break;
+    from+=passo;
+  }
+  return naoEnc;
+}
+
+$('#btnVerNaoEncontrados').addEventListener('click',async()=>{
+  const msg=$('#naoEncMsg'), lista=$('#naoEncLista');
+  msg.textContent='Carregando...'; lista.innerHTML='';
+  try{
+    const itens=await obterNaoEncontrados();
+    if(!itens.length){ msg.innerHTML='<span style="color:var(--ok)">✓ Todos os itens foram encontrados!</span>'; return; }
+    msg.textContent=`${itens.length} item(ns) não encontrado(s):`;
+    // mostra no máximo 200 na tela (a lista completa vai no CSV)
+    const mostrar=itens.slice(0,200);
+    lista.innerHTML=mostrar.map(b=>{
+      const placa=(b.placa&&b.placa.trim())?b.placa:'sem placa';
+      return `<div class="ne-item" data-cod="${b.codigo}" style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;background:var(--surface2)">
+        <div style="font-weight:600">${b.codigo} · ${placa}</div>
+        <div style="font-size:12px;color:var(--muted)">${(b.descricao||'').slice(0,50)}${b.localizacao?(' — '+b.localizacao.slice(0,30)):''}</div>
+      </div>`;
+    }).join('') + (itens.length>200?`<div style="font-size:12px;color:var(--muted);padding:6px">…e mais ${itens.length-200}. Baixe o CSV para a lista completa.</div>`:'');
+    // tocar num item abre ele
+    lista.querySelectorAll('.ne-item').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const cod=el.getAttribute('data-cod');
+        $('#toolsCard').classList.add('hidden');
+        modoBusca='codigo';
+        openByPlate(cod);
+      });
+    });
+  }catch(e){ msg.innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
+});
+
+$('#btnBaixarNaoEncontrados').addEventListener('click',async()=>{
+  const msg=$('#naoEncMsg');
+  msg.textContent='Gerando arquivo...';
+  try{
+    const itens=await obterNaoEncontrados();
+    if(!itens.length){ msg.innerHTML='<span style="color:var(--ok)">✓ Todos os itens foram encontrados!</span>'; return; }
+    const cab=['Código','Placa','Descrição','Localização'];
+    const linhas=[cab.map(csvCell).join(',')];
+    itens.forEach(b=>{
+      linhas.push([b.codigo, (b.placa||''), (b.descricao||''), (b.localizacao||'')].map(csvCell).join(','));
+    });
+    const csv='\uFEFF'+linhas.join('\r\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='itens_nao_encontrados.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    msg.textContent=`${itens.length} item(ns) exportado(s).`;
+  }catch(e){ msg.innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
+});
 
 $('#btnSalvarComissao').addEventListener('click',async()=>{
   const cod=($('#comCod').value||'').trim();
