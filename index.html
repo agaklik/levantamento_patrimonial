@@ -204,6 +204,11 @@
     </div>
     <div id="locSelected" class="loc-selected hidden"></div>
 
+    <div id="ugWrap" style="margin-top:10px">
+      <label>Unidade Gestora</label>
+      <div id="dUnidadeGestora" style="font-weight:600;color:var(--txt);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px">—</div>
+    </div>
+
     <div id="movWrap" class="hidden" style="background:rgba(194,65,12,.06);border:1px solid var(--accent-2);border-radius:10px;padding:12px;margin-bottom:14px">
       <label style="color:var(--accent-2)">Motivo da movimentação <span style="text-transform:none">(padrão do levantamento)</span></label>
       <select id="fMotivo"><option value="">— selecione o motivo —</option></select>
@@ -333,7 +338,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-15'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-17'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -341,6 +346,14 @@ let LOCS=[], MOTIVOS=[], COMISSOES=[], SITS=[], ESTS=[];
 // Listas fixas oficiais (embutidas) — sempre disponíveis nos seletores
 const ESTADOS_FIXOS=[{cod:'1',desc:'Excelente'},{cod:'2',desc:'Bom'},{cod:'3',desc:'Regular'},{cod:'4',desc:'Péssimo'}];
 const SITUACOES_FIXAS=[{cod:'1',desc:'EM USO'},{cod:'2',desc:'EM ESTOQUE'},{cod:'3',desc:'CEDIDO'},{cod:'4',desc:'DEPÓSITO - INSERVÍVEL'}];
+// Unidades gestoras (código -> descrição)
+const UNIDADES_GESTORAS={'0':'Prefeitura Municipal','1':'Câmara Municipal de Vereadores'};
+function descUnidadeGestora(cod){
+  const c=stripZeros((cod==null?'':String(cod)).trim());
+  if(c==='') return '';
+  const nome=UNIDADES_GESTORAS[c];
+  return nome ? (c+' — '+nome) : c;
+}
 let current=null;          // bem em edição {bem, lev}
 let currentFotos=[];       // fotos novas (dataURL) a enviar
 let codeReader=null, photoStream=null;
@@ -705,6 +718,8 @@ function openDetail(bem, lev){
   // valores levantados: do levantamento existente OU os atuais do bem
   const L=lev||{};
   current.nova_local_cod = L.cod_localizacao ?? bem.cod_localizacao;
+  // unidade gestora de referência = a da localização ORIGINAL do bem (não pode mudar para outra UG)
+  { const locOrig=LOCS.find(l=>l.cod===(bem.cod_localizacao||'')); current.ugRef = locOrig ? (stripZeros(String(locOrig.ug||''))) : ''; }
   current.nova_local     = L.localizacao     ?? bem.localizacao;
   current.novo_estado_cod= L.cod_estado      ?? bem.cod_estado;
   current.nova_sit_cod   = L.cod_situacao    ?? bem.cod_situacao;
@@ -780,12 +795,27 @@ function renderLocField(){
     inp.classList.add('hidden');inp.value='';
     $('#locClear').onclick=()=>{sel.classList.add('hidden');inp.classList.remove('hidden');inp.value='';inp.focus();};
   }else{ sel.classList.add('hidden');inp.classList.remove('hidden');inp.value=''; }
+  atualizarUnidadeGestora();
+}
+
+// mostra a unidade gestora da localização ATUAL do bem
+function atualizarUnidadeGestora(){
+  const el=$('#dUnidadeGestora'); if(!el||!current) return;
+  const codLoc=current.nova_local_cod||'';
+  const loc=LOCS.find(l=>l.cod===codLoc);
+  const ug=loc ? loc.ug : '';
+  const txt=descUnidadeGestora(ug);
+  el.textContent = txt || 'Não informada';
 }
 function locFilter(q){
   q=q.trim().toLowerCase(); if(!LOCS.length)return [];
-  if(!q)return LOCS.slice(0,50);
+  // só localizações da MESMA unidade gestora do bem (regra: não mudar de UG)
+  const ugRef=(current&&current.ugRef!=null)?current.ugRef:'';
+  let base=LOCS;
+  if(ugRef!=='') base=LOCS.filter(l=>stripZeros(String(l.ug||''))===ugRef);
+  if(!q)return base.slice(0,50);
   const qn=q.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  return LOCS.filter(l=>((l.cod+' '+l.desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')).includes(qn)).slice(0,50);
+  return base.filter(l=>((l.cod+' '+l.desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')).includes(qn)).slice(0,50);
 }
 function showLocSuggest(){
   const inp=$('#fLocal'), sug=$('#locSuggest');
@@ -880,6 +910,15 @@ async function saveItem(){
     if(conflito){ toast('⚠️ '+conflito); return; }
   }
   const locMudou=(current.nova_local_cod!==b.cod_localizacao);
+  // regra: não permitir mudar para localização de outra unidade gestora
+  if(locMudou && current.ugRef!=null && current.ugRef!==''){
+    const locNova=LOCS.find(l=>l.cod===(current.nova_local_cod||''));
+    const ugNova=locNova?stripZeros(String(locNova.ug||'')):'';
+    if(ugNova!=='' && ugNova!==current.ugRef){
+      toast('⚠️ Essa localização é de outra unidade gestora. Não é permitido.');
+      return;
+    }
+  }
   // validações
   if(locMudou && !current.cod_motivo){ toast('Selecione o motivo da movimentação'); return; }
   const estMudou=(current.novo_estado_cod!==b.cod_estado);
