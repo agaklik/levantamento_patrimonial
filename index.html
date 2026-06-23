@@ -320,11 +320,14 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-11'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-12'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
 let LOCS=[], MOTIVOS=[], COMISSOES=[], SITS=[], ESTS=[];
+// Listas fixas oficiais (embutidas) — sempre disponíveis nos seletores
+const ESTADOS_FIXOS=[{cod:'1',desc:'Excelente'},{cod:'2',desc:'Bom'},{cod:'3',desc:'Regular'},{cod:'4',desc:'Péssimo'}];
+const SITUACOES_FIXAS=[{cod:'1',desc:'EM USO'},{cod:'2',desc:'EM ESTOQUE'},{cod:'3',desc:'CEDIDO'},{cod:'4',desc:'DEPÓSITO - INSERVÍVEL'}];
 let current=null;          // bem em edição {bem, lev}
 let currentFotos=[];       // fotos novas (dataURL) a enviar
 let codeReader=null, photoStream=null;
@@ -723,6 +726,10 @@ function openDetail(bem, lev){
 // o valor atual do bem. Mantemos um cache simples acumulado.
 function ensureEstSit(bem){
   const addUniq=(arr,cod,desc)=>{if(cod&&!arr.some(x=>x.cod===cod))arr.push({cod,desc:desc||cod});};
+  // garante as opções fixas oficiais (sempre disponíveis nos seletores)
+  ESTADOS_FIXOS.forEach(x=>addUniq(ESTS,x.cod,x.desc));
+  SITUACOES_FIXAS.forEach(x=>addUniq(SITS,x.cod,x.desc));
+  // acrescenta também o valor do próprio bem, caso seja algum fora da lista
   addUniq(ESTS,bem.cod_estado,bem.estado);
   addUniq(SITS,bem.cod_situacao,bem.situacao);
   const byCod=(a,b)=>(parseInt(a.cod)||0)-(parseInt(b.cod)||0);
