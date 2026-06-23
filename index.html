@@ -258,7 +258,6 @@
       <button class="btn-2 btn-block" data-import="bens">📦 Importar Bens</button>
       <button class="btn-2 btn-block" data-import="localizacoes">📍 Importar Localizações</button>
       <button class="btn-2 btn-block" data-import="motivos">🏷️ Importar Motivos</button>
-      <button class="btn-2 btn-block" data-import="comissoes">👥 Importar Comissões</button>
     </div>
     <input type="file" id="importFile" accept=".csv,text/csv" style="display:none">
     <div id="importProgress" class="hidden" style="margin-top:14px">
@@ -267,6 +266,16 @@
         <div id="importBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div>
       </div>
     </div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
+    <h3 style="margin-top:0;font-size:15px">Comissão de Avaliação</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Cadastre a comissão do levantamento. Ela será usada nos itens e no arquivo de exportação.</p>
+    <label>Código da comissão</label>
+    <input type="text" id="comCod" inputmode="numeric" placeholder="Ex.: 1" style="margin:0 0 10px">
+    <label>Descrição</label>
+    <input type="text" id="comDesc" placeholder="Ex.: Comissão de Avaliação 2026" style="margin:0 0 12px">
+    <button class="btn-ok btn-block" id="btnSalvarComissao">Salvar comissão</button>
+    <div id="comInfo" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
 
     <button class="btn-ghost btn-block" id="btnCloseTools" style="margin-top:16px">Fechar</button>
   </div>
@@ -320,7 +329,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-12'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-13'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -684,7 +693,7 @@ function openDetail(bem, lev){
   current.novo_estado_cod= L.cod_estado      ?? bem.cod_estado;
   current.nova_sit_cod   = L.cod_situacao    ?? bem.cod_situacao;
   current.cod_motivo     = L.cod_motivo || MOTIVO_PADRAO;
-  current.cod_comissao   = L.cod_comissao || '';
+  current.cod_comissao   = L.cod_comissao || (COMISSOES[0] ? COMISSOES[0].cod : '');
   current.data_mov       = L.data_movimento || '';
   current.concluido      = !!L.concluido;
   current.placa_nova     = L.placa_nova || '';   // placa informada em campo
@@ -739,10 +748,8 @@ function ensureEstSit(bem){
 
 function updateMovComVisibility(){
   if(!current)return;
-  const b=current.bem;
-  const estMudou=(current.novo_estado_cod!==b.cod_estado);
   $('#movWrap').classList.remove('hidden');   // motivo é fixo do levantamento: sempre visível
-  $('#comWrap').classList.toggle('hidden',!estMudou);
+  $('#comWrap').classList.remove('hidden');   // comissão cadastrada: sempre visível
 }
 
 /* ---------- seletor de localização ---------- */
@@ -860,7 +867,7 @@ async function saveItem(){
   // validações
   if(locMudou && !current.cod_motivo){ toast('Selecione o motivo da movimentação'); return; }
   const estMudou=(current.novo_estado_cod!==b.cod_estado);
-  if(estMudou && !current.cod_comissao){ toast('Selecione a comissão de avaliação'); return; }
+  if(!current.cod_comissao){ toast('Cadastre a comissão de avaliação na engrenagem (Tabelas e dados)'); return; }
 
   $('#btnSave').disabled=true; $('#btnSave').innerHTML='<span class="spin"></span> Salvando...';
   try{
@@ -882,7 +889,7 @@ async function saveItem(){
       cod_situacao:current.nova_sit_cod||null, situacao:sitDesc||null,
       cod_estado:current.novo_estado_cod||null, estado:estDesc||null,
       cod_motivo:(current.cod_motivo||MOTIVO_PADRAO),
-      cod_comissao:estMudou?(current.cod_comissao||null):null,
+      cod_comissao:(current.cod_comissao||(COMISSOES[0]?COMISSOES[0].cod:null)),
       data_movimento:locMudou?(current.data_mov||new Date().toISOString()):null,
       concluido:current.concluido, atualizado_em:new Date().toISOString()
     };
@@ -938,11 +945,40 @@ function dataURLtoBlob(d){
 $('#btnReopenImport').addEventListener('click',()=>{
   $('#searchCard').classList.add('hidden');$('#detailCard').classList.add('hidden');
   $('#toolsCard').classList.remove('hidden');
+  preencherComissaoForm();
   $('#toolsInfo').innerHTML=`Localizações: <b>${LOCS.length}</b> · Motivos: <b>${MOTIVOS.length}</b> · Comissões: <b>${COMISSOES.length}</b><br>Bens no banco: <b>${statsCache.total.toLocaleString('pt-BR')}</b>`;
 });
 $('#btnReopenImport').classList.remove('hidden');
 $('#btnCloseTools').addEventListener('click',()=>{$('#toolsCard').classList.add('hidden');$('#searchCard').classList.remove('hidden');});
 $('#btnReloadAux').addEventListener('click',async()=>{await loadAux();toast('Tabelas recarregadas');$('#btnReopenImport').click();});
+
+/* ====================== CADASTRO DA COMISSÃO (única) ====================== */
+// preenche o formulário com a comissão atual (se já houver uma cadastrada)
+function preencherComissaoForm(){
+  const c=COMISSOES[0];
+  if(c){ $('#comCod').value=c.cod||''; $('#comDesc').value=c.desc||'';
+    $('#comInfo').textContent='Comissão atual: '+c.cod+' — '+c.desc;
+  } else { $('#comInfo').textContent='Nenhuma comissão cadastrada ainda.'; }
+}
+
+$('#btnSalvarComissao').addEventListener('click',async()=>{
+  const cod=($('#comCod').value||'').trim();
+  const desc=($('#comDesc').value||'').trim();
+  if(!cod){ toast('Informe o código da comissão'); return; }
+  if(!desc){ toast('Informe a descrição da comissão'); return; }
+  const btn=$('#btnSalvarComissao'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
+  try{
+    // comissão é única: limpa a tabela e grava só esta
+    const del=await sb.from('comissoes').delete().neq('cod','__nunca__');
+    if(del.error) throw del.error;
+    const ins=await sb.from('comissoes').insert([{cod, desc_:desc}]);
+    if(ins.error) throw ins.error;
+    await loadAux();
+    preencherComissaoForm();
+    toast('✓ Comissão salva');
+  }catch(e){ toast('Erro ao salvar comissão: '+(e.message||e)); }
+  finally{ btn.disabled=false; btn.textContent=txt; }
+});
 
 /* ====================== IMPORTAÇÃO CSV (admin) ====================== */
 // Configuração de cada tabela: colunas válidas e como normalizar cada linha do CSV
@@ -1005,14 +1041,6 @@ const IMPORT_CFG = {
     map:(row)=>{
       const cod=(row.cod ?? row.cdMotivo ?? '').toString().trim();
       const desc=(row.desc_ ?? row.dsMotivo ?? '').toString().trim();
-      return cod ? {cod, desc_:desc} : null;
-    }
-  },
-  comissoes: {
-    label:'Comissões', table:'comissoes', conflict:'cod',
-    map:(row)=>{
-      const cod=(row.cod ?? row.CdComissao ?? '').toString().trim();
-      const desc=(row.desc_ ?? row.NmComissao ?? '').toString().trim();
       return cod ? {cod, desc_:desc} : null;
     }
   }
@@ -1158,7 +1186,7 @@ async function exportAtualiza(){
         codLocal, b.cod_classificacao, codSit, codEstado,
         dataBR(b.data_ingresso), b.tipo_ingresso, b.cod_fornecedor, b.cod_convenio, valorBR(b.valor_atual),
         b.contabil, b.depreciavel, b.metodo_depreciacao, b.vida_util, valorBR(b.valor_residual),
-        dataBR(b.data_inicio_depreciacao), (lev.cod_motivo||MOTIVO_PADRAO), estMudou?(lev.cod_comissao||''):''
+        dataBR(b.data_inicio_depreciacao), (lev.cod_motivo||MOTIVO_PADRAO), (lev.cod_comissao||'')
       ].map(csvCell).join(','));
     }
     // CONFERÊNCIA: placas repetidas no conjunto que vai ser exportado
