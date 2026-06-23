@@ -103,7 +103,11 @@
     <label>E-mail</label>
     <input type="email" id="loginEmail" autocomplete="username" inputmode="email" placeholder="voce@exemplo.com">
     <label>Senha</label>
-    <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••">
+    <div style="position:relative">
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••" style="padding-right:44px">
+      <button type="button" id="btnTogglePass" aria-label="Mostrar senha"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--muted)">👁️</button>
+    </div>
     <button class="btn btn-block" id="btnLogin" style="margin-top:6px">Entrar</button>
     <div id="loginMsg" style="margin-top:12px;font-size:13px"></div>
   </div>
@@ -134,7 +138,7 @@
       <button type="button" class="seg-btn" id="segCodigo" data-modo="codigo" style="flex:1">Por código</button>
     </div>
     <div class="row">
-      <input type="search" id="plateInput" inputmode="text" placeholder="Digite a placa..." style="margin:0">
+      <input type="search" id="plateInput" inputmode="numeric" placeholder="Digite a placa..." style="margin:0">
       <button class="btn-2" id="btnSearch" style="flex:none">Buscar</button>
     </div>
     <div id="scanWrap" class="hidden">
@@ -172,7 +176,7 @@
     <div id="semPlacaWrap" class="hidden" style="background:rgba(180,83,9,.08);border:1px solid var(--warn);border-radius:10px;padding:12px;margin-bottom:14px">
       <label style="color:var(--warn)">Item sem placa — informe a placa encontrada</label>
       <div class="row">
-        <input type="text" id="fPlacaNova" inputmode="text" placeholder="Digite ou escaneie a placa..." style="margin:0">
+        <input type="text" id="fPlacaNova" inputmode="numeric" placeholder="Digite ou escaneie a placa..." style="margin:0">
         <button class="btn-2" id="btnScanPlacaNova" style="flex:none" title="Escanear">📷</button>
       </div>
       <small style="color:var(--muted);display:block;margin-top:6px">Deixe em branco se o item realmente não tiver placa.</small>
@@ -217,8 +221,8 @@
     </div>
 
     <div id="comWrap" class="hidden" style="background:rgba(15,118,110,.06);border:1px solid var(--accent);border-radius:10px;padding:12px;margin:14px 0">
-      <label style="color:var(--accent)">Comissão de avaliação <span style="text-transform:none">(alteração de estado/valor)</span></label>
-      <select id="fComissao"><option value="">— selecione a comissão —</option></select>
+      <label style="color:var(--accent)">Comissão de avaliação</label>
+      <div id="comInfoDetalhe" style="font-weight:600;color:var(--txt)">—</div>
     </div>
 
     <label>Registro fotográfico</label>
@@ -329,7 +333,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-13'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-14'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -363,10 +367,23 @@ async function enterApp(){
 }
 $('#btnLogin').addEventListener('click', doLogin);
 $('#loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+// olho para mostrar/ocultar a senha
+$('#btnTogglePass')&&$('#btnTogglePass').addEventListener('click',()=>{
+  const inp=$('#loginPass'); const btn=$('#btnTogglePass');
+  if(inp.type==='password'){ inp.type='text'; btn.textContent='🙈'; btn.setAttribute('aria-label','Ocultar senha'); }
+  else{ inp.type='password'; btn.textContent='👁️'; btn.setAttribute('aria-label','Mostrar senha'); }
+});
+// lembrar o e-mail digitado (a senha fica a cargo do navegador via autocomplete)
+try{
+  const emailSalvo=localStorage.getItem('lev_email');
+  if(emailSalvo && $('#loginEmail')) $('#loginEmail').value=emailSalvo;
+}catch(_){}
+
 async function doLogin(){
   const email=norm($('#loginEmail').value), pass=$('#loginPass').value;
   if(!email||!pass){$('#loginMsg').innerHTML='<span class="err">Informe e-mail e senha.</span>';return;}
   $('#loginMsg').innerHTML='<span class="spin"></span> Entrando...';
+  try{ localStorage.setItem('lev_email', email); }catch(_){}
   const {error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){$('#loginMsg').innerHTML='<span class="err">'+error.message+'</span>';}
   else{$('#loginMsg').innerHTML='';}
@@ -385,7 +402,6 @@ async function loadAux(){
     MOTIVOS=(mot.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
     COMISSOES=(com.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
     fillSelect('#fMotivo',MOTIVOS,'— selecione o motivo —');
-    fillSelect('#fComissao',COMISSOES,'— selecione a comissão —');
   }catch(e){ toast('Falha ao carregar tabelas de apoio'); }
 }
 function fillSelect(sel,list,ph){
@@ -724,7 +740,7 @@ function openDetail(bem, lev){
   $('#fEstado').value=current.novo_estado_cod||'';
   $('#fSituacao').value=current.nova_sit_cod||'';
   $('#fMotivo').value=current.cod_motivo||'';
-  $('#fComissao').value=current.cod_comissao||'';
+  { const c=COMISSOES[0]; $('#comInfoDetalhe').textContent = c ? (c.desc+' ('+c.cod+')') : 'Nenhuma comissão cadastrada'; }
   $('#fDone').checked=current.concluido;
   renderLocField(); renderPhotos(); updateStatusPill(); updateMovComVisibility();
   loadFotosExistentes(bem.codigo);
@@ -799,7 +815,7 @@ $('#fLocal').addEventListener('blur',()=>{setTimeout(()=>$('#locSuggest').classL
 $('#fEstado').addEventListener('change',e=>{ if(!current)return; current.novo_estado_cod=e.target.value; updateMovComVisibility(); });
 $('#fSituacao').addEventListener('change',e=>{ if(!current)return; current.nova_sit_cod=e.target.value; });
 $('#fMotivo').addEventListener('change',e=>{ if(current)current.cod_motivo=e.target.value; });
-$('#fComissao').addEventListener('change',e=>{ if(current)current.cod_comissao=e.target.value; });
+// (comissão agora é só informativa, sem seletor)
 $('#fDone').addEventListener('change',e=>{ if(current){current.concluido=e.target.checked;updateStatusPill();} });
 
 function updateStatusPill(){
@@ -852,7 +868,7 @@ async function saveItem(){
   current.novo_estado_cod=$('#fEstado').value;
   current.nova_sit_cod=$('#fSituacao').value;
   current.cod_motivo=$('#fMotivo').value;
-  current.cod_comissao=$('#fComissao').value;
+  current.cod_comissao=(COMISSOES[0]?COMISSOES[0].cod:'');
   current.concluido=$('#fDone').checked;
   // placa informada em campo (só para itens sem placa cadastrada)
   if(!current.temPlaca){ current.placa_nova=stripZeros(($('#fPlacaNova').value||'').trim()); }
