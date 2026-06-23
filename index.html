@@ -284,6 +284,11 @@
     <label>Descrição</label>
     <input type="text" id="comDesc" placeholder="Ex.: Comissão de Avaliação 2026" style="margin:0 0 12px">
     <button class="btn-ok btn-block" id="btnSalvarComissao">Salvar comissão</button>
+    <div id="comCard" style="display:none;margin-top:12px;background:rgba(15,118,110,.06);border:1px solid var(--accent);border-radius:10px;padding:12px">
+      <div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Comissão cadastrada</div>
+      <div id="comCardTexto" style="font-weight:600;color:var(--txt)">—</div>
+      <button class="btn-2 btn-block" id="btnEditarComissao" style="margin-top:10px">✏️ Editar</button>
+    </div>
     <div id="comInfo" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
 
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
@@ -348,7 +353,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-22'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.06.22-23'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1006,9 +1011,29 @@ $('#btnReloadAux').addEventListener('click',async()=>{await loadAux();toast('Tab
 // preenche o formulário com a comissão atual (se já houver uma cadastrada)
 function preencherComissaoForm(){
   const c=COMISSOES[0];
-  if(c){ $('#comCod').value=c.cod||''; $('#comDesc').value=c.desc||'';
-    $('#comInfo').textContent='Comissão atual: '+c.cod+' — '+c.desc;
-  } else { $('#comInfo').textContent='Nenhuma comissão cadastrada ainda.'; }
+  const card=$('#comCard'), texto=$('#comCardTexto'), info=$('#comInfo');
+  if(c){
+    // mostra o cartão da comissão salva; campos ficam vazios (prontos para nova/editar)
+    card.style.display='block';
+    texto.textContent=c.cod+' — '+c.desc;
+    $('#comCod').value=''; $('#comDesc').value='';
+    info.textContent='';
+  } else {
+    card.style.display='none';
+    $('#comCod').value=''; $('#comDesc').value='';
+    info.textContent='Nenhuma comissão cadastrada ainda.';
+  }
+}
+
+// botão Editar: carrega a comissão salva nos campos para alteração
+function ligarBtnEditarComissao(){
+  const btn=$('#btnEditarComissao'); if(!btn) return;
+  btn.onclick=()=>{
+    const c=COMISSOES[0]; if(!c) return;
+    $('#comCod').value=c.cod||''; $('#comDesc').value=c.desc||'';
+    $('#comInfo').textContent='Editando a comissão. Altere e toque em Salvar.';
+    $('#comCod').focus();
+  };
 }
 
 /* ====================== ACOMPANHAMENTO (encontrados / não encontrados) ====================== */
@@ -1118,6 +1143,7 @@ $('#btnSalvarComissao').addEventListener('click',async()=>{
   }catch(e){ toast('Erro ao salvar comissão: '+(e.message||e)); }
   finally{ btn.disabled=false; btn.textContent=txt; }
 });
+ligarBtnEditarComissao();
 
 /* ====================== IMPORTAÇÃO CSV (admin) ====================== */
 // Configuração de cada tabela: colunas válidas e como normalizar cada linha do CSV
