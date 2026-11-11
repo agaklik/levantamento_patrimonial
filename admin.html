@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Administração · Levantamento Patrimonial</title>
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#ffffff; --surface2:#f0ebe0; --border:#d9d0bf;
+    --txt:#2b2a26; --muted:#7a7262; --accent:#0f766e; --accent-2:#c2410c; --ok:#15803d; --warn:#b45309; --danger:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  .hidden{display:none!important}
+  header{position:sticky;top:0;z-index:40;background:var(--accent);color:#fff;border-bottom:3px solid var(--accent-2);padding:0 20px;display:flex;align-items:center;gap:24px;min-height:54px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:700;white-space:nowrap}
+  header h1 small{font-weight:400;opacity:.8;margin-left:6px}
+  nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}
+  nav button{background:none;color:rgba(255,255,255,.8);border-radius:8px 8px 0 0;padding:17px 14px 14px;border-bottom:3px solid transparent;margin-bottom:-3px}
+  nav button.active{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,.12)}
+  .hdr-right{display:flex;gap:8px;align-items:center;font-size:12px}
+  .hdr-right a,.hdr-right button{color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 10px;text-decoration:none;font-size:12px;font-weight:600}
+  main{padding:20px;max-width:1400px;margin:0 auto}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+  .card h2{margin:0 0 4px;font-size:16px}
+  .card p.sub{margin:0 0 12px;color:var(--muted);font-size:13px}
+  button{font:inherit;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+  button:disabled{opacity:.5;cursor:default}
+  .btn{background:var(--accent);color:#fff}
+  .btn-2{background:var(--surface2);color:var(--txt);border:1px solid var(--border)}
+  .btn-danger{background:none;color:var(--danger);border:1px solid var(--danger)}
+  label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:0 0 4px}
+  input,select,textarea{font:inherit;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--txt)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  input[readonly]{background:var(--surface2)}
+  input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:var(--accent)}
+  textarea{min-height:64px;resize:vertical}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .kpi .l{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .kpi .v{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .d{font-size:12px;color:var(--muted);margin-top:2px}
+  .bar{height:8px;background:var(--surface2);border-radius:5px;overflow:hidden;margin-top:8px}
+  .bar>div{height:100%;background:var(--accent)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+  .toolbar>div{flex:1;min-width:150px}.toolbar>div.fix{flex:none;min-width:0}
+  .tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--surface2);font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);white-space:nowrap;position:sticky;top:0}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  #tbody tr{cursor:pointer}#tbody tr:hover{background:rgba(15,118,110,.05)}
+  tbody tr:last-child td{border-bottom:none}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .p-ok{background:rgba(21,128,61,.12);color:var(--ok)}.p-pend{background:rgba(180,83,9,.12);color:var(--warn)}.p-no{background:rgba(185,28,28,.1);color:var(--danger)}.p-mut{background:var(--surface2);color:var(--muted)}
+  .pager{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;color:var(--muted);gap:10px;flex-wrap:wrap}
+  .msg{padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid var(--warn);background:rgba(180,83,9,.08);color:var(--warn);font-weight:600}
+  .pos{color:var(--ok)}.neg{color:var(--danger)}
+  /* painel lateral */
+  #drawerBg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:60}
+  #drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);background:var(--bg);z-index:61;overflow-y:auto;box-shadow:-6px 0 24px rgba(0,0,0,.2);padding:18px}
+  #drawer h2{margin:0;font-size:17px}
+  .dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;font-size:13px}
+  .dl div span{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .thumbs img{width:110px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .result{background:rgba(15,118,110,.07);border:1px solid var(--accent);border-radius:10px;padding:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+  .result b{font-size:22px;color:var(--accent);font-variant-numeric:tabular-nums}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:#2b2a26;color:#fff;padding:10px 18px;border-radius:10px;z-index:200;transition:.25s;opacity:0;font-size:13px;max-width:90vw}
+  .toast.show{transform:translateX(-50%);opacity:1}
+  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login .card{width:min(380px,100%)}
+  .doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .doc-grid .card{margin:0;display:flex;flex-direction:column;gap:10px}
+  .doc-grid .card .acts{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+  /* pré-visualização / impressão */
+  #preview{position:fixed;inset:0;background:#525659;z-index:100;overflow:auto}
+  #previewBar{position:sticky;top:0;background:#2b2a26;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;z-index:2}
+  #previewBar span{flex:1;font-size:13px}
+  .page{background:#fff;color:#000;width:210mm;min-height:297mm;margin:16px auto;padding:18mm 16mm;font-family:Georgia,'Times New Roman',serif;font-size:11pt;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+  .page.land{width:297mm;min-height:210mm}
+  .page h1{font-size:14pt;text-align:center;margin:10pt 0 2pt;text-transform:uppercase}
+  .page .org{text-align:center;font-weight:700;font-size:12pt;text-transform:uppercase}
+  .page .org small{display:block;font-weight:400;font-size:10pt;text-transform:none}
+  .page .num{text-align:center;font-size:10pt;margin-bottom:12pt}
+  .page h3{font-size:11pt;margin:12pt 0 4pt;border-bottom:1px solid #000;padding-bottom:2pt;text-transform:uppercase}
+  .page table{font-size:9.5pt;margin:4pt 0}.page th,.page td,.page tbody tr:last-child td{border:1px solid #666;padding:3pt 5pt}.page th{background:#eee;color:#000;position:static;font-size:8.5pt}
+  .page table.kv td:nth-child(odd){background:#f3f3f3;font-weight:700;width:22%}
+  .page p{margin:4pt 0;text-align:justify}
+  .page .fotos{display:flex;gap:8pt;margin-top:4pt}.page .fotos img{width:48%;max-height:60mm;object-fit:contain;border:1px solid #666}
+  .page .sign{display:flex;flex-wrap:wrap;gap:24pt 20pt;justify-content:space-around;margin-top:34pt;page-break-inside:avoid}
+  .page .sign div{width:44%;border-top:1px solid #000;text-align:center;padding-top:3pt;font-size:10pt}
+  .page .local{margin-top:16pt;text-align:right}
+  .page tfoot td{font-weight:700;background:#eee}
+  @media print{
+    body>*:not(#preview){display:none!important}
+    #preview{position:static;background:none;overflow:visible}
+    #previewBar{display:none}
+    .page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    @page{size:A4;margin:16mm 14mm}
+    thead{display:table-header-group}tr{page-break-inside:avoid}
+  }
+  @media(max-width:800px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:12px}}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginScreen" class="login hidden">
+  <div class="card">
+    <h2>Administração</h2>
+    <p class="sub">Levantamento Patrimonial. Acesso restrito a administradores.</p>
+    <label>E-mail</label><input type="email" id="loginEmail" autocomplete="username" style="margin-bottom:10px">
+    <label>Senha</label><input type="password" id="loginPass" autocomplete="current-password" style="margin-bottom:14px">
+    <button class="btn" id="btnLogin" style="width:100%">Entrar</button>
+    <div id="loginMsg" style="margin-top:10px;font-size:13px;color:var(--danger)"></div>
+  </div>
+</div>
+
+<!-- ===== SEM ACESSO ===== -->
+<div id="blockScreen" class="login hidden">
+  <div class="card">
+    <h2>Acesso não liberado</h2>
+    <p id="blockMsg" style="font-size:14px"></p>
+    <button class="btn-2" id="btnBlockLogout">Sair</button>
+    <a href="./" style="margin-left:10px">Voltar ao app</a>
+  </div>
+</div>
+
+<!-- ===== APLICAÇÃO ===== -->
+<div id="app" class="hidden">
+<header>
+  <h1>Administração <small>Levantamento Patrimonial</small></h1>
+  <nav id="nav">
+    <button data-tab="painel" class="active">Painel</button>
+    <button data-tab="reav">Reavaliação</button>
+    <button data-tab="docs">Documentos</button>
+    <button data-tab="cfg">Configuração</button>
+  </nav>
+  <div class="hdr-right"><a href="./">App de campo</a><button id="btnReload">↻ Atualizar</button><button id="btnLogout">Sair</button></div>
+</header>
+<main>
+  <div id="schemaMsg" class="msg hidden">As tabelas de reavaliação ainda não existem no banco. Execute o script supabase/reavaliacao.sql no SQL Editor do Supabase e recarregue esta página.</div>
+  <div id="loading" style="color:var(--muted);padding:30px;text-align:center">Carregando dados...</div>
+
+  <!-- PAINEL -->
+  <section id="tab-painel" class="hidden">
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <h2>Resumo por classificação</h2>
+      <p class="sub">Somente bens encontrados no levantamento.</p>
+      <div class="tblwrap"><table id="tblClass"></table></div>
+    </div>
+  </section>
+
+  <!-- REAVALIAÇÃO -->
+  <section id="tab-reav" class="hidden">
+    <div class="card">
+      <div class="toolbar">
+        <div style="flex:2"><label>Buscar</label><input type="search" id="fBusca" placeholder="Placa, código ou descrição"></div>
+        <div><label>Localização</label><select id="fLoc"></select></div>
+        <div><label>Classificação</label><select id="fClass"></select></div>
+        <div><label>Situação</label><select id="fStatus">
+          <option value="encontrados">Encontrados (todos)</option>
+          <option value="pendentes">Encontrados, a reavaliar</option>
+          <option value="reavaliados">Reavaliados</option>
+          <option value="nao">Não localizados</option>
+          <option value="todos">Todos os bens</option>
+        </select></div>
+      </div>
+      <div class="toolbar" style="margin-bottom:10px">
+        <div class="fix"><button class="btn-2" id="btnPlanilha">⬇ Planilha de pesquisa de preços</button></div>
+        <div class="fix"><button class="btn-2" id="btnImportar">⬆ Importar valores de referência</button><input type="file" id="fileImport" accept=".csv,text/csv" class="hidden"></div>
+        <div class="fix"><button class="btn-2" id="btnLaudosSel" disabled>🖨 Laudos dos selecionados</button></div>
+        <div style="text-align:right;color:var(--muted);font-size:13px" id="selInfo"></div>
+      </div>
+      <div class="tblwrap"><table>
+        <thead><tr><th><input type="checkbox" id="chkAll" title="Selecionar a página"></th><th>Placa</th><th>Código</th><th>Descrição</th><th>Localização</th><th>Estado</th><th class="n">Valor atual</th><th class="n">Reavaliado</th><th class="n">Variação</th><th>Situação</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table></div>
+      <div class="pager"><span id="pgInfo"></span><span><button class="btn-2" id="pgPrev">‹ Anterior</button> <button class="btn-2" id="pgNext">Próxima ›</button></span></div>
+    </div>
+  </section>
+
+  <!-- DOCUMENTOS -->
+  <section id="tab-docs" class="hidden">
+    <div class="doc-grid">
+      <div class="card">
+        <h2>Laudo de avaliação por item</h2>
+        <p class="sub">Um laudo por bem reavaliado, com identificação, vistoria, metodologia, resultado e assinaturas.</p>
+        <div><label>Localização</label><select id="dLaudoLoc"></select></div>
+        <label style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:13px;font-weight:400;color:var(--txt)"><input type="checkbox" id="dLaudoFotos" checked> Incluir fotos (até 2 por bem)</label>
+        <div class="acts"><button class="btn" id="btnDocLaudos">Gerar laudos</button></div>
+      </div>
+      <div class="card">
+        <h2>Termo de responsabilidade</h2>
+        <p class="sub">Relação dos bens encontrados em cada localização, para assinatura do responsável pelo setor.</p>
+        <div><label>Localização</label><select id="dTermoLoc"></select></div>
+        <div class="acts"><button class="btn" id="btnDocTermos">Gerar termos</button></div>
+      </div>
+      <div class="card">
+        <h2>Relatório de bens não localizados</h2>
+        <p class="sub">Bens do cadastro sem levantamento concluído, agrupados pela localização de origem.</p>
+        <div class="acts"><button class="btn" id="btnDocNao">Gerar relatório</button></div>
+      </div>
+      <div class="card">
+        <h2>Relatório geral da reavaliação</h2>
+        <p class="sub">Todos os bens reavaliados com valor anterior, valor reavaliado e variação, com totais por classificação.</p>
+        <div class="acts"><button class="btn" id="btnDocGeral">Gerar relatório</button><button class="btn-2" id="btnCsvReav">⬇ CSV</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIGURAÇÃO -->
+  <section id="tab-cfg" class="hidden">
+    <div class="card">
+      <h2>Dados do órgão e do trabalho</h2>
+      <p class="sub">Usados no cabeçalho e nas assinaturas dos documentos.</p>
+      <div class="grid g3">
+        <div><label>Órgão / entidade</label><input id="cOrgao" placeholder="Ex.: Câmara Municipal de ..."></div>
+        <div><label>Município / UF</label><input id="cMunicipio" placeholder="Ex.: Santa Rosa/RS"></div>
+        <div><label>CNPJ</label><input id="cCnpj"></div>
+        <div><label>Data-base da reavaliação</label><input type="date" id="cDataBase"></div>
+        <div><label>Ato de nomeação da comissão</label><input id="cAto" placeholder="Ex.: Portaria nº 123/2026"></div>
+        <div><label>Modalidade da avaliação</label><select id="cModalidade"><option value="comissao">Comissão de servidores</option><option value="laudo">Laudo de responsável técnico</option><option value="ambos">Comissão e responsável técnico</option></select></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Comissão de avaliação</h2>
+      <div class="grid g2" id="cMembros"></div>
+    </div>
+    <div class="card">
+      <h2>Responsável técnico</h2>
+      <div class="grid g3">
+        <div><label>Nome</label><input id="cRtNome"></div>
+        <div><label>Título</label><input id="cRtTitulo" placeholder="Ex.: Engenheiro Civil"></div>
+        <div><label>Registro</label><input id="cRtRegistro" placeholder="Ex.: CREA-RS 000000"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Parâmetros do método do fator de reavaliação</h2>
+      <p class="sub">Fator = (peso EC × EC + peso PVU × PVU − peso PUB × PUB) ÷ 100. Quando o resultado fica abaixo do fator mínimo, vale o mínimo. Confira os pesos, as notas e o mínimo com a norma adotada pelo órgão antes de emitir os laudos.</p>
+      <div class="grid g4">
+        <div><label>Peso do estado (EC)</label><input type="number" id="cPesoEc" step="0.1"></div>
+        <div><label>Peso da vida útil futura (PVU)</label><input type="number" id="cPesoPvu" step="0.1"></div>
+        <div><label>Peso do tempo de uso (PUB)</label><input type="number" id="cPesoPub" step="0.1"></div>
+        <div><label>Valor residual padrão (%)</label><input type="number" id="cResidual" step="1" min="0" max="100"></div>
+        <div><label>Fator mínimo</label><input type="number" id="cFatorMin" step="0.01" min="0" max="1"></div>
+        <div><label>Nota: Excelente</label><input type="number" id="cEc1" step="0.5"></div>
+        <div><label>Nota: Bom</label><input type="number" id="cEc2" step="0.5"></div>
+        <div><label>Nota: Regular</label><input type="number" id="cEc3" step="0.5"></div>
+        <div><label>Nota: Péssimo</label><input type="number" id="cEc4" step="0.5"></div>
+      </div>
+      <div style="margin-top:12px"><label>Fundamentação (texto que aparece nos laudos)</label><textarea id="cFundamento"></textarea></div>
+    </div>
+    <button class="btn" id="btnSalvarCfg">Salvar configuração</button>
+  </section>
+</main>
+</div>
+
+<!-- ===== PAINEL LATERAL DO ITEM ===== -->
+<div id="drawerBg" class="hidden"></div>
+<aside id="drawer" class="hidden">
+  <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:12px">
+    <div><h2 id="iTitulo"></h2><div id="iSub" style="color:var(--muted);font-size:13px;margin-top:2px"></div></div>
+    <button class="btn-2" id="btnFechar">✕</button>
+  </div>
+  <div class="card">
+    <div class="dl" id="iDados"></div>
+    <div class="thumbs" id="iFotos"></div>
+  </div>
+  <div class="card" id="iForm">
+    <div class="grid g2">
+      <div><label>Método</label><select id="rMetodo">
+        <option value="fator">Valor de bem novo × fator de reavaliação</option>
+        <option value="mercado">Valor de mercado de bem equivalente</option>
+        <option value="laudo">Valor definido em laudo técnico</option>
+      </select></div>
+      <div><label>Data da avaliação</label><input type="date" id="rData"></div>
+    </div>
+    <div id="boxFator" style="margin-top:12px">
+      <div class="grid g4">
+        <div style="grid-column:span 2"><label>Valor de referência (bem novo)</label><input id="rRef" inputmode="decimal" placeholder="0,00"></div>
+        <div><label>Estado (EC)</label><select id="rEc"></select></div>
+        <div><label>Fator</label><input id="rFator" readonly></div>
+        <div style="grid-column:span 2"><label>Tempo de uso em anos (PUB)</label><input type="number" id="rPub" min="0" max="10" step="1"></div>
+        <div style="grid-column:span 2"><label>Vida útil futura em anos (PVU)</label><input type="number" id="rPvu" min="0" max="10" step="1"></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px" id="rFormula"></div>
+    </div>
+    <div id="boxDireto" class="hidden" style="margin-top:12px">
+      <label>Valor reavaliado</label><input id="rValorDireto" inputmode="decimal" placeholder="0,00">
+    </div>
+    <div class="result" style="margin-top:12px">
+      <div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Valor reavaliado</div><b id="rValor">—</b></div>
+      <div style="text-align:right;font-size:13px"><div>Valor atual: <b id="rAtual" style="font-size:13px;color:var(--txt)"></b></div><div id="rVar"></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:12px">
+      <div><label>Nova vida útil (anos)</label><input type="number" id="rVida" min="0" step="1"></div>
+      <div><label>Valor residual</label><input id="rResidual" inputmode="decimal" placeholder="0,00"></div>
+    </div>
+    <div style="margin-top:12px"><label>Fonte da pesquisa de preços</label><input id="rFonte" placeholder="Ex.: 3 cotações em lojas online, 05/11/2026"></div>
+    <div style="margin-top:12px"><label>Observações</label><textarea id="rObs"></textarea></div>
+    <label style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:14px;font-weight:600;color:var(--txt);margin-top:12px"><input type="checkbox" id="rConcluido"> Reavaliação concluída</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn" id="btnSalvar">Salvar</button>
+      <button class="btn-2" id="btnSalvarProx">Salvar e ir ao próximo</button>
+      <button class="btn-2" id="btnLaudoItem">🖨 Laudo</button>
+      <button class="btn-danger" id="btnExcluir" style="margin-left:auto">Excluir reavaliação</button>
+    </div>
+  </div>
+  <div class="msg hidden" id="iNao">Este bem não foi localizado no levantamento. A reavaliação só é feita em bens encontrados.</div>
+</aside>
+
+<!-- ===== PRÉ-VISUALIZAÇÃO ===== -->
+<div id="preview" class="hidden">
+  <div id="previewBar"><span id="previewInfo"></span><button class="btn" id="btnPrint">🖨 Imprimir / salvar em PDF</button><button class="btn-2" id="btnClosePreview">Fechar</button></div>
+  <div id="previewBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="vendor/supabase.js"></script>
+<script>
+/* ====================== CONFIG ====================== */
+// Mesmo projeto Supabase do app de campo (index.html).
+const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
+const FOTOS_BUCKET = 'fotos';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo'};
+const UNIDADES_GESTORAS = {'0':'Prefeitura Municipal','1':'Câmara Municipal de Vereadores'};
+const CFG_PADRAO = {
+  orgao:'', municipio:'', cnpj:'', dataBase:'', ato:'', modalidade:'comissao',
+  membros:[{nome:'',cargo:'Presidente'},{nome:'',cargo:'Membro'},{nome:'',cargo:'Membro'},{nome:'',cargo:''}],
+  rtNome:'', rtTitulo:'', rtRegistro:'',
+  pesoEc:4, pesoPvu:6, pesoPub:3, residualPct:10, fatorMin:0.1,
+  ec:{'1':10,'2':8,'3':5,'4':2},
+  pvuMin:{'1':8,'2':6,'3':4,'4':1},   // vida útil futura mínima sugerida conforme o estado
+  fundamento:'Avaliação realizada com base no Manual de Contabilidade Aplicada ao Setor Público (MCASP) e na NBC TSP 07 (Ativo Imobilizado), considerando o estado de conservação verificado em vistoria, o tempo de uso e a vida útil futura estimada do bem.'
+};
+const PAGE = 100;
+
+/* ====================== ESTADO ====================== */
+const $ = s => document.querySelector(s);
+let BENS=[], LEV={}, REAV={}, LOCS={}, CFG=structuredClone(CFG_PADRAO);
+let USER=null, schemaOk=true, filtrados=[], pagina=0, selecionados=new Set(), atual=null;
+
+const toast=(m,ms=2600)=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);};
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const semAcento=s=>(s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+// número: aceita "1.234,56", "1234.56", número ou vazio
+function num(v){
+  if(v==null||v==='') return null;
+  if(typeof v==='number') return isFinite(v)?v:null;
+  let s=String(v).trim().replace(/[R$\s]/g,'');
+  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s); return isFinite(n)?n:null;
+}
+const brl=n=>(n==null?'—':n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+const dec=n=>(n==null?'':n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}));
+const r2=n=>Math.round(n*100)/100;
+function parseData(s){
+  s=(s||'').toString().trim(); if(!s) return null;
+  let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){ let y=+m[3]; if(y<100) y+=2000; return new Date(y,+m[2]-1,+m[1]); }
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  return null;
+}
+const dataBR=d=>{ if(typeof d==='string') d=parseData(d); return d?d.toLocaleDateString('pt-BR'):''; };
+const hojeISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const dataExtenso=iso=>{const d=parseData(iso)||new Date();return d.toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});};
+
+/* ---------- visão consolidada de um bem ---------- */
+const lev=b=>LEV[b.codigo]||null;
+const encontrado=b=>!!(lev(b)&&lev(b).concluido);
+const reav=b=>REAV[b.codigo]||null;
+const reavOk=b=>!!(reav(b)&&reav(b).concluido&&reav(b).valor_reavaliado!=null);
+const locCod=b=>(lev(b)&&lev(b).cod_localizacao)||b.cod_localizacao||'';
+const locDesc=b=>{const c=locCod(b);return (LOCS[c]&&LOCS[c].desc)||(lev(b)&&lev(b).localizacao)||b.localizacao||c||'—';};
+const estCod=b=>String((lev(b)&&lev(b).cod_estado)||b.cod_estado||'');
+const estDesc=b=>ESTADOS[estCod(b)]||(lev(b)&&lev(b).estado)||b.estado||'—';
+const sitDesc=b=>(lev(b)&&lev(b).situacao)||b.situacao||'—';
+const placa=b=>(b.placa&&String(b.placa).trim())||(lev(b)&&lev(b).placa_nova)||'s/ placa';
+const ugDesc=b=>{const l=LOCS[locCod(b)];const c=l?String(l.ug||'').replace(/^0+(?=\d)/,''):'';return c===''?'—':(UNIDADES_GESTORAS[c]?c+' — '+UNIDADES_GESTORAS[c]:c);};
+function anosUso(b){
+  const ini=parseData(b.data_ingresso); if(!ini) return null;
+  const fim=parseData(CFG.dataBase)||new Date();
+  return Math.max(0,(fim-ini)/(365.25*24*3600*1000));
+}
+function calcFator(ec,pvu,pub){
+  if(ec==null||pvu==null||pub==null) return null;
+  return Math.max(+CFG.fatorMin||0, r2((CFG.pesoEc*ec + CFG.pesoPvu*pvu - CFG.pesoPub*pub))/100);
+}
+const notaEc=b=>{const n=CFG.ec[estCod(b)];return n==null?null:+n;};
+// sugestão de PUB e PVU (0 a 10): PUB vem da data de ingresso; PVU é o que resta de 10 anos,
+// mas nunca abaixo do mínimo associado ao estado de conservação. O avaliador pode alterar os dois.
+function sugestao(b){
+  const a=anosUso(b);
+  const pub=a==null?null:Math.min(10,Math.round(a));
+  const pvu=pub==null?null:Math.min(10,Math.max(10-pub, +(CFG_PADRAO.pvuMin[estCod(b)]||1)));
+  return {pub,pvu};
+}
+
+/* ====================== AUTENTICAÇÃO ====================== */
+function tela(id){ ['loginScreen','blockScreen','app'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id)); }
+async function iniciar(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ tela('loginScreen'); return; }
+  USER=session.user;
+  let admin=false, falta=false;
+  try{
+    const {data,error}=await sb.rpc('is_admin');
+    if(error){ falta = error.code==='PGRST202'||error.code==='42883'||/could not find the function|does not exist/i.test(error.message||''); }
+    else admin = data===true;
+  }catch(_){}
+  if(!admin){
+    $('#blockMsg').textContent = falta
+      ? 'As regras de acesso ainda não foram configuradas no banco. Execute o script supabase/seguranca.sql no SQL Editor do Supabase e tente de novo.'
+      : 'O usuário '+(USER.email||'')+' não está cadastrado como administrador.';
+    tela('blockScreen'); return;
+  }
+  tela('app');
+  await carregar();
+}
+$('#btnLogin').addEventListener('click',entrar);
+$('#loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
+async function entrar(){
+  const email=$('#loginEmail').value.trim(), password=$('#loginPass').value;
+  if(!email||!password){ $('#loginMsg').textContent='Informe e-mail e senha.'; return; }
+  $('#loginMsg').textContent='';
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error){ $('#loginMsg').textContent=error.message; return; }
+  iniciar();
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+$('#btnLogout').addEventListener('click',sair);
+$('#btnBlockLogout').addEventListener('click',sair);
+$('#btnReload').addEventListener('click',()=>carregar());
+
+/* ====================== CARGA DE DADOS ====================== */
+async function lerTudo(tabela, colunas, ordem){
+  let tudo=[], from=0; const passo=1000;
+  while(true){
+    const {data,error}=await sb.from(tabela).select(colunas).order(ordem).range(from,from+passo-1);
+    if(error) throw error;
+    tudo=tudo.concat(data||[]);
+    if(!data||data.length<passo) break;
+    from+=passo;
+  }
+  return tudo;
+}
+const tabelaAusente=e=>e&&(e.code==='42P01'||e.code==='PGRST205'||/does not exist|could not find the table/i.test(e.message||''));
+async function carregar(){
+  $('#loading').classList.remove('hidden');
+  try{
+    const [bens,levs,locs]=await Promise.all([
+      lerTudo('bens','*','codigo'), lerTudo('levantamento','*','codigo'), lerTudo('localizacoes','cod,desc_,unidade_gestora','cod')
+    ]);
+    BENS=bens; LEV={}; levs.forEach(l=>LEV[l.codigo]=l);
+    LOCS={}; locs.forEach(l=>LOCS[l.cod]={desc:l.desc_,ug:l.unidade_gestora});
+    schemaOk=true; REAV={};
+    try{
+      (await lerTudo('reavaliacao','*','codigo')).forEach(r=>REAV[r.codigo]=r);
+      const c=await sb.from('configuracao').select('dados').eq('id',1).maybeSingle();
+      if(c.error) throw c.error;
+      CFG=Object.assign(structuredClone(CFG_PADRAO), (c.data&&c.data.dados)||{});
+      CFG.ec=Object.assign({},CFG_PADRAO.ec,CFG.ec||{});
+    }catch(e){ if(tabelaAusente(e)) schemaOk=false; else throw e; }
+    $('#schemaMsg').classList.toggle('hidden',schemaOk);
+    preencherFiltros(); preencherCfg(); renderPainel(); aplicarFiltro();
+    $('#loading').classList.add('hidden');
+    mostrarAba(abaAtual);
+  }catch(e){ $('#loading').textContent='Erro ao carregar: '+(e.message||e); }
+}
+
+/* ====================== ABAS ====================== */
+let abaAtual='painel';
+function mostrarAba(t){
+  abaAtual=t;
+  ['painel','reav','docs','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+}
+document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>mostrarAba(b.dataset.tab)));
+
+/* ====================== PAINEL ====================== */
+function renderPainel(){
+  const enc=BENS.filter(encontrado), rv=enc.filter(reavOk);
+  const total=BENS.length, pct=total?Math.round(enc.length/total*100):0, pctR=enc.length?Math.round(rv.length/enc.length*100):0;
+  const vAnt=rv.reduce((s,b)=>s+(num(b.valor_atual)||0),0), vNovo=rv.reduce((s,b)=>s+(+reav(b).valor_reavaliado||0),0);
+  const vEnc=enc.reduce((s,b)=>s+(num(b.valor_atual)||0),0);
+  const dif=vNovo-vAnt;
+  const k=(l,v,d,bar)=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${d||''}</div>${bar!=null?`<div class="bar"><div style="width:${bar}%"></div></div>`:''}</div>`;
+  $('#kpis').innerHTML=
+    k('Bens no cadastro',total.toLocaleString('pt-BR'),'')+
+    k('Encontrados',enc.length.toLocaleString('pt-BR'),pct+'% do cadastro',pct)+
+    k('Não localizados',(total-enc.length).toLocaleString('pt-BR'),'sem levantamento concluído')+
+    k('Reavaliados',rv.length.toLocaleString('pt-BR'),pctR+'% dos encontrados',pctR)+
+    k('Valor contábil dos encontrados',brl(vEnc),'conforme o cadastro')+
+    k('Valor reavaliado',brl(vNovo),'anterior destes bens: '+brl(vAnt))+
+    k('Variação',`<span class="${dif>=0?'pos':'neg'}">${dif>=0?'+':''}${brl(dif)}</span>`,vAnt?((dif/vAnt*100).toFixed(1).replace('.',',')+'% sobre o valor anterior'):'');
+  const g=porClassificacao(enc);
+  $('#tblClass').innerHTML='<thead><tr><th>Classificação</th><th class="n">Encontrados</th><th class="n">Reavaliados</th><th class="n">Valor atual</th><th class="n">Valor reavaliado</th></tr></thead><tbody>'+
+    g.map(x=>`<tr style="cursor:default"><td>${esc(x.nome)}</td><td class="n">${x.qtd}</td><td class="n">${x.qtdR}</td><td class="n">${brl(x.vAtual)}</td><td class="n">${x.qtdR?brl(x.vNovo):'—'}</td></tr>`).join('')+'</tbody>';
+}
+function porClassificacao(lista){
+  const m={};
+  lista.forEach(b=>{
+    const nome=b.classificacao||b.cod_classificacao||'(sem classificação)';
+    const x=m[nome]=m[nome]||{nome,qtd:0,qtdR:0,vAtual:0,vAnt:0,vNovo:0};
+    x.qtd++; x.vAtual+=num(b.valor_atual)||0;
+    if(reavOk(b)){ x.qtdR++; x.vAnt+=num(b.valor_atual)||0; x.vNovo+=+reav(b).valor_reavaliado||0; }
+  });
+  return Object.values(m).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+}
+
+/* ====================== LISTA DE REAVALIAÇÃO ====================== */
+function opcoes(sel,itens,todos){ $(sel).innerHTML=`<option value="">${todos}</option>`+itens.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join(''); }
+function preencherFiltros(){
+  const locs={}, cls={};
+  BENS.forEach(b=>{ locs[locCod(b)]=locDesc(b); const c=b.classificacao||b.cod_classificacao||''; if(c) cls[c]=c; });
+  const ord=o=>Object.entries(o).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'pt-BR'));
+  const lo=ord(locs);
+  opcoes('#fLoc',lo,'Todas'); opcoes('#fClass',ord(cls),'Todas');
+  opcoes('#dLaudoLoc',lo,'Todas as localizações'); opcoes('#dTermoLoc',lo,'Todas as localizações');
+}
+function aplicarFiltro(manterPagina){
+  const q=semAcento($('#fBusca').value.trim()), loc=$('#fLoc').value, cl=$('#fClass').value, st=$('#fStatus').value;
+  filtrados=BENS.filter(b=>{
+    const e=encontrado(b);
+    if(st==='encontrados'&&!e) return false;
+    if(st==='pendentes'&&(!e||reavOk(b))) return false;
+    if(st==='reavaliados'&&!reavOk(b)) return false;
+    if(st==='nao'&&e) return false;
+    if(loc&&locCod(b)!==loc) return false;
+    if(cl&&(b.classificacao||b.cod_classificacao||'')!==cl) return false;
+    if(q&&!semAcento([b.placa,b.codigo,b.descricao,lev(b)&&lev(b).placa_nova].join(' ')).includes(q)) return false;
+    return true;
+  });
+  if(!manterPagina) pagina=0;
+  renderTabela();
+}
+['#fBusca','#fLoc','#fClass','#fStatus'].forEach(s=>$(s).addEventListener('input',()=>aplicarFiltro()));
+function pillStatus(b){
+  if(!encontrado(b)) return '<span class="pill p-no">Não localizado</span>';
+  if(reavOk(b)) return '<span class="pill p-ok">Reavaliado</span>';
+  if(reav(b)) return '<span class="pill p-pend">Em andamento</span>';
+  return '<span class="pill p-mut">A reavaliar</span>';
+}
+function variacao(b){
+  const a=num(b.valor_atual), r=reav(b)&&reav(b).valor_reavaliado!=null?+reav(b).valor_reavaliado:null;
+  if(r==null) return '';
+  const d=r-(a||0);
+  return `<span class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${dec(d)}</span>`;
+}
+function renderTabela(){
+  const paginas=Math.max(1,Math.ceil(filtrados.length/PAGE));
+  pagina=Math.min(pagina,paginas-1);
+  const fatia=filtrados.slice(pagina*PAGE,(pagina+1)*PAGE);
+  $('#tbody').innerHTML=fatia.map(b=>`<tr data-c="${esc(b.codigo)}">
+    <td><input type="checkbox" class="chk" ${selecionados.has(b.codigo)?'checked':''}></td>
+    <td><b>${esc(placa(b))}</b></td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td>
+    <td>${esc(locDesc(b))}</td><td>${esc(estDesc(b))}</td>
+    <td class="n">${dec(num(b.valor_atual))}</td><td class="n">${reav(b)&&reav(b).valor_reavaliado!=null?dec(+reav(b).valor_reavaliado):''}</td>
+    <td class="n">${variacao(b)}</td><td>${pillStatus(b)}</td></tr>`).join('')
+    || '<tr style="cursor:default"><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">Nenhum bem com esses filtros.</td></tr>';
+  $('#pgInfo').textContent=`${filtrados.length.toLocaleString('pt-BR')} bem(ns) · página ${pagina+1} de ${paginas}`;
+  $('#pgPrev').disabled=pagina===0; $('#pgNext').disabled=pagina>=paginas-1;
+  $('#chkAll').checked=fatia.length>0&&fatia.every(b=>selecionados.has(b.codigo));
+  atualizarSel();
+}
+function atualizarSel(){
+  $('#selInfo').textContent=selecionados.size?selecionados.size+' selecionado(s)':'';
+  $('#btnLaudosSel').disabled=!selecionados.size;
+}
+$('#pgPrev').addEventListener('click',()=>{pagina--;renderTabela();});
+$('#pgNext').addEventListener('click',()=>{pagina++;renderTabela();});
+$('#chkAll').addEventListener('change',e=>{
+  filtrados.slice(pagina*PAGE,(pagina+1)*PAGE).forEach(b=>e.target.checked?selecionados.add(b.codigo):selecionados.delete(b.codigo));
+  renderTabela();
+});
+$('#tbody').addEventListener('click',e=>{
+  const tr=e.target.closest('tr[data-c]'); if(!tr) return;
+  const c=tr.dataset.c;
+  if(e.target.classList.contains('chk')){ e.target.checked?selecionados.add(c):selecionados.delete(c); atualizarSel(); return; }
+  if(e.target.closest('td')===tr.cells[0]) return;
+  abrirItem(c);
+});
+
+/* ====================== ITEM (painel lateral) ====================== */
+const bemPorCodigo=c=>BENS.find(b=>b.codigo===c);
+function abrirItem(codigo){
+  const b=bemPorCodigo(codigo); if(!b) return;
+  atual=b;
+  $('#iTitulo').textContent='Placa '+placa(b);
+  $('#iSub').textContent='Código '+b.codigo+' · '+(b.descricao||b.descricao_reduzida||'');
+  const d=(l,v)=>`<div><span>${l}</span>${esc(v||'—')}</div>`;
+  const a=anosUso(b);
+  $('#iDados').innerHTML=d('Classificação',b.classificacao)+d('Marca / modelo',[b.marca,b.modelo].filter(Boolean).join(' / '))+
+    d('Localização',locDesc(b))+d('Unidade gestora',ugDesc(b))+d('Estado de conservação',estDesc(b))+d('Situação',sitDesc(b))+
+    d('Data de ingresso',dataBR(b.data_ingresso)+(a!=null?` (${a.toFixed(1).replace('.',',')} anos)`:''))+d('Valor atual',brl(num(b.valor_atual)))+
+    d('Vida útil no cadastro',b.vida_util)+d('Levantado em',lev(b)&&lev(b).atualizado_em?new Date(lev(b).atualizado_em).toLocaleDateString('pt-BR'):'');
+  $('#iFotos').innerHTML='';
+  fotosDoBem(b.codigo,6).then(urls=>{ if(atual===b) $('#iFotos').innerHTML=urls.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Foto do bem"></a>`).join(''); });
+  const enc=encontrado(b);
+  $('#iForm').classList.toggle('hidden',!enc); $('#iNao').classList.toggle('hidden',enc);
+  if(enc) preencherForm(b);
+  $('#drawer').classList.remove('hidden'); $('#drawerBg').classList.remove('hidden'); $('#drawer').scrollTop=0;
+}
+function fecharItem(){ atual=null; $('#drawer').classList.add('hidden'); $('#drawerBg').classList.add('hidden'); }
+$('#btnFechar').addEventListener('click',fecharItem);
+$('#drawerBg').addEventListener('click',fecharItem);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(!$('#preview').classList.contains('hidden')) fecharPreview(); else if(atual) fecharItem(); } });
+
+function preencherForm(b){
+  const r=reav(b)||{}, s=sugestao(b);
+  $('#rMetodo').value=r.metodo||'fator';
+  $('#rData').value=(r.data_avaliacao||CFG.dataBase||hojeISO()).slice(0,10);
+  $('#rRef').value=r.valor_referencia!=null?dec(+r.valor_referencia):'';
+  $('#rEc').innerHTML=Object.keys(ESTADOS).map(k=>`<option value="${CFG.ec[k]}">${ESTADOS[k]} (${CFG.ec[k]})</option>`).join('');
+  $('#rEc').value=String(r.ec!=null?+r.ec:(notaEc(b)??CFG.ec['3']));
+  $('#rPub').value=r.pub!=null?+r.pub:(s.pub??'');
+  $('#rPvu').value=r.pvu!=null?+r.pvu:(s.pvu??'');
+  $('#rValorDireto').value=(r.metodo&&r.metodo!=='fator'&&r.valor_reavaliado!=null)?dec(+r.valor_reavaliado):'';
+  $('#rVida').value=r.vida_util_remanescente!=null?+r.vida_util_remanescente:($('#rPvu').value||'');
+  $('#rResidual').value=r.valor_residual!=null?dec(+r.valor_residual):'';
+  $('#rResidual').dataset.auto=r.valor_residual!=null?'':'1';
+  $('#rFonte').value=r.fonte||''; $('#rObs').value=r.observacao||'';
+  $('#rConcluido').checked=r.concluido!=null?!!r.concluido:true;
+  $('#rAtual').textContent=brl(num(b.valor_atual));
+  $('#btnExcluir').classList.toggle('hidden',!reav(b));
+  recalc();
+}
+// lê o formulário e devolve os valores calculados
+function lerForm(){
+  const metodo=$('#rMetodo').value;
+  const o={metodo, valor_referencia:null, ec:null, pvu:null, pub:null, fator:null, valor_reavaliado:null};
+  if(metodo==='fator'){
+    o.valor_referencia=num($('#rRef').value); o.ec=num($('#rEc').value); o.pvu=num($('#rPvu').value); o.pub=num($('#rPub').value);
+    o.fator=calcFator(o.ec,o.pvu,o.pub);
+    if(o.valor_referencia!=null&&o.fator!=null) o.valor_reavaliado=r2(o.valor_referencia*o.fator);
+  }else{ o.valor_reavaliado=num($('#rValorDireto').value); }
+  return o;
+}
+function recalc(){
+  if(!atual) return;
+  const o=lerForm(), fator=o.metodo==='fator';
+  $('#boxFator').classList.toggle('hidden',!fator); $('#boxDireto').classList.toggle('hidden',fator);
+  $('#rFator').value=o.fator!=null?o.fator.toFixed(2).replace('.',','):'';
+  $('#rFormula').textContent=fator?`Fator = (${CFG.pesoEc} × EC + ${CFG.pesoPvu} × PVU − ${CFG.pesoPub} × PUB) ÷ 100. Mínimo de ${String(CFG.fatorMin).replace('.',',')}. PUB e PVU vão de 0 a 10 e vêm sugeridos pela data de ingresso e pelo estado; ajuste conforme a vistoria.`:'';
+  $('#rValor').textContent=brl(o.valor_reavaliado);
+  const a=num(atual.valor_atual);
+  if(o.valor_reavaliado!=null){ const d=o.valor_reavaliado-(a||0); $('#rVar').innerHTML=`Variação: <b class="${d>=0?'pos':'neg'}" style="font-size:13px">${d>=0?'+':''}${brl(d)}</b>`; }
+  else $('#rVar').textContent='';
+  if($('#rResidual').dataset.auto&&o.valor_reavaliado!=null) $('#rResidual').value=dec(r2(o.valor_reavaliado*(+CFG.residualPct||0)/100));
+}
+['#rMetodo','#rRef','#rEc','#rPub','#rPvu','#rValorDireto'].forEach(s=>$(s).addEventListener('input',recalc));
+$('#rResidual').addEventListener('input',()=>{ $('#rResidual').dataset.auto=''; });
+
+function linhaReav(b,o,extra){
+  return Object.assign({
+    codigo:b.codigo, metodo:o.metodo, valor_anterior:num(b.valor_atual),
+    valor_referencia:o.valor_referencia, ec:o.ec, pvu:o.pvu, pub:o.pub, fator:o.fator, valor_reavaliado:o.valor_reavaliado,
+    atualizado_em:new Date().toISOString(), atualizado_por:USER?USER.id:null
+  },extra);
+}
+async function salvarItem(proximo){
+  if(!atual) return false;
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return false; }
+  const b=atual, o=lerForm(), concluido=$('#rConcluido').checked;
+  if(concluido&&o.valor_reavaliado==null){ toast(o.metodo==='fator'?'Informe o valor de referência, o tempo de uso e a vida útil futura.':'Informe o valor reavaliado.'); return false; }
+  if(o.metodo==='fator'&&[o.pvu,o.pub].some(v=>v!=null&&(v<0||v>10))){ toast('PUB e PVU devem ficar entre 0 e 10.'); return false; }
+  const row=linhaReav(b,o,{
+    vida_util_remanescente:num($('#rVida').value), valor_residual:num($('#rResidual').value),
+    fonte:$('#rFonte').value.trim()||null, observacao:$('#rObs').value.trim()||null,
+    data_avaliacao:$('#rData').value||null, concluido
+  });
+  const {error}=await sb.from('reavaliacao').upsert(row,{onConflict:'codigo'});
+  if(error){ toast('Erro ao salvar: '+error.message); return false; }
+  REAV[b.codigo]=row; toast('✓ Reavaliação salva');
+  renderPainel();
+  if(proximo){
+    const i=filtrados.findIndex(x=>x.codigo===b.codigo);
+    aplicarFiltro(true);
+    const prox=filtrados.slice(Math.max(0,i)).find(x=>x.codigo!==b.codigo&&encontrado(x)&&!reavOk(x));
+    if(prox) abrirItem(prox.codigo); else { fecharItem(); toast('✓ Salvo. Não há mais itens a reavaliar neste filtro.'); }
+  }else{ aplicarFiltro(true); $('#btnExcluir').classList.remove('hidden'); }
+  return true;
+}
+$('#btnSalvar').addEventListener('click',()=>salvarItem(false));
+$('#btnSalvarProx').addEventListener('click',()=>salvarItem(true));
+$('#btnExcluir').addEventListener('click',async()=>{
+  if(!atual||!reav(atual)) return;
+  if(!confirm('Excluir a reavaliação deste bem?')) return;
+  const {error}=await sb.from('reavaliacao').delete().eq('codigo',atual.codigo);
+  if(error){ toast('Erro: '+error.message); return; }
+  delete REAV[atual.codigo]; toast('Reavaliação excluída'); renderPainel(); aplicarFiltro(true); preencherForm(atual);
+});
+$('#btnLaudoItem').addEventListener('click',async()=>{
+  if(!atual) return;
+  if(!(await salvarItem(false))) return;
+  if(!reavOk(atual)){ toast('Marque a reavaliação como concluída para gerar o laudo.'); return; }
+  gerarLaudos([atual],true);
+});
+
+/* ---------- fotos ---------- */
+async function fotosDoBem(codigo,limite){
+  try{
+    const {data}=await sb.storage.from(FOTOS_BUCKET).list(String(codigo),{limit:20});
+    const paths=(data||[]).filter(f=>f.name&&f.id!==null).slice(0,limite).map(f=>codigo+'/'+f.name);
+    if(!paths.length) return [];
+    const sig=await sb.storage.from(FOTOS_BUCKET).createSignedUrls(paths,3600);
+    const urls=(sig.data||[]).filter(x=>x&&x.signedUrl&&!x.error).map(x=>x.signedUrl);
+    return urls.length?urls:paths.map(p=>sb.storage.from(FOTOS_BUCKET).getPublicUrl(p).data.publicUrl);
+  }catch(_){ return []; }
+}
+
+/* ====================== PLANILHA DE PESQUISA DE PREÇOS ====================== */
+function csvCell(v){ v=(v??'').toString(); return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function baixar(nome,linhas){
+  const blob=new Blob(['﻿'+linhas.map(l=>l.map(csvCell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+$('#btnPlanilha').addEventListener('click',()=>{
+  const lista=(selecionados.size?BENS.filter(b=>selecionados.has(b.codigo)):filtrados).filter(encontrado);
+  if(!lista.length){ toast('Nenhum bem encontrado no filtro atual.'); return; }
+  const linhas=[['codigo','placa','descricao','marca','modelo','estado','valor_atual','valor_referencia','fonte']];
+  lista.forEach(b=>{ const r=reav(b)||{}; linhas.push([b.codigo,placa(b),b.descricao||'',b.marca||'',b.modelo||'',estDesc(b),dec(num(b.valor_atual)),r.valor_referencia!=null?dec(+r.valor_referencia):'',r.fonte||'']); });
+  baixar('pesquisa_de_precos.csv',linhas);
+  toast(`Planilha com ${lista.length} bem(ns). Preencha valor_referencia e fonte e importe de volta.`,4500);
+});
+// leitor simples de CSV (separador ; ou , com aspas)
+function lerCsv(txt){
+  txt=txt.replace(/^﻿/,'');
+  const primeira=txt.split(/\r?\n/)[0]||'';
+  const sep=(primeira.split(';').length>=primeira.split(',').length)?';':',';
+  const linhas=[]; let campo='', linha=[], aspas=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(aspas){ if(c==='"'){ if(txt[i+1]==='"'){campo+='"';i++;} else aspas=false; } else campo+=c; }
+    else if(c==='"') aspas=true;
+    else if(c===sep){ linha.push(campo); campo=''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&txt[i+1]==='\n') i++; linha.push(campo); campo=''; if(linha.some(x=>x.trim()!=='')) linhas.push(linha); linha=[]; }
+    else campo+=c;
+  }
+  linha.push(campo); if(linha.some(x=>x.trim()!=='')) linhas.push(linha);
+  if(!linhas.length) return [];
+  const cab=linhas[0].map(h=>semAcento(h.trim()).replace(/\s+/g,'_'));
+  return linhas.slice(1).map(l=>{ const o={}; cab.forEach((h,i)=>o[h]=(l[i]||'').trim()); return o; });
+}
+$('#btnImportar').addEventListener('click',()=>{ $('#fileImport').value=''; $('#fileImport').click(); });
+$('#fileImport').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
+  const {rows,ignorados}=montarImportacao(lerCsv(await f.text()));
+  if(!rows.length){ toast('Nenhuma linha com código e valor_referencia válidos.',4000); return; }
+  if(!confirm(`${rows.length} bem(ns) serão reavaliados pelo método do fator, com estado, tempo de uso e vida útil sugeridos pelo sistema.`+(ignorados?`\n${ignorados} linha(s) ignoradas (sem valor, bem não encontrado ou sem data de ingresso).`:'')+'\n\nContinuar?')) return;
+  try{
+    for(let i=0;i<rows.length;i+=500){
+      const {error}=await sb.from('reavaliacao').upsert(rows.slice(i,i+500),{onConflict:'codigo'});
+      if(error) throw error;
+    }
+    rows.forEach(r=>REAV[r.codigo]=r);
+    toast(`✓ ${rows.length} reavaliação(ões) importadas`); renderPainel(); aplicarFiltro(true);
+  }catch(err){ toast('Erro ao importar: '+(err.message||err),5000); }
+});
+function montarImportacao(dados){
+  const rows=[]; let ignorados=0;
+  dados.forEach(d=>{
+    const cod=(d.codigo||'').replace(/^0+(?=\d)/,''), ref=num(d.valor_referencia), b=bemPorCodigo(cod);
+    if(!b||ref==null||ref<=0||!encontrado(b)){ ignorados++; return; }
+    const ant=reav(b)||{}, s=sugestao(b);
+    const ec=ant.ec!=null?+ant.ec:notaEc(b), pub=ant.pub!=null?+ant.pub:s.pub, pvu=ant.pvu!=null?+ant.pvu:s.pvu;
+    const fator=calcFator(ec,pvu,pub);
+    if(fator==null){ ignorados++; return; }
+    const valor=r2(ref*fator);
+    rows.push(linhaReav(b,{metodo:'fator',valor_referencia:ref,ec,pvu,pub,fator,valor_reavaliado:valor},{
+      vida_util_remanescente:ant.vida_util_remanescente!=null?ant.vida_util_remanescente:pvu,
+      valor_residual:ant.valor_residual!=null?ant.valor_residual:r2(valor*(+CFG.residualPct||0)/100),
+      fonte:d.fonte||ant.fonte||null, observacao:ant.observacao||null,
+      data_avaliacao:ant.data_avaliacao||CFG.dataBase||hojeISO(), concluido:true
+    }));
+  });
+  return {rows,ignorados};
+}
+
+/* ====================== CONFIGURAÇÃO ====================== */
+function preencherCfg(){
+  $('#cOrgao').value=CFG.orgao; $('#cMunicipio').value=CFG.municipio; $('#cCnpj').value=CFG.cnpj;
+  $('#cDataBase').value=CFG.dataBase; $('#cAto').value=CFG.ato; $('#cModalidade').value=CFG.modalidade;
+  $('#cMembros').innerHTML=CFG.membros.map((m,i)=>`<div><label>Nome do membro ${i+1}</label><input class="cmN" value="${esc(m.nome)}"></div><div><label>Cargo ou função</label><input class="cmC" value="${esc(m.cargo)}"></div>`).join('');
+  $('#cRtNome').value=CFG.rtNome; $('#cRtTitulo').value=CFG.rtTitulo; $('#cRtRegistro').value=CFG.rtRegistro;
+  $('#cPesoEc').value=CFG.pesoEc; $('#cPesoPvu').value=CFG.pesoPvu; $('#cPesoPub').value=CFG.pesoPub; $('#cResidual').value=CFG.residualPct; $('#cFatorMin').value=CFG.fatorMin;
+  ['1','2','3','4'].forEach(k=>$('#cEc'+k).value=CFG.ec[k]);
+  $('#cFundamento').value=CFG.fundamento;
+}
+$('#btnSalvarCfg').addEventListener('click',async()=>{
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
+  const n=[...document.querySelectorAll('.cmN')], c=[...document.querySelectorAll('.cmC')];
+  const nv=(id,pad)=>{const v=num($(id).value);return v==null?pad:v;};
+  const novo={
+    orgao:$('#cOrgao').value.trim(), municipio:$('#cMunicipio').value.trim(), cnpj:$('#cCnpj').value.trim(),
+    dataBase:$('#cDataBase').value, ato:$('#cAto').value.trim(), modalidade:$('#cModalidade').value,
+    membros:n.map((el,i)=>({nome:el.value.trim(),cargo:c[i].value.trim()})),
+    rtNome:$('#cRtNome').value.trim(), rtTitulo:$('#cRtTitulo').value.trim(), rtRegistro:$('#cRtRegistro').value.trim(),
+    pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0.1),
+    ec:{'1':nv('#cEc1',10),'2':nv('#cEc2',8),'3':nv('#cEc3',5),'4':nv('#cEc4',2)},
+    fundamento:$('#cFundamento').value.trim()
+  };
+  const {error}=await sb.from('configuracao').upsert({id:1,dados:novo,atualizado_em:new Date().toISOString()},{onConflict:'id'});
+  if(error){ toast('Erro ao salvar: '+error.message); return; }
+  CFG=novo; toast('✓ Configuração salva'); renderPainel();
+});
+
+/* ====================== DOCUMENTOS ====================== */
+function abrirPreview(html,info){
+  $('#previewBody').innerHTML=html; $('#previewInfo').textContent=info||'';
+  $('#preview').classList.remove('hidden'); $('#preview').scrollTop=0;
+}
+function fecharPreview(){ $('#preview').classList.add('hidden'); $('#previewBody').innerHTML=''; }
+$('#btnClosePreview').addEventListener('click',fecharPreview);
+$('#btnPrint').addEventListener('click',()=>window.print());
+
+const cabecalho=()=>`<div class="org">${esc(CFG.orgao||'[Órgão não informado na Configuração]')}<small>${esc([CFG.municipio,CFG.cnpj?'CNPJ '+CFG.cnpj:''].filter(Boolean).join(' · '))}</small></div>`;
+const localData=iso=>`<p class="local">${esc((CFG.municipio||'').split('/')[0]||'Local')}, ${dataExtenso(iso||CFG.dataBase||hojeISO())}.</p>`;
+function assinaturas(extra){
+  const s=[];
+  if(CFG.modalidade!=='laudo') CFG.membros.filter(m=>m.nome).forEach(m=>s.push(`<div>${esc(m.nome)}<br><small>${esc(m.cargo||'Membro')} da comissão</small></div>`));
+  if(CFG.modalidade!=='comissao'&&CFG.rtNome) s.push(`<div>${esc(CFG.rtNome)}<br><small>${esc([CFG.rtTitulo,CFG.rtRegistro].filter(Boolean).join(' · ')||'Responsável técnico')}</small></div>`);
+  (extra||[]).forEach(x=>s.push(`<div>${x}</div>`));
+  if(!s.length) s.push('<div>Responsável pela avaliação</div>');
+  return `<div class="sign">${s.join('')}</div>`;
+}
+const kv=pares=>{ let h='<table class="kv">'; for(let i=0;i<pares.length;i+=2){ const a=pares[i], b=pares[i+1]; h+=`<tr><td>${a[0]}</td><td${b?'':' colspan="3"'}>${esc(a[1]||'—')}</td>${b?`<td>${b[0]}</td><td>${esc(b[1]||'—')}</td>`:''}</tr>`; } return h+'</table>'; };
+const NOME_METODO={fator:'Valor de bem novo multiplicado por fator de reavaliação',mercado:'Valor de mercado de bem equivalente',laudo:'Valor definido em laudo técnico'};
+
+function paginaLaudo(b,fotos){
+  const r=reav(b), ano=(r.data_avaliacao||hojeISO()).slice(0,4);
+  const ant=r.valor_anterior!=null?+r.valor_anterior:num(b.valor_atual), novo=+r.valor_reavaliado, dif=novo-(ant||0);
+  let metodo;
+  if(r.metodo==='fator'){
+    metodo=`<p>Método: ${NOME_METODO.fator}. O valor de referência corresponde ao preço de um bem novo, igual ou equivalente, apurado em pesquisa de preços. O fator de reavaliação pondera o estado de conservação (EC), a vida útil futura estimada (PVU) e o tempo de uso do bem (PUB), pela fórmula:</p>
+    <p style="text-align:center"><b>Fator = (${CFG.pesoEc} × EC + ${CFG.pesoPvu} × PVU − ${CFG.pesoPub} × PUB) ÷ 100</b>${+CFG.fatorMin?`, com mínimo de ${String(CFG.fatorMin).replace('.',',')}`:''}</p>
+    <table><tr><th>Valor de referência</th><th>EC</th><th>PVU</th><th>PUB</th><th>Fator</th><th>Valor reavaliado</th></tr>
+    <tr><td class="n">${brl(+r.valor_referencia)}</td><td class="n">${+r.ec}</td><td class="n">${+r.pvu}</td><td class="n">${+r.pub}</td><td class="n">${(+r.fator).toFixed(2).replace('.',',')}</td><td class="n">${brl(novo)}</td></tr></table>`;
+  }else{
+    metodo=`<p>Método: ${NOME_METODO[r.metodo]||esc(r.metodo)}. O valor foi atribuído diretamente pelo avaliador, considerando o estado de conservação verificado em vistoria e os preços praticados para bens equivalentes.</p>`;
+  }
+  return `<div class="page">${cabecalho()}
+    <h1>Laudo de Avaliação de Bem Patrimonial</h1>
+    <div class="num">Laudo nº ${esc(b.codigo)}/${ano}${CFG.ato?' · '+esc(CFG.ato):''}</div>
+    <h3>1. Identificação do bem</h3>
+    ${kv([['Placa',placa(b)],['Código',b.codigo],['Descrição',b.descricao||b.descricao_reduzida],['Classificação',b.classificacao],['Marca',b.marca],['Modelo',b.modelo],['Data de ingresso',dataBR(b.data_ingresso)],['Unidade gestora',ugDesc(b)],['Localização',locDesc(b)]])}
+    <h3>2. Vistoria</h3>
+    ${kv([['Estado de conservação',estDesc(b)],['Situação',sitDesc(b)],['Data do levantamento',lev(b)&&lev(b).atualizado_em?new Date(lev(b).atualizado_em).toLocaleDateString('pt-BR'):''],['Data da avaliação',dataBR(r.data_avaliacao)]])}
+    ${fotos&&fotos.length?`<div class="fotos">${fotos.map(u=>`<img src="${esc(u)}" alt="">`).join('')}</div>`:''}
+    <h3>3. Metodologia</h3>
+    <p>${esc(CFG.fundamento)}</p>${metodo}
+    ${r.fonte?`<p><b>Fonte da pesquisa de preços:</b> ${esc(r.fonte)}</p>`:''}
+    <h3>4. Resultado</h3>
+    ${kv([['Valor contábil anterior',brl(ant)],['Valor reavaliado',brl(novo)],['Variação',(dif>=0?'+':'')+brl(dif)],['Nova vida útil',r.vida_util_remanescente!=null?(+r.vida_util_remanescente)+' ano(s)':''],['Valor residual',r.valor_residual!=null?brl(+r.valor_residual):'']])}
+    ${r.observacao?`<h3>5. Observações</h3><p>${esc(r.observacao)}</p>`:''}
+    ${localData(r.data_avaliacao)}${assinaturas()}
+  </div>`;
+}
+async function gerarLaudos(lista,comFotos){
+  lista=lista.filter(reavOk);
+  if(!lista.length){ toast('Nenhum bem com reavaliação concluída nessa seleção.'); return; }
+  if(lista.length>300&&!confirm(`Serão gerados ${lista.length} laudos. Isso pode demorar. Continuar?`)) return;
+  abrirPreview('<div class="page"><p>Preparando laudos...</p></div>','');
+  const partes=[];
+  for(let i=0;i<lista.length;i++){
+    const fotos=comFotos?await fotosDoBem(lista[i].codigo,2):[];
+    partes.push(paginaLaudo(lista[i],fotos));
+    if(comFotos&&i%10===0) $('#previewInfo').textContent=`Preparando ${i+1} de ${lista.length}...`;
+  }
+  abrirPreview(partes.join(''),`${lista.length} laudo(s)`+(comFotos?'. Aguarde as fotos carregarem antes de imprimir.':''));
+}
+$('#btnLaudosSel').addEventListener('click',()=>gerarLaudos(BENS.filter(b=>selecionados.has(b.codigo)),true));
+$('#btnDocLaudos').addEventListener('click',()=>{
+  const loc=$('#dLaudoLoc').value;
+  gerarLaudos(BENS.filter(b=>!loc||locCod(b)===loc),$('#dLaudoFotos').checked);
+});
+
+function agrupar(lista,chave){ const m=new Map(); lista.forEach(b=>{const k=chave(b); if(!m.has(k)) m.set(k,[]); m.get(k).push(b);}); return [...m.entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'pt-BR')); }
+const valorVigente=b=>reavOk(b)?+reav(b).valor_reavaliado:num(b.valor_atual);
+
+$('#btnDocTermos').addEventListener('click',()=>{
+  const loc=$('#dTermoLoc').value;
+  const lista=BENS.filter(b=>encontrado(b)&&(!loc||locCod(b)===loc));
+  if(!lista.length){ toast('Nenhum bem encontrado nessa localização.'); return; }
+  const grupos=agrupar(lista,locDesc);
+  abrirPreview(grupos.map(([nome,bens])=>{
+    const total=bens.reduce((s,b)=>s+(valorVigente(b)||0),0);
+    return `<div class="page">${cabecalho()}
+      <h1>Termo de Responsabilidade Patrimonial</h1>
+      <div class="num">Localização: <b>${esc(nome)}</b> · Unidade gestora: ${esc(ugDesc(bens[0]))}</div>
+      <p>Declaro que os bens patrimoniais abaixo relacionados, conferidos no levantamento físico${CFG.ato?' realizado conforme '+esc(CFG.ato):''}, encontram-se nesta localização e ficam sob minha responsabilidade quanto à guarda, ao uso e à conservação, comprometendo-me a comunicar ao setor de patrimônio qualquer movimentação, dano ou extravio.</p>
+      <table><thead><tr><th>#</th><th>Placa</th><th>Código</th><th>Descrição</th><th>Estado</th><th>Valor</th></tr></thead>
+      <tbody>${bens.map((b,i)=>`<tr><td class="n">${i+1}</td><td>${esc(placa(b))}</td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td><td>${esc(estDesc(b))}</td><td class="n">${dec(valorVigente(b))}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="5">Total: ${bens.length} bem(ns)</td><td class="n">${dec(total)}</td></tr></tfoot></table>
+      ${localData()}<div class="sign"><div>Responsável pela localização<br><small>Nome e matrícula</small></div><div>Setor de Patrimônio</div></div>
+    </div>`;
+  }).join(''),`${grupos.length} termo(s), ${lista.length} bem(ns)`);
+});
+
+$('#btnDocNao').addEventListener('click',()=>{
+  const lista=BENS.filter(b=>!encontrado(b));
+  if(!lista.length){ toast('Todos os bens foram encontrados.'); return; }
+  const total=lista.reduce((s,b)=>s+(num(b.valor_atual)||0),0);
+  const grupos=agrupar(lista,b=>(LOCS[b.cod_localizacao]&&LOCS[b.cod_localizacao].desc)||b.localizacao||b.cod_localizacao||'(sem localização)');
+  abrirPreview(`<div class="page">${cabecalho()}
+    <h1>Relatório de Bens Não Localizados</h1>
+    <div class="num">${CFG.ato?esc(CFG.ato)+' · ':''}Posição em ${dataBR(new Date())}</div>
+    <p>Relação dos bens constantes do cadastro patrimonial que não foram localizados no levantamento físico, agrupados pela localização de origem. Total: <b>${lista.length}</b> bem(ns), com valor contábil de <b>${brl(total)}</b>.</p>
+    ${grupos.map(([nome,bens])=>`<h3>${esc(nome)} (${bens.length})</h3>
+      <table><thead><tr><th>Placa</th><th>Código</th><th>Descrição</th><th>Ingresso</th><th>Valor atual</th></tr></thead>
+      <tbody>${bens.map(b=>`<tr><td>${esc(placa(b))}</td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td><td>${dataBR(b.data_ingresso)}</td><td class="n">${dec(num(b.valor_atual))}</td></tr>`).join('')}</tbody></table>`).join('')}
+    ${localData()}${assinaturas()}
+  </div>`,`${lista.length} bem(ns) não localizado(s)`);
+});
+
+$('#btnDocGeral').addEventListener('click',()=>{
+  const lista=BENS.filter(reavOk);
+  if(!lista.length){ toast('Ainda não há bens com reavaliação concluída.'); return; }
+  const tA=lista.reduce((s,b)=>s+(num(b.valor_atual)||0),0), tN=lista.reduce((s,b)=>s+(+reav(b).valor_reavaliado),0);
+  const cls=porClassificacao(lista);
+  abrirPreview(`<div class="page land">${cabecalho()}
+    <h1>Relatório Geral da Reavaliação de Bens</h1>
+    <div class="num">${CFG.ato?esc(CFG.ato)+' · ':''}Data-base: ${dataBR(CFG.dataBase)||dataBR(new Date())}</div>
+    <p>${esc(CFG.fundamento)}</p>
+    <h3>Resumo por classificação</h3>
+    <table><thead><tr><th>Classificação</th><th>Bens</th><th>Valor anterior</th><th>Valor reavaliado</th><th>Variação</th></tr></thead>
+    <tbody>${cls.map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${x.qtdR}</td><td class="n">${dec(x.vAnt)}</td><td class="n">${dec(x.vNovo)}</td><td class="n">${dec(x.vNovo-x.vAnt)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="n">${lista.length}</td><td class="n">${dec(tA)}</td><td class="n">${dec(tN)}</td><td class="n">${dec(tN-tA)}</td></tr></tfoot></table>
+    <h3>Bens reavaliados</h3>
+    <table><thead><tr><th>Placa</th><th>Código</th><th>Descrição</th><th>Localização</th><th>Estado</th><th>Método</th><th>Valor anterior</th><th>Valor reavaliado</th><th>Variação</th><th>Vida útil</th></tr></thead>
+    <tbody>${lista.map(b=>{const r=reav(b),a=num(b.valor_atual)||0;return `<tr><td>${esc(placa(b))}</td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td><td>${esc(locDesc(b))}</td><td>${esc(estDesc(b))}</td><td>${r.metodo==='fator'?'Fator '+(+r.fator).toFixed(2).replace('.',','):(r.metodo==='laudo'?'Laudo':'Mercado')}</td><td class="n">${dec(a)}</td><td class="n">${dec(+r.valor_reavaliado)}</td><td class="n">${dec(+r.valor_reavaliado-a)}</td><td class="n">${r.vida_util_remanescente!=null?+r.vida_util_remanescente:''}</td></tr>`;}).join('')}</tbody></table>
+    ${localData()}${assinaturas()}
+  </div>`,`${lista.length} bem(ns) reavaliado(s). Na impressão, escolha a orientação paisagem.`);
+});
+
+$('#btnCsvReav').addEventListener('click',()=>{
+  const lista=BENS.filter(b=>reav(b));
+  if(!lista.length){ toast('Ainda não há reavaliações.'); return; }
+  const linhas=[['codigo','placa','descricao','classificacao','localizacao','estado','metodo','valor_anterior','valor_referencia','ec','pvu','pub','fator','valor_reavaliado','variacao','nova_vida_util_anos','valor_residual','fonte','observacao','data_avaliacao','concluido']];
+  lista.forEach(b=>{ const r=reav(b), a=num(b.valor_atual); linhas.push([b.codigo,placa(b),b.descricao||'',b.classificacao||'',locDesc(b),estDesc(b),r.metodo,dec(a),r.valor_referencia!=null?dec(+r.valor_referencia):'',r.ec??'',r.pvu??'',r.pub??'',r.fator!=null?String(r.fator).replace('.',','):'',r.valor_reavaliado!=null?dec(+r.valor_reavaliado):'',r.valor_reavaliado!=null?dec(+r.valor_reavaliado-(a||0)):'',r.vida_util_remanescente??'',r.valor_residual!=null?dec(+r.valor_residual):'',r.fonte||'',r.observacao||'',dataBR(r.data_avaliacao),r.concluido?'sim':'não']); });
+  baixar('reavaliacao.csv',linhas);
+});
+
+iniciar();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 Aplicativo de campo para o levantamento (inventário físico) de bens patrimoniais de órgãos públicos. A equipe percorre os locais com o celular, lê a placa de cada bem, confere localização, estado de conservação e situação, registra fotos e, ao final, o administrador exporta um arquivo pronto para atualizar o sistema de patrimônio.
 
-Versão atual: `v2026.11.11-26` (aparece na tela de login).
+Versão atual: `v2026.11.11-27` (aparece na tela de login).
 
 ## Sumário
 
@@ -11,6 +11,7 @@ Versão atual: `v2026.11.11-26` (aparece na tela de login).
 - [Perfis de acesso](#perfis-de-acesso)
 - [Uso em campo](#uso-em-campo)
 - [Uso pelo administrador](#uso-pelo-administrador)
+- [Página de administração: reavaliação e documentos](#página-de-administração-reavaliação-e-documentos)
 - [Arquivos CSV de importação](#arquivos-csv-de-importação)
 - [Arquivo de exportação ATUALIZA.csv](#arquivo-de-exportação-atualizacsv)
 - [Regras de negócio](#regras-de-negócio)
@@ -107,6 +108,59 @@ O levantamento usa uma única comissão. Ao salvar uma nova, ela substitui a ant
 ### Exportação
 
 O botão ⬇ no topo gera o `ATUALIZA.csv` com todos os itens levantados. Antes de gerar, o app confere se há placas repetidas e pede confirmação.
+
+## Página de administração: reavaliação e documentos
+
+O app de campo cuida do levantamento. Depois que ele termina, o trabalho continua em **`admin.html`**, uma página pensada para o computador e restrita a administradores. O acesso é pelo link "Abrir página de administração" na engrenagem do app, ou direto pelo endereço do app seguido de `/admin.html`.
+
+Antes do primeiro uso, execute [`supabase/reavaliacao.sql`](supabase/reavaliacao.sql) no SQL Editor do Supabase (depois do `seguranca.sql`).
+
+### Abas
+
+| Aba | Para que serve |
+| --- | --- |
+| **Painel** | Totais de bens, encontrados, não localizados e reavaliados; valor contábil, valor reavaliado e variação; resumo por classificação |
+| **Reavaliação** | Lista dos bens com filtros. Clicar em um bem abre a ficha com os dados do levantamento, as fotos e o formulário de reavaliação |
+| **Documentos** | Geração dos laudos, termos e relatórios |
+| **Configuração** | Dados do órgão, comissão, responsável técnico e parâmetros do cálculo |
+
+### Métodos de reavaliação
+
+| Método | Como o valor é obtido |
+| --- | --- |
+| **Valor de bem novo × fator de reavaliação** | Valor de referência (preço de um bem novo equivalente) multiplicado pelo fator |
+| **Valor de mercado de bem equivalente** | Valor informado diretamente |
+| **Valor definido em laudo técnico** | Valor informado diretamente |
+
+O fator de reavaliação é calculado por:
+
+```
+Fator = (4 × EC + 6 × PVU − 3 × PUB) ÷ 100
+```
+
+- **EC**, estado de conservação: Excelente 10, Bom 8, Regular 5, Péssimo 2. Vem do estado registrado no levantamento.
+- **PVU**, vida útil futura estimada, de 0 a 10 anos.
+- **PUB**, tempo de uso do bem, de 0 a 10 anos. Vem sugerido pela data de ingresso e pela data-base.
+- Quando o resultado fica abaixo do **fator mínimo** (padrão 0,10), vale o mínimo.
+
+PVU e PUB chegam preenchidos com uma sugestão e podem ser alterados pelo avaliador. Pesos, notas, fator mínimo e percentual de valor residual são ajustáveis na aba Configuração. **Confira esses parâmetros com a norma adotada pelo órgão antes de emitir os laudos.**
+
+### Reavaliar em lote
+
+1. Na aba Reavaliação, filtre os bens e clique em **Planilha de pesquisa de preços**. O arquivo traz código, placa, descrição, marca, modelo, estado e valor atual.
+2. Preencha as colunas `valor_referencia` e `fonte`.
+3. Clique em **Importar valores de referência**. Cada bem com valor preenchido é reavaliado pelo método do fator, com os parâmetros sugeridos. Depois é possível abrir qualquer bem e ajustar.
+
+### Documentos gerados
+
+| Documento | Conteúdo |
+| --- | --- |
+| **Laudo de avaliação por item** | Um por bem: identificação, vistoria (com fotos), metodologia, resultado e assinaturas |
+| **Termo de responsabilidade** | Um por localização, com os bens encontrados e espaço para assinatura do responsável |
+| **Relatório de bens não localizados** | Bens sem levantamento concluído, por localização de origem |
+| **Relatório geral da reavaliação** | Todos os bens reavaliados, com totais por classificação. Também disponível em CSV |
+
+Os documentos abrem em uma pré-visualização. O botão **Imprimir / salvar em PDF** usa a impressão do navegador. As assinaturas seguem a modalidade escolhida na Configuração: comissão de servidores, responsável técnico ou ambos.
 
 ## Arquivos CSV de importação
 
@@ -227,6 +281,8 @@ Use somente a chave pública. A chave `service_role` nunca deve aparecer no cód
 
 No painel do Supabase, abra o SQL Editor, cole o conteúdo de [`supabase/seguranca.sql`](supabase/seguranca.sql), troque `SEU_EMAIL_AQUI` pelo e-mail de login do administrador e execute. O script pode ser executado mais de uma vez.
 
+Em seguida, execute da mesma forma o [`supabase/reavaliacao.sql`](supabase/reavaliacao.sql), que cria as tabelas da página de administração.
+
 Para incluir outro administrador depois:
 
 ```sql
@@ -253,6 +309,8 @@ Publique os arquivos da raiz do repositório em qualquer hospedagem de site est�
 | `motivos` | `cod` | `cod`, `desc_` |
 | `comissoes` | `cod` | `cod`, `desc_` |
 | `admins` | `user_id` | Usuários administradores (criada pelo script de segurança) |
+| `reavaliacao` | `codigo` | Uma reavaliação por bem: método, parâmetros, valor reavaliado, nova vida útil, valor residual e fonte |
+| `configuracao` | `id` | Linha única com os dados do órgão, a comissão e os parâmetros do cálculo |
 
 Colunas de `levantamento`: `codigo`, `placa_nova`, `cod_localizacao`, `localizacao`, `cod_situacao`, `situacao`, `cod_estado`, `estado`, `cod_motivo`, `cod_comissao`, `data_movimento`, `concluido`, `atualizado_em`.
 
@@ -292,11 +350,14 @@ O service worker busca sempre a versão da rede quando há conexão. Se um apare
 ## Estrutura do repositório
 
 ```
-index.html              Aplicativo completo (interface, lógica e bibliotecas embutidas)
+index.html              App de campo (interface, lógica e bibliotecas embutidas)
+admin.html              Página de administração (reavaliação e documentos)
+vendor/supabase.js      Biblioteca do Supabase usada pela página de administração
 manifest.json           Dados para instalação como app (nome, cores, ícones)
 sw.js                   Service worker (cache da casca do app)
 icon-192.png            Ícone do app
 icon-512.png            Ícone do app
 supabase/seguranca.sql  Regras de acesso, perfil de administrador e bucket privado
+supabase/reavaliacao.sql  Tabelas da reavaliação e da configuração
 README.md               Este documento
 ```
