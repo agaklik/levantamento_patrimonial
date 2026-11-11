@@ -258,11 +258,12 @@
   <div class="card hidden" id="toolsCard">
     <h3 style="margin-top:0">Tabelas e dados</h3>
     <div id="toolsInfo" style="font-size:13px;color:var(--muted)"></div>
+    <div id="segAviso" class="hidden" style="background:rgba(180,83,9,.08);border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:10px;margin-top:10px;font-size:12px;font-weight:600">⚠️ Regras de acesso não configuradas no banco: qualquer usuário logado vê esta tela. Execute o script supabase/seguranca.sql no painel do Supabase.</div>
     <button class="btn-2 btn-block" id="btnReloadAux" style="margin-top:12px">↻ Recarregar tabelas de apoio</button>
 
     <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
     <h3 style="margin-top:0;font-size:15px">Importar dados (CSV)</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Substitui todo o conteúdo da tabela escolhida pelo arquivo enviado.</p>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Atualiza a tabela escolhida com o arquivo enviado. O levantamento já feito é sempre preservado.</p>
     <div class="row" style="flex-direction:column;gap:8px">
       <button class="btn-2 btn-block" data-import="bens">📦 Importar Bens</button>
       <button class="btn-2 btn-block" data-import="localizacoes">📍 Importar Localizações</button>
@@ -353,7 +354,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.06.22-25'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.11-26'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -390,10 +391,37 @@ async function initAuth(){
 function showLogin(){ $('#loginScreen').classList.remove('hidden'); $('#appScreen').classList.add('hidden'); }
 async function enterApp(){
   $('#loginScreen').classList.add('hidden'); $('#appScreen').classList.remove('hidden');
-  const {data:{user}}=await sb.auth.getUser();
+  await carregarPerfil();
   await loadAux();
   await refreshStats();
 }
+/* ====================== PERFIL (administrador) ====================== */
+// A engrenagem (importação, comissão, listas) só aparece para administradores.
+// Quem é administrador é decidido no banco pela função is_admin() (ver supabase/seguranca.sql);
+// as regras de acesso (RLS) do mesmo script é que de fato bloqueiam quem não é.
+let IS_ADMIN=false, SEGURANCA_CONFIGURADA=true;
+async function carregarPerfil(){
+  let admin=false, configurada=true;
+  try{
+    const {data,error}=await sb.rpc('is_admin');
+    if(error){
+      // função ainda não existe no banco => script de segurança não foi executado.
+      // Mantém o comportamento antigo (engrenagem liberada) e avisa na tela.
+      const naoExiste = error.code==='PGRST202' || error.code==='42883' || /could not find the function|does not exist/i.test(error.message||'');
+      if(naoExiste){ configurada=false; admin=true; }
+    }else{ admin = data===true; }
+  }catch(_){ /* sem rede: fica sem acesso de administrador */ }
+  IS_ADMIN=admin; SEGURANCA_CONFIGURADA=configurada;
+  $('#btnReopenImport').classList.toggle('hidden', !IS_ADMIN);
+  const av=$('#segAviso'); if(av) av.classList.toggle('hidden', SEGURANCA_CONFIGURADA);
+  if(!IS_ADMIN) $('#toolsCard').classList.add('hidden');
+}
+function exigirAdmin(){
+  if(IS_ADMIN) return true;
+  toast('Apenas administradores podem fazer isso.');
+  return false;
+}
+
 $('#btnLogin').addEventListener('click', doLogin);
 $('#loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 // olho para mostrar/ocultar a senha
@@ -580,7 +608,7 @@ async function startScan(){
         stopScan();
         $('#plateInput').value=txt;
         if(navigator.vibrate)navigator.vibrate(120);
-        openByPlate(txt);
+        onScanResult(txt);   // respeita o destino (busca ou placa nova) e trata sempre como placa
         return;
       }
       scanTries++;
@@ -986,7 +1014,13 @@ async function loadFotosExistentes(codigo){
   try{
     const {data}=await sb.storage.from(FOTOS_BUCKET).list(codigo,{limit:20});
     if(!data||!data.length)return;
-    current.fotosExist=data.map(f=>sb.storage.from(FOTOS_BUCKET).getPublicUrl(codigo+'/'+f.name).data.publicUrl);
+    const paths=data.filter(f=>f.name&&f.id!==null).map(f=>codigo+'/'+f.name);
+    if(!paths.length)return;
+    // link assinado (1h): funciona com o bucket privado; se falhar, cai no link público antigo
+    const sig=await sb.storage.from(FOTOS_BUCKET).createSignedUrls(paths,3600);
+    const urls=(sig.data||[]).filter(x=>x&&x.signedUrl&&!x.error).map(x=>x.signedUrl);
+    if(!current||current.bem.codigo!==codigo)return;
+    current.fotosExist = urls.length ? urls : paths.map(p=>sb.storage.from(FOTOS_BUCKET).getPublicUrl(p).data.publicUrl);
     renderPhotos();
   }catch(e){}
 }
@@ -998,12 +1032,12 @@ function dataURLtoBlob(d){
 
 /* ====================== FERRAMENTAS (engrenagem) ====================== */
 $('#btnReopenImport').addEventListener('click',()=>{
+  if(!exigirAdmin()) return;
   $('#searchCard').classList.add('hidden');$('#detailCard').classList.add('hidden');
   $('#toolsCard').classList.remove('hidden');
   preencherComissaoForm();
   $('#toolsInfo').innerHTML=`Localizações: <b>${LOCS.length}</b> · Motivos: <b>${MOTIVOS.length}</b> · Comissões: <b>${COMISSOES.length}</b><br>Bens no banco: <b>${statsCache.total.toLocaleString('pt-BR')}</b>`;
 });
-$('#btnReopenImport').classList.remove('hidden');
 $('#btnCloseTools').addEventListener('click',()=>{$('#toolsCard').classList.add('hidden');$('#searchCard').classList.remove('hidden');});
 $('#btnReloadAux').addEventListener('click',async()=>{await loadAux();toast('Tabelas recarregadas');$('#btnReopenImport').click();});
 
@@ -1128,6 +1162,7 @@ $('#btnBaixarEncontrados').addEventListener('click',()=>baixarLista('encontrados
 $('#btnSalvarComissao').addEventListener('click',async()=>{
   const cod=($('#comCod').value||'').trim();
   const desc=($('#comDesc').value||'').trim();
+  if(!exigirAdmin()) return;
   if(!cod){ toast('Informe o código da comissão'); return; }
   if(!desc){ toast('Informe a descrição da comissão'); return; }
   const btn=$('#btnSalvarComissao'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
@@ -1229,7 +1264,8 @@ $('#importFile').addEventListener('change', (e)=>{
   const file=e.target.files&&e.target.files[0];
   if(!file||!importTarget) return;
   const cfg=IMPORT_CFG[importTarget];
-  if(!confirm(`Importar "${file.name}" para ${cfg.label}?\n\nIsto vai APAGAR os dados atuais de ${cfg.label} e substituir pelos do arquivo.`)) return;
+  if(!exigirAdmin()) return;
+  if(!confirm(`Importar "${file.name}" para ${cfg.label}?\n\nOs registros do arquivo serão incluídos ou atualizados. O levantamento já feito NÃO é apagado.`)) return;
   importCSV(file, cfg);
 });
 
@@ -1271,38 +1307,85 @@ async function importCSV(file, cfg){
   const duplicadas=registros.length-unicos.length;
   registros=unicos;
 
-  showImportProgress(8, `${registros.length} registros${duplicadas?` (${duplicadas} duplicados ignorados)`:''}. Limpando ${cfg.label}...`);
+  showImportProgress(8, `${registros.length} registros${duplicadas?` (${duplicadas} duplicados ignorados)`:''}. Conferindo a base atual...`);
 
-  // 3) limpa a tabela (substituir tudo). Bens depende de levantamento → limpa levantamento antes.
+  // 3) NÃO apaga nada antes: os registros do arquivo são incluídos/atualizados pela chave (upsert).
+  //    Assim o levantamento já feito em campo é preservado mesmo que a importação falhe no meio.
+  const chave=cfg.conflict;
+  let existentes=[], codsLev=new Set();
   try{
+    existentes=await lerColuna(cfg.table, chave);
     if(cfg.table==='bens'){
-      const delLev=await sb.from('levantamento').delete().neq('codigo','__nunca__');
-      if(delLev.error) throw delLev.error;
+      // placas informadas em campo (itens que estavam sem placa) não podem ser perdidas
+      const levs=await lerTudo('levantamento','codigo,placa_nova');
+      const placaCampo={};
+      levs.forEach(l=>{ codsLev.add(l.codigo); if(l.placa_nova) placaCampo[l.codigo]=l.placa_nova; });
+      registros.forEach(r=>{ if(!r.placa && placaCampo[r.codigo]) r.placa=placaCampo[r.codigo]; });
     }
-    const del=await sb.from(cfg.table).delete().neq(cfg.conflict,'__nunca__');
-    if(del.error) throw del.error;
-  }catch(err){ showImportProgress(0,'Erro ao limpar a tabela: '+(err.message||err)); return; }
+  }catch(err){ showImportProgress(0,'Erro ao ler a base atual: '+(err.message||err)); return; }
 
-  // 4) insere em lotes de 500
+  // 4) grava em lotes de 500 (inclui novos, atualiza existentes)
   const lote=500, total=registros.length; let feitos=0;
   try{
     for(let i=0;i<total;i+=lote){
       const slice=registros.slice(i,i+lote);
-      const {error}=await sb.from(cfg.table).insert(slice);
+      const {error}=await sb.from(cfg.table).upsert(slice,{onConflict:chave});
       if(error) throw error;
       feitos+=slice.length;
-      const pct=8+Math.round((feitos/total)*90);
+      const pct=8+Math.round((feitos/total)*85);
       showImportProgress(pct, `Importando ${cfg.label}: ${feitos} de ${total}...`);
     }
-    showImportProgress(100, `✓ ${feitos} registros importados em ${cfg.label}.`);
-    toast(`✓ ${cfg.label}: ${feitos} importados`);
-    // recarrega tabelas de apoio e estatísticas
-    await loadAux(); await refreshStats();
-    setTimeout(()=>{ $('#importProgress').classList.add('hidden'); }, 4000);
   }catch(err){
-    showImportProgress(0, `Erro ao importar (parou em ${feitos} de ${total}): `+(err.message||err));
+    showImportProgress(0, `Erro ao importar (parou em ${feitos} de ${total}; nada foi apagado): `+(err.message||err));
+    return;
   }
+
+  // 5) registros que estão na base mas não vieram no arquivo: remover só com confirmação,
+  //    e nunca um bem que já tenha levantamento.
+  let removidos=0, mantidos=0;
+  try{
+    const noArquivo=new Set(registros.map(r=>r[chave]));
+    const sobrando=existentes.filter(k=>!noArquivo.has(k));
+    const remover=sobrando.filter(k=>!codsLev.has(k));
+    mantidos=sobrando.length-remover.length;
+    if(remover.length && confirm(
+      `${remover.length} registro(s) de ${cfg.label} estão na base mas não vieram no arquivo.\n\n`+
+      (mantidos?`(Outros ${mantidos} também não vieram, mas já têm levantamento e serão mantidos.)\n\n`:'')+
+      `Deseja removê-los da base?\n\nOK = remover · Cancelar = manter`)){
+      for(let i=0;i<remover.length;i+=200){
+        const slice=remover.slice(i,i+200);
+        const {error}=await sb.from(cfg.table).delete().in(chave,slice);
+        if(error) throw error;
+        removidos+=slice.length;
+        showImportProgress(93+Math.round((removidos/remover.length)*6), `Removendo registros antigos: ${removidos} de ${remover.length}...`);
+      }
+    }
+  }catch(err){
+    showImportProgress(0, `Importação concluída (${feitos}), mas houve erro ao remover registros antigos: `+(err.message||err));
+    await loadAux(); await refreshStats();
+    return;
+  }
+
+  showImportProgress(100, `✓ ${feitos} registros importados em ${cfg.label}`+(removidos?`, ${removidos} antigos removidos`:'')+(mantidos?`, ${mantidos} fora do arquivo mantidos por já terem levantamento`:'')+'.');
+  toast(`✓ ${cfg.label}: ${feitos} importados`);
+  // recarrega tabelas de apoio e estatísticas
+  await loadAux(); await refreshStats();
+  setTimeout(()=>{ $('#importProgress').classList.add('hidden'); }, 6000);
 }
+
+// lê todas as linhas de uma tabela (paginando de 1000 em 1000)
+async function lerTudo(tabela, colunas, ordem){
+  let tudo=[], from=0; const passo=1000;
+  while(true){
+    const {data,error}=await sb.from(tabela).select(colunas).order(ordem||colunas.split(',')[0]).range(from,from+passo-1);
+    if(error) throw error;
+    tudo=tudo.concat(data||[]);
+    if(!data || data.length<passo) break;
+    from+=passo;
+  }
+  return tudo;
+}
+async function lerColuna(tabela, coluna){ return (await lerTudo(tabela, coluna)).map(r=>r[coluna]); }
 
 /* ====================== EXPORTAÇÃO ATUALIZA.csv ====================== */
 $('#btnExport').addEventListener('click',exportAtualiza);
