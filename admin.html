@@ -297,6 +297,7 @@
         <div class="fix"><button class="btn-2" id="btnImportar">Importar valores de referência</button><input type="file" id="fileImport" accept=".csv,text/csv" class="hidden"></div>
         <div class="fix"><button class="btn-2" id="btnTipos">Valores por tipo de bem</button></div>
         <div class="fix"><button class="btn" id="btnReavSel" disabled>Reavaliar selecionados</button></div>
+        <div class="fix"><button class="btn-2" id="btnLaudoTecSel" disabled title="Para imóveis, veículos e máquinas avaliados por profissional habilitado">Laudo técnico de engenheiro</button></div>
         <div class="fix"><button class="btn-2" id="btnLaudosSel" disabled>Laudos dos selecionados</button></div>
         <div style="text-align:right;color:var(--muted);font-size:13px" id="selInfo"></div>
       </div>
@@ -972,7 +973,7 @@ function renderTabela(){
 }
 function atualizarSel(){
   $('#selInfo').textContent=selecionados.size?selecionados.size+' selecionado(s)':'';
-  $('#btnLaudosSel').disabled=!selecionados.size; $('#btnReavSel').disabled=!selecionados.size;
+  $('#btnLaudosSel').disabled=!selecionados.size; $('#btnLaudoTecSel').disabled=!selecionados.size; $('#btnReavSel').disabled=!selecionados.size;
 }
 $('#pgPrev').addEventListener('click',()=>{pagina--;renderTabela();});
 $('#pgNext').addEventListener('click',()=>{pagina++;renderTabela();});
@@ -1245,6 +1246,10 @@ $('#btnLaudoTec').addEventListener('click',()=>{
   $('#ltArquivo').value=''; $('#ltArqInfo').textContent=l.arquivo?'Arquivo já anexado: '+(l.arquivo_nome||'laudo')+'. Escolha outro para substituir.':'';
   $('#ltErro').textContent=''; $('#ltRemover').classList.toggle('hidden',!LAUDO_SEL);
   $('#dlgLaudoTec').showModal(); $('#ltNumero').focus();
+});
+$('#btnLaudoTecSel').addEventListener('click',()=>{
+  if(selecionados.size!==1){ toast('O laudo técnico é de um bem por vez. Deixe marcado só o bem do laudo.',4500); return; }
+  abrirItem([...selecionados][0]); if(atual) $('#btnLaudoTec').click();
 });
 $('#ltCancelar').addEventListener('click',()=>$('#dlgLaudoTec').close());
 $('#ltRemover').addEventListener('click',()=>{ LAUDO_SEL=null; LAUDO_MUDOU=true; infoLaudo(); $('#dlgLaudoTec').close(); toast('Laudo removido. Escolha o método e salve.',3500); });
