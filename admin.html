@@ -390,11 +390,6 @@
       <button class="btn" id="btnSalvarModo">Salvar forma de envio</button>
     </div>
     <div class="card">
-      <h2>Localização temporária</h2>
-      <p class="sub">Se, antes da importação, todos os bens foram transferidos no sistema para uma localização temporária, indique qual é. Ela não entra na conclusão das localizações: cada bem encontrado sai dela para a sala onde está, e o que sobrar nela ao final é tratado como não localizado.</p>
-      <div class="toolbar"><div style="max-width:520px"><label>Localização temporária</label><select id="cLocalTemp"></select></div><div class="fix"><button class="btn" id="btnSalvarTemp">Salvar</button></div></div>
-    </div>
-    <div class="card">
       <h2>Receber arquivo do app de campo</h2>
       <p class="sub">Use quando a equipe trabalhou sem internet e exportou o levantamento pelo celular. Os registros e as fotos do arquivo são gravados na nuvem; um item que já foi atualizado depois do arquivo não é sobrescrito.</p>
       <button class="btn-2" id="btnImportCampo">Importar arquivo do celular (.json)</button>
@@ -654,7 +649,11 @@ const encontrado=b=>!!(lev(b)&&lev(b).concluido);
 const reav=b=>REAV[b.codigo]||null;
 let CONC={}, REFS={}, concOk=false;
 const liberado=b=>!concOk||!!CONC[locCod(b)];
-const ehTemp=c=>!!CFG.localTemp&&c===CFG.localTemp;
+// localização de origem: aquela em que (quase) todos os bens estão no cadastro importado.
+// Na estratégia do levantamento, os bens são transferidos para ela antes da importação
+// (ex.: "Levantamento 2026"); o que sobrar nela ao final é tratado como não localizado.
+let LOCAL_ORIGEM='';
+function detectarOrigem(){ const c={}; BENS.forEach(b=>{ const k=b.cod_localizacao||''; c[k]=(c[k]||0)+1; }); const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]; LOCAL_ORIGEM=top&&top[0]&&BENS.length>=5&&top[1]>BENS.length*0.5?top[0]:''; }
 const chaveRef=b=>semAcento(b.descricao||b.descricao_reduzida||'').toUpperCase().replace(/\s+/g,' ').trim();
 const refDe=b=>REFS[chaveRef(b)]||null;
 const reavOk=b=>!!(reav(b)&&reav(b).concluido&&reav(b).valor_reavaliado!=null);
@@ -769,7 +768,7 @@ async function carregar(){
     const [bens,levs,locs]=await Promise.all([
       lerTudo('bens','*','codigo'), lerTudo('levantamento','*','codigo'), lerTudo('localizacoes','cod,desc_,unidade_gestora','cod')
     ]);
-    BENS=bens; LEV={}; levs.forEach(l=>LEV[l.codigo]=l);
+    BENS=bens; LEV={}; levs.forEach(l=>LEV[l.codigo]=l); detectarOrigem();
     LOCS={}; locs.forEach(l=>LOCS[l.cod]={desc:l.desc_,ug:l.unidade_gestora});
     try{
       const [com,mot]=await Promise.all([sb.from('comissoes').select('cod,desc_').order('cod'), sb.from('motivos').select('*',{count:'exact',head:true})]);
@@ -833,18 +832,18 @@ function renderConclusao(){
   BENS.forEach(b=>{ const c=locCod(b); const x=m[c]||(m[c]={cod:c,desc:locDesc(b),total:0,enc:0}); x.total++; if(encontrado(b)) x.enc++; });
   Object.keys(CONC).forEach(c=>{ if(!m[c]) m[c]={cod:c,desc:CONC[c].descricao||c,total:0,enc:0}; });
   const q=semAcento($('#concBusca').value.trim()), f=$('#concFiltro').value;
-  const temp=m[CFG.localTemp||'\u0000']; if(temp) delete m[temp.cod];
+  const temp=m[LOCAL_ORIGEM||'\u0000']; if(temp) delete m[temp.cod];
   const todas=Object.values(m), feitas=todas.filter(x=>CONC[x.cod]).length;
   const lista=todas.filter(x=>(!q||semAcento(x.cod+' '+x.desc).includes(q))&&(!f||(f==='ok')===!!CONC[x.cod]))
     .sort((a,b)=>{ const ca=CONC[a.cod], cb=CONC[b.cod]; if(!!ca!==!!cb) return ca?-1:1; if(ca&&cb) return ca.concluido_em<cb.concluido_em?1:-1; return (b.enc/(b.total||1))-(a.enc/(a.total||1))||String(a.desc).localeCompare(String(b.desc),'pt-BR'); });
-  $('#concInfo').textContent=`${feitas} de ${todas.length} localizações concluídas`+(temp?` · ${temp.total-temp.enc} bem(ns) ainda na localização temporária`:'');
+  $('#concInfo').textContent=`${feitas} de ${todas.length} localizações concluídas`+(temp?` · ${temp.total-temp.enc} bem(ns) ainda na localização de origem`:'');
   $('#concCorpo').innerHTML=lista.map(x=>{ const c=CONC[x.cod];
     return `<tr style="cursor:default" data-c="${esc(x.cod)}"><td>${esc(x.desc)}<small style="display:block;color:var(--muted);font-size:12px">Código ${esc(x.cod||'—')}</small></td><td class="n">${x.total}</td><td class="n">${x.enc}</td>
       <td>${c?'<span class="pill p-ok">Concluída</span>':x.enc?'<span class="pill p-pend">Em andamento</span>':'<span class="pill p-mut">Não iniciada</span>'}</td>
       <td>${c?esc(c.concluido_nome||'—'):''}</td><td>${c?dataHoraBR(c.concluido_em):''}</td>
       <td style="text-align:right">${!concOk?'':c?'<button class="btn-2 cReabrir" style="padding:5px 10px;font-size:12.5px">Reabrir</button>':'<button class="btn-2 cConcluir" style="padding:5px 10px;font-size:12.5px">Concluir</button>'}</td></tr>`; }).join('')
     || '<tr style="cursor:default"><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhuma localização.</td></tr>';
-  if(temp&&!q&&f!=='ok') $('#concCorpo').insertAdjacentHTML('beforeend',`<tr style="cursor:default;background:var(--surface2)"><td>${esc(temp.desc)}<small style="display:block;color:var(--muted);font-size:12px">Código ${esc(temp.cod)} · localização temporária</small></td><td class="n">${temp.total}</td><td class="n">${temp.enc}</td><td><span class="pill p-mut">Temporária</span></td><td colspan="3" style="color:var(--muted);font-size:13px">${temp.total-temp.enc} bem(ns) ainda não encontrados. O que sobrar aqui ao final é tratado como não localizado.</td></tr>`);
+  if(temp&&!q&&f!=='ok') $('#concCorpo').insertAdjacentHTML('beforeend',`<tr style="cursor:default;background:var(--surface2)"><td>${esc(temp.desc)}<small style="display:block;color:var(--muted);font-size:12px">Código ${esc(temp.cod)} · localização de origem</small></td><td class="n">${temp.total}</td><td class="n">${temp.enc}</td><td><span class="pill p-mut">Origem</span></td><td colspan="3" style="color:var(--muted);font-size:13px">${temp.total-temp.enc} bem(ns) ainda não encontrados. O que sobrar aqui ao final é tratado como não localizado.</td></tr>`);
   $('#concCorpo').querySelectorAll('.cConcluir').forEach(b=>b.onclick=()=>concluirLocal(m[b.closest('tr').dataset.c]));
   $('#concCorpo').querySelectorAll('.cReabrir').forEach(b=>b.onclick=()=>reabrirLocal(m[b.closest('tr').dataset.c]));
 }
@@ -1305,16 +1304,7 @@ async function fotosDoBem(codigo,limite){
 }
 
 /* ====================== FORMA DE ENVIO DO APP DE CAMPO ====================== */
-function preencherModo(){ const m=(CFG.modoEnvio==='offline')?'offline':'online'; document.querySelectorAll('input[name=modoEnvio]').forEach(r=>r.checked=r.value===m);
-  $('#cLocalTemp').innerHTML='<option value="">Nenhuma (não uso localização temporária)</option>'+Object.keys(LOCS).sort((a,b)=>String(LOCS[a].desc).localeCompare(String(LOCS[b].desc),'pt-BR')).map(c=>`<option value="${esc(c)}">${esc(LOCS[c].desc||c)} (código ${esc(c)})</option>`).join('');
-  $('#cLocalTemp').value=CFG.localTemp||''; }
-$('#btnSalvarTemp').addEventListener('click',async()=>{
-  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
-  const dados=Object.assign({},CFG,{localTemp:$('#cLocalTemp').value});
-  const {error}=await sb.from('configuracao').upsert({id:1,dados,atualizado_em:new Date().toISOString()},{onConflict:'id'});
-  if(error){ toast('Erro ao salvar: '+error.message,5000); return; }
-  CFG=dados; toast('Localização temporária salva'); renderPainel(); aplicarFiltro(true);
-});
+function preencherModo(){ const m=(CFG.modoEnvio==='offline')?'offline':'online'; document.querySelectorAll('input[name=modoEnvio]').forEach(r=>r.checked=r.value===m); }
 $('#btnSalvarModo').addEventListener('click',async()=>{
   if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
   const m=(document.querySelector('input[name=modoEnvio]:checked')||{}).value||'online';
@@ -1786,7 +1776,7 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0.1),
     ec:{'1':nv('#cEc1',10),'2':nv('#cEc2',8),'3':nv('#cEc3',5),'4':nv('#cEc4',2)},
     fundamento:$('#cFundamento').value.trim(),
-    modoEnvio:CFG.modoEnvio||'online', localTemp:CFG.localTemp||''
+    modoEnvio:CFG.modoEnvio||'online'
   };
   const {error}=await sb.from('configuracao').upsert({id:1,dados:novo,atualizado_em:new Date().toISOString()},{onConflict:'id'});
   if(error){ toast('Erro ao salvar: '+error.message); return; }
