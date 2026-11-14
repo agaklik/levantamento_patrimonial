@@ -62,6 +62,28 @@
   .seg-btn{flex:1;background:transparent;color:var(--muted);border:none;border-radius:8px;padding:8px;min-height:40px;font-weight:600;font-size:15px;cursor:pointer}
   .seg-btn.active{background:var(--surface);color:var(--txt);box-shadow:0 0 0 1px var(--border),0 1px 2px rgba(24,33,43,.08)}
 
+  .hdr-icon{position:relative}
+  .badge{position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--signal);color:var(--signal-ink);font-size:12.5px;font-weight:800;line-height:22px;text-align:center;font-variant-numeric:tabular-nums}
+  .modo-band{display:flex;align-items:center;gap:10px;width:100%;margin:0;border-radius:0;min-height:44px;padding:8px 16px;background:#FFF7E6;color:#5C3D00;border:0;border-bottom:1px solid #E8C27A;font-size:14px;font-weight:600;justify-content:flex-start;text-align:left}
+  .modo-band b{font-variant-numeric:tabular-nums}
+  .modo-band::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--warn);flex:none}
+  #syncCard h3{margin:0 0 4px;font-size:20px;font-weight:700;font-stretch:108%}
+  .sync-mode{border-radius:12px;padding:12px 14px;margin:12px 0 16px;font-size:14.5px;background:var(--surface2);border:1px solid var(--border)}
+  .sync-mode b{display:block;font-size:15.5px;margin-bottom:2px}
+  .sync-count{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .sync-count b{font-size:40px;font-weight:800;font-stretch:80%;font-variant-numeric:tabular-nums;line-height:1}
+  .sync-list{max-height:34vh;overflow:auto;margin:10px 0 14px;border:1px solid var(--line);border-radius:10px}
+  .sync-list div{padding:9px 12px;border-bottom:1px solid var(--line);font-size:14px;display:flex;justify-content:space-between;gap:10px}
+  .sync-list div:last-child{border-bottom:0}
+  .sync-list small{color:var(--muted);white-space:nowrap}
+  .stack{display:flex;flex-direction:column;gap:8px}
+  #syncMsg:not(:empty){margin-top:12px;font-size:14px}
+  .results{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+  .results button{justify-content:space-between;text-align:left;background:var(--surface);border:1.5px solid var(--border);min-height:56px;padding:10px 12px;font-weight:500}
+  .results button b{display:block;font-weight:600}
+  .results button small{display:block;color:var(--muted);font-size:13px}
+  .results button .pl{font-weight:800;font-stretch:80%;font-size:18px;font-variant-numeric:tabular-nums;color:var(--txt);flex:none}
+
   /* ---------- formulários ---------- */
   label{display:block;font-size:14px;font-weight:600;color:var(--txt);margin:0 0 6px}
   input,select{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:12px;min-height:48px;color:var(--txt);font:inherit;margin-bottom:16px;appearance:none;-webkit-appearance:none}
@@ -186,6 +208,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-barcode" viewBox="0 0 30 24"><g fill="currentColor"><rect x="0" y="0" width="2.5" height="24"/><rect x="4" y="0" width="1.2" height="24"/><rect x="7" y="0" width="3" height="24"/><rect x="11.5" y="0" width="1.2" height="24"/><rect x="14" y="0" width="2.2" height="24"/><rect x="18" y="0" width="1.2" height="24"/><rect x="20.5" y="0" width="3" height="24"/><rect x="25" y="0" width="1.2" height="24"/><rect x="27.5" y="0" width="2.5" height="24"/></g></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 8.5A1.5 1.5 0 0 1 4.5 7h3l1.5-2.5h6L16.5 7h3A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.7 4.7 0 0 0 7 18.5zM12 16v-6m-2.5 2.5L12 10l2.5 2.5"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-exit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 8l-4 4 4 4M6 12h10"/></symbol>
 </svg>
@@ -221,9 +244,10 @@
       <div id="progText"></div>
     </div>
   </div>
-  <button id="btnExport" class="hdr-icon" title="Exportar arquivo" aria-label="Exportar arquivo"><svg><use href="#i-download"/></svg></button>
+  <button id="btnEnvio" class="hdr-icon" title="Envio dos dados" aria-label="Envio dos dados"><svg><use href="#i-cloud"/></svg><span class="badge hidden" id="filaBadge">0</span></button>
   <button id="btnLogout" class="hdr-icon" title="Sair" aria-label="Sair"><svg><use href="#i-exit"/></svg></button>
 </header>
+<button id="modoBand" class="modo-band hidden" type="button"></button>
 
 <main>
   <!-- BUSCA / SCANNER -->
@@ -240,12 +264,31 @@
     <div class="seg" role="group" aria-label="Buscar por">
       <button type="button" class="seg-btn active" id="segPlaca" data-modo="placa">Por placa</button>
       <button type="button" class="seg-btn" id="segCodigo" data-modo="codigo">Por código</button>
+      <button type="button" class="seg-btn" id="segNome" data-modo="nome">Por nome</button>
     </div>
     <div class="row">
       <input type="search" id="plateInput" inputmode="numeric" placeholder="Número da placa" aria-label="Placa ou código" style="margin:0">
       <button class="btn" id="btnSearch" style="flex:none;padding:12px 18px">Buscar</button>
     </div>
     <div id="searchMsg" style="font-size:14px"></div>
+    <div id="searchResults" class="results hidden"></div>
+  </div>
+
+  <!-- ENVIO DOS DADOS -->
+  <div class="card hidden" id="syncCard">
+    <h3>Envio dos dados</h3>
+    <div class="sync-mode" id="syncModo"></div>
+    <div class="sync-count"><b id="syncQtd">0</b><span id="syncQtdTxt">itens guardados neste celular</span></div>
+    <div class="sync-list" id="syncLista"></div>
+    <div class="stack">
+      <button class="btn btn-block" id="btnSincronizar">Enviar agora para a nuvem</button>
+      <button class="btn-2 btn-block" id="btnExportarArquivo">Exportar arquivo do levantamento</button>
+      <button class="btn-ghost btn-block hidden" id="btnLimparExportados">Apagar do celular os itens já exportados</button>
+      <button class="btn-ghost btn-block hidden" id="btnBaixarBase">Atualizar os bens guardados no celular</button>
+    </div>
+    <p class="hint" id="baseInfo" style="margin:12px 0 0"></p>
+    <div id="syncMsg"></div>
+    <button class="btn-ghost btn-block" id="btnFecharEnvio" style="margin-top:16px">Voltar à busca</button>
   </div>
 
   <!-- DETALHE DO BEM -->
@@ -386,7 +429,7 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.11-27'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-1'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -416,16 +459,30 @@ const stripZeros=s=>(s||'').toString().trim().replace(/^0+(?=\d)/,'');
 
 /* ====================== AUTENTICAÇÃO ====================== */
 async function initAuth(){
-  const {data:{session}} = await sb.auth.getSession();
-  if(session) enterApp(); else showLogin();
-  sb.auth.onAuthStateChange((_e,sess)=>{ if(sess) enterApp(); else showLogin(); });
+  let session=null;
+  try{ ({data:{session}} = await sb.auth.getSession()); }catch(_){}
+  if(session){ enterApp(session); }
+  // sem internet e sessão vencida: no modo offline dá para continuar com os dados do celular
+  else if(OFFLINE() && !navigator.onLine && await baseLocalPronta()){ SEM_SESSAO=true; try{ USUARIO_EMAIL=localStorage.getItem('lev_email')||''; }catch(_){} enterApp(null); }
+  else showLogin();
+  sb.auth.onAuthStateChange((ev,sess)=>{ if(sess){ SEM_SESSAO=false; enterApp(sess); } else if(ev==='SIGNED_OUT' && !SEM_SESSAO) showLogin(); });
 }
 function showLogin(){ $('#loginScreen').classList.remove('hidden'); $('#appScreen').classList.add('hidden'); }
-async function enterApp(){
+let _entrando=false;
+async function enterApp(session){
   $('#loginScreen').classList.add('hidden'); $('#appScreen').classList.remove('hidden');
-  await carregarPerfil();
-  await loadAux();
-  await refreshStats();
+  if(session&&session.user) USUARIO_EMAIL=session.user.email||USUARIO_EMAIL;
+  if(_entrando) return; _entrando=true;
+  try{
+    if(!SEM_SESSAO){ await carregarPerfil(); await carregarModoEnvio(); }
+    await loadAux();
+    // modo offline: na primeira entrada com internet, baixa os bens para o celular
+    if(OFFLINE() && !SEM_SESSAO && navigator.onLine && !(await baseLocalPronta())){
+      toast('Baixando os bens para usar sem internet...',4000);
+      try{ await baixarBase(); toast('Bens guardados no celular'); }catch(e){ toast('Não foi possível baixar os bens: '+(e.message||e),4000); }
+    }
+    await refreshStats();
+  }finally{ _entrando=false; }
 }
 /* ====================== PERFIL (administrador) ====================== */
 // A engrenagem (importação, comissão, listas) só aparece para administradores.
@@ -474,7 +531,11 @@ async function doLogin(){
   if(error){$('#loginMsg').innerHTML='<span class="err">'+error.message+'</span>';}
   else{$('#loginMsg').innerHTML='';}
 }
-$('#btnLogout').addEventListener('click',async()=>{ await sb.auth.signOut(); toast('Sessão encerrada'); });
+$('#btnLogout').addEventListener('click',async()=>{
+  let n=0; try{ n=(await idbAll('fila')).length; }catch(_){}
+  if(n && !confirm(`Há ${n} item(ns) guardados neste celular que ainda não foram enviados. Eles continuam guardados. Sair mesmo assim?`)) return;
+  SEM_SESSAO=false; try{ await sb.auth.signOut(); }catch(_){} showLogin(); toast('Sessão encerrada');
+});
 
 /* ====================== TABELAS DE APOIO ====================== */
 async function loadAux(){
@@ -487,8 +548,14 @@ async function loadAux(){
     LOCS=(loc.data||[]).map(r=>({cod:r.cod,desc:r.desc_,ug:r.unidade_gestora||''}));
     MOTIVOS=(mot.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
     COMISSOES=(com.data||[]).map(r=>({cod:r.cod,desc:r.desc_}));
-    fillSelect('#fMotivo',MOTIVOS,'— selecione o motivo —');
-  }catch(e){ toast('Falha ao carregar tabelas de apoio'); }
+    if(loc.error||mot.error) throw (loc.error||mot.error);
+    idbPut('meta',{LOCS,MOTIVOS,COMISSOES},'aux').catch(()=>{});
+  }catch(e){
+    // sem internet: usa a última cópia guardada no celular
+    try{ const aux=await idbGet('meta','aux'); if(aux){ LOCS=aux.LOCS||[]; MOTIVOS=aux.MOTIVOS||[]; COMISSOES=aux.COMISSOES||[]; } else toast('Falha ao carregar tabelas de apoio'); }
+    catch(_){ toast('Falha ao carregar tabelas de apoio'); }
+  }
+  fillSelect('#fMotivo',MOTIVOS,'— selecione o motivo —');
 }
 function fillSelect(sel,list,ph){
   const el=$(sel); if(!el)return;
@@ -497,6 +564,15 @@ function fillSelect(sel,list,ph){
 
 /* ====================== ESTATÍSTICAS ====================== */
 async function refreshStats(){
+  atualizarFilaUI();
+  if(OFFLINE() || SEM_SESSAO){
+    try{
+      const total=(await bensLocais()).length;
+      const levs=await idbAll('lev'); const done=levs.filter(l=>l.concluido).length;
+      statsCache={done,total}; atualizarBarraProgresso();
+    }catch(_){}
+    return;
+  }
   try{
     const total=await sb.from('bens').select('*',{count:'exact',head:true});
     const done=await sb.from('levantamento').select('*',{count:'exact',head:true}).eq('concluido',true);
@@ -531,7 +607,10 @@ document.querySelectorAll('.seg-btn[data-modo]').forEach(btn=>{
     modoBusca=btn.getAttribute('data-modo');
     $('#segPlaca').classList.toggle('active', modoBusca==='placa');
     $('#segCodigo').classList.toggle('active', modoBusca==='codigo');
-    $('#plateInput').placeholder = modoBusca==='placa' ? 'Digite a placa...' : 'Digite o código...';
+    $('#segNome').classList.toggle('active', modoBusca==='nome');
+    $('#plateInput').placeholder = modoBusca==='placa' ? 'Número da placa' : modoBusca==='codigo' ? 'Código do bem' : 'Nome ou parte da descrição';
+    $('#plateInput').inputMode = modoBusca==='nome' ? 'text' : 'numeric';
+    $('#searchResults').classList.add('hidden'); $('#searchMsg').innerHTML='';
     $('#plateInput').focus();
   });
 });
@@ -539,7 +618,10 @@ document.querySelectorAll('.seg-btn[data-modo]').forEach(btn=>{
 async function openByPlate(termo, origem){
   const texto=(termo||'').toString().trim();
   if(!texto){toast('Digite a placa ou o código');return;}
-  $('#searchMsg').innerHTML='<span class="spin"></span> Buscando '+texto+'...';
+  $('#searchMsg').innerHTML='<span class="spin"></span> Buscando '+esc(texto)+'...';
+  $('#searchResults').classList.add('hidden');
+  if(modoBusca==='nome' && origem!=='etiqueta' && origem!=='lista'){ return buscarPorNome(texto); }
+  if(OFFLINE() || SEM_SESSAO){ return abrirLocal(texto, origem); }
   try{
     const placaNum=stripZeros(onlyDigits(texto));
     const codigoNum=stripZeros(texto);
@@ -551,12 +633,12 @@ async function openByPlate(termo, origem){
 
     // no modo placa (ou scan), tenta por placa
     if(buscarPlaca){
-      let r=await sb.from('bens').select('*').or(`placa.eq.${texto},placa.eq.${placaNum}`).limit(1).maybeSingle();
+      let r=await sb.from('bens').select('*').or(`placa.eq.${texto},placa.eq.${placaNum}`).limit(1).maybeSingle(); if(r.error) throw new Error(r.error.message||'erro');
       if(r.data) bem=r.data;
     }
     // no modo código (ou scan, se ainda não achou), tenta por código
     if(!bem && buscarCodigo){
-      let r=await sb.from('bens').select('*').or(`codigo.eq.${texto},codigo.eq.${codigoNum}`).limit(1).maybeSingle();
+      let r=await sb.from('bens').select('*').or(`codigo.eq.${texto},codigo.eq.${codigoNum}`).limit(1).maybeSingle(); if(r.error) throw new Error(r.error.message||'erro');
       if(r.data) bem=r.data;
     }
 
@@ -567,10 +649,58 @@ async function openByPlate(termo, origem){
     }
 
     // busca levantamento existente deste bem (pelo código)
-    const {data:lev}=await sb.from('levantamento').select('*').eq('codigo',bem.codigo).maybeSingle();
+    const {data:lev,error:eLev}=await sb.from('levantamento').select('*').eq('codigo',bem.codigo).maybeSingle();
+    if(eLev) throw new Error(eLev.message||'erro');
     $('#searchMsg').innerHTML='';
-    openDetail(bem,lev||null);
-  }catch(e){ $('#searchMsg').innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
+    const naFila=await filaGet(bem.codigo);   // item guardado no celular e ainda não enviado
+    openDetail(bem, naFila?naFila.row:(lev||null), naFila);
+  }catch(e){
+    if(ehErroDeRede(e) && await baseLocalPronta()){ return abrirLocal(texto, origem); }
+    $('#searchMsg').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. Tente de novo quando tiver sinal.':'Erro: '+esc(e.message||e))+'</span>';
+  }
+}
+
+/* busca pelo nome (descrição): mostra uma lista para escolher o bem */
+async function buscarPorNome(texto){
+  if(texto.length<3){ $('#searchMsg').innerHTML='<span class="err">Digite pelo menos 3 letras do nome.</span>'; return; }
+  try{
+    let lista;
+    if(OFFLINE() || SEM_SESSAO){
+      const q=semAcento(texto); lista=(await bensLocais()).filter(b=>semAcento(b.descricao).includes(q)).slice(0,40);
+    }else{
+      const termo=texto.replace(/[%_,()]/g,' ').trim();
+      const r=await sb.from('bens').select('codigo,placa,descricao,localizacao').ilike('descricao','%'+termo+'%').order('descricao').limit(40);
+      if(r.error) throw r.error; lista=r.data||[];
+    }
+    if(!lista.length){ $('#searchMsg').innerHTML='<span class="err">Nenhum bem com "'+esc(texto)+'" no nome.</span>'; return; }
+    $('#searchMsg').innerHTML='<span style="color:var(--muted)">'+lista.length+(lista.length===40?'+':'')+' bem(ns) encontrado(s). Toque para abrir.</span>';
+    const box=$('#searchResults');
+    box.innerHTML=lista.map(b=>`<button type="button" data-cod="${esc(b.codigo)}"><span><b>${esc(b.descricao||'(sem descrição)')}</b><small>Código ${esc(b.codigo)}${b.localizacao?' · '+esc(b.localizacao):''}</small></span><span class="pl">${esc(b.placa||'sem placa')}</span></button>`).join('');
+    box.classList.remove('hidden');
+    box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+      const m=modoBusca; modoBusca='codigo'; openByPlate(btn.dataset.cod,'lista'); modoBusca=m;
+    }));
+  }catch(e){
+    $('#searchMsg').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. A busca por nome precisa dos bens guardados no celular (modo offline).':'Erro: '+esc(e.message||e))+'</span>';
+  }
+}
+
+/* abre um bem a partir dos dados guardados no celular */
+async function abrirLocal(texto, origem){
+  try{
+    if(!(await baseLocalPronta())){ $('#searchMsg').innerHTML='<span class="err">Os bens ainda não foram baixados para este celular. Abra o envio dos dados e toque em atualizar os bens com internet.</span>'; return; }
+    const todos=await bensLocais();
+    const placaNum=stripZeros(onlyDigits(texto)), codNum=stripZeros(texto);
+    const porPlaca = origem==='etiqueta' || modoBusca==='placa';
+    let bem=null;
+    if(porPlaca) bem=todos.find(b=>b.placa===texto||stripZeros(b.placa)===placaNum);
+    if(!bem && !porPlaca) bem=todos.find(b=>b.codigo===texto||b.codigo===codNum);
+    if(!bem){ $('#searchMsg').innerHTML='<span class="err">Nada encontrado para "'+esc(texto)+'" ('+(porPlaca?'placa':'código')+').</span>'; return; }
+    const naFila=await filaGet(bem.codigo);
+    const lev=naFila?naFila.row:await idbGet('lev',bem.codigo);
+    $('#searchMsg').innerHTML='';
+    openDetail(bem, lev||null, naFila);
+  }catch(e){ $('#searchMsg').innerHTML='<span class="err">Erro: '+esc(e.message||e)+'</span>'; }
 }
 
 /* ====================== SCANNER ====================== */
@@ -728,8 +858,9 @@ function fmtMoney(v){
   const n=parseFloat(s); if(isNaN(n))return v;
   return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 }
-function openDetail(bem, lev){
+function openDetail(bem, lev, naFila){
   current={bem,lev}; currentFotos=[];
+  current.fotosFila = (naFila&&naFila.fotos)||[];   // fotos guardadas no celular, ainda não enviadas
   // valores levantados: do levantamento existente OU os atuais do bem
   const L=lev||{};
   current.nova_local_cod = L.cod_localizacao ?? bem.cod_localizacao;
@@ -910,6 +1041,16 @@ $('#btnSave').addEventListener('click',saveItem);
 async function placaJaExiste(placa, codigoAtual){
   const p=stripZeros((placa||'').trim());
   if(!p) return null;
+  if(OFFLINE() || SEM_SESSAO){
+    try{
+      const b=(await bensLocais()).find(x=>stripZeros(x.placa)===p && x.codigo!==codigoAtual);
+      if(b) return `Placa ${p} já pertence ao bem código ${b.codigo}${b.descricao?(' ('+b.descricao+')'):''}.`;
+      const outros=(await idbAll('lev')).concat((await idbAll('fila')).map(f=>f.row));
+      const o=outros.find(x=>x&&x.placa_nova&&stripZeros(x.placa_nova)===p&&x.codigo!==codigoAtual);
+      if(o) return `Placa ${p} já foi informada para o bem código ${o.codigo}.`;
+    }catch(_){}
+    return null;
+  }
   try{
     // 1) placa cadastrada em algum bem
     const r1=await sb.from('bens').select('codigo,placa,descricao').or(`placa.eq.${p},placa.eq.${placa.trim()}`).limit(1);
@@ -962,21 +1103,13 @@ async function saveItem(){
   // validações
   if(locMudou && !current.cod_motivo){ toast('Selecione o motivo da movimentação'); return; }
   const estMudou=(current.novo_estado_cod!==b.cod_estado);
-  if(!current.cod_comissao){ toast('Cadastre a comissão de avaliação na engrenagem (Tabelas e dados)'); return; }
+  if(!current.cod_comissao){ toast('Falta cadastrar a comissão de avaliação no painel admin (Configuração).'); return; }
 
   $('#btnSave').disabled=true; $('#btnSave').innerHTML='<span class="spin"></span> Salvando...';
   try{
-    // 1) envia fotos novas ao Storage (pasta = código do bem)
-    for(const dataUrl of currentFotos){
-      const blob=dataURLtoBlob(dataUrl);
-      const ts=Date.now()+'_'+Math.random().toString(36).slice(2,7);
-      const path=`${b.codigo}/${ts}.jpg`;
-      const {error:upErr}=await sb.storage.from(FOTOS_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false});
-      if(upErr) throw new Error('Foto: '+upErr.message);
-    }
-    // 2) grava levantamento (upsert por código)
     const estDesc=(ESTS.find(x=>x.cod===current.novo_estado_cod)||{}).desc||'';
     const sitDesc=(SITS.find(x=>x.cod===current.nova_sit_cod)||{}).desc||'';
+    const agora=new Date().toISOString();
     const row={
       codigo:b.codigo,
       placa_nova:(current.temPlaca?null:(current.placa_nova||null)),
@@ -985,27 +1118,170 @@ async function saveItem(){
       cod_estado:current.novo_estado_cod||null, estado:estDesc||null,
       cod_motivo:(current.cod_motivo||MOTIVO_PADRAO),
       cod_comissao:(current.cod_comissao||(COMISSOES[0]?COMISSOES[0].cod:null)),
-      data_movimento:locMudou?(current.data_mov||new Date().toISOString()):null,
-      concluido:current.concluido, atualizado_em:new Date().toISOString()
+      data_movimento:locMudou?(current.data_mov||agora):null,
+      concluido:current.concluido, atualizado_em:agora
     };
-    const {error}=await sb.from('levantamento').upsert(row,{onConflict:'codigo'});
-    if(error) throw error;
+    // cada foto ganha um nome fixo: reenviar o mesmo registro não duplica fotos
+    const fotos=(current.fotosFila||[]).concat(currentFotos.map((d,i)=>({id:Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,7),data:d})));
+    const reg={codigo:b.codigo,row,fotos,placa_nova:(!current.temPlaca&&current.placa_nova)?current.placa_nova:null,
+      descricao:b.descricao||'',placa:b.placa||current.placa_nova||'',salvo_em:agora,usuario:USUARIO_EMAIL};
 
-    // se o bem não tinha placa e o levantador informou uma placa nova,
-    // grava essa placa direto no cadastro do bem (passa a ter placa de verdade)
-    if(!current.temPlaca && current.placa_nova){
-      const {error:eb}=await sb.from('bens').update({placa:current.placa_nova}).eq('codigo',b.codigo);
-      if(eb) throw eb;
-      // atualiza o estado local para refletir que o bem agora tem placa
-      b.placa=current.placa_nova; current.temPlaca=true;
+    if(OFFLINE() || SEM_SESSAO){
+      await guardarNaFila(reg);
+      toast('Guardado no celular. Envie quando tiver internet.',3200);
+    }else{
+      try{
+        await enviarRegistro(reg);
+        await idbDel('fila',b.codigo).catch(()=>{});
+        idbPut('lev',row).catch(()=>{});
+        toast('✓ Salvo na nuvem');
+      }catch(e){
+        if(!ehErroDeRede(e)) throw e;
+        await guardarNaFila(reg);
+        toast('Sem internet: o item ficou guardado no celular para enviar depois.',3600);
+      }
     }
-
-    toast('✓ Salvo na nuvem');
+    if(reg.placa_nova){ b.placa=reg.placa_nova; current.temPlaca=true; }
     await refreshStats();
     $('#btnBack').click();
   }catch(e){ toast('Erro ao salvar: '+(e.message||e)); }
   finally{ $('#btnSave').disabled=false; $('#btnSave').innerHTML='Salvar item'; }
 }
+
+/* ====================== ENVIO DOS DADOS (online, fila no celular e arquivo) ====================== */
+// Parâmetro definido no painel admin (Configuração > Envio dos dados do app de campo):
+//   online  = cada item vai direto para a nuvem ao salvar (se faltar internet, fica guardado e é enviado depois)
+//   offline = os bens ficam guardados no celular e os registros são enviados depois, pela sincronização ou por arquivo
+let MODO_ENVIO='online', SEM_SESSAO=false, USUARIO_EMAIL='';
+try{ MODO_ENVIO=localStorage.getItem('lev_modo')||'online'; }catch(_){}
+const OFFLINE=()=>MODO_ENVIO==='offline';
+const esc=s=>(s??'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const semAcento=s=>(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function ehErroDeRede(e){ const m=(e&&(e.message||String(e)))||''; return !navigator.onLine || e instanceof TypeError || /failed to fetch|network|load failed|fetch/i.test(m); }
+
+// ---- IndexedDB: bens, levantamento, fila e dados de apoio guardados no celular
+let _db=null;
+function idb(){ if(_db) return Promise.resolve(_db); return new Promise((res,rej)=>{ const r=indexedDB.open('levpat',1);
+  r.onupgradeneeded=()=>{ const d=r.result; ['bens','lev','fila'].forEach(n=>{ if(!d.objectStoreNames.contains(n)) d.createObjectStore(n,{keyPath:'codigo'}); }); if(!d.objectStoreNames.contains('meta')) d.createObjectStore('meta'); };
+  r.onsuccess=()=>{ _db=r.result; res(_db); }; r.onerror=()=>rej(r.error); }); }
+const rq=r=>new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+async function st(n,m){ return (await idb()).transaction(n,m||'readonly').objectStore(n); }
+async function idbGet(n,k){ return rq((await st(n)).get(k)); }
+async function idbAll(n){ return rq((await st(n)).getAll()); }
+async function idbPut(n,v,k){ return rq(k===undefined?(await st(n,'readwrite')).put(v):(await st(n,'readwrite')).put(v,k)); }
+async function idbDel(n,k){ return rq((await st(n,'readwrite')).delete(k)); }
+async function idbTroca(n,lista){ const d=await idb(); return new Promise((res,rej)=>{ const t=d.transaction(n,'readwrite'); const s=t.objectStore(n); s.clear(); lista.forEach(v=>s.put(v)); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); }); }
+async function filaGet(c){ try{ return await idbGet('fila',c); }catch(_){ return null; } }
+
+let _bensLocais=null;
+async function bensLocais(){ if(!_bensLocais) _bensLocais=await idbAll('bens'); return _bensLocais; }
+async function baseLocalPronta(){ try{ return !!(await idbGet('meta','baixado_em')); }catch(_){ return false; } }
+
+async function carregarModoEnvio(){
+  try{
+    const {data,error}=await sb.from('configuracao').select('dados').eq('id',1).maybeSingle();
+    if(!error && data && data.dados){ MODO_ENVIO=data.dados.modoEnvio==='offline'?'offline':'online'; try{ localStorage.setItem('lev_modo',MODO_ENVIO); }catch(_){} }
+  }catch(_){ /* sem internet: mantém o último modo conhecido */ }
+}
+async function baixarBase(){
+  const msg=$('#syncMsg'); msg.innerHTML='<span class="spin"></span> Baixando os bens para o celular...';
+  const [bens,levs]=await Promise.all([lerTudo('bens','*','codigo'), lerTudo('levantamento','*','codigo')]);
+  await idbTroca('bens',bens); await idbTroca('lev',levs); _bensLocais=null;
+  await idbPut('meta',{LOCS,MOTIVOS,COMISSOES},'aux');
+  await idbPut('meta',new Date().toISOString(),'baixado_em');
+  msg.textContent=bens.length.toLocaleString('pt-BR')+' bens guardados no celular.';
+}
+async function guardarNaFila(reg){
+  await idbPut('fila',reg);
+  await idbPut('lev',reg.row).catch(()=>{});
+  if(reg.placa_nova){ const bl=(await bensLocais()).find(x=>x.codigo===reg.codigo); if(bl){ bl.placa=reg.placa_nova; idbPut('bens',bl).catch(()=>{}); } }
+  atualizarFilaUI();
+}
+// envia um registro: fotos (com nome fixo), levantamento e placa nova
+async function enviarRegistro(reg){
+  for(const f of (reg.fotos||[])){
+    const {error}=await sb.storage.from(FOTOS_BUCKET).upload(`${reg.codigo}/${f.id}.jpg`,dataURLtoBlob(f.data),{contentType:'image/jpeg',upsert:false});
+    if(error && !/exist|duplicate/i.test(error.message||'') && String(error.statusCode)!=='409') throw new Error('Foto: '+error.message);
+  }
+  const {error}=await sb.from('levantamento').upsert(reg.row,{onConflict:'codigo'});
+  if(error) throw error;
+  if(reg.placa_nova){ const {error:eb}=await sb.from('bens').update({placa:reg.placa_nova}).eq('codigo',reg.codigo); if(eb) throw eb; }
+}
+async function atualizarFilaUI(){
+  let fila=[]; try{ fila=await idbAll('fila'); }catch(_){}
+  const n=fila.length, b=$('#filaBadge');
+  b.textContent=n; b.classList.toggle('hidden',!n);
+  const band=$('#modoBand');
+  if(OFFLINE()||n){
+    band.classList.remove('hidden');
+    band.innerHTML=(OFFLINE()?'Modo offline':'Itens a enviar')+' · <b>'+n+'</b>&nbsp;'+(n===1?'item guardado':'itens guardados')+' no celular';
+  }else band.classList.add('hidden');
+  return fila;
+}
+function dataHoraBR(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+async function abrirEnvio(){
+  stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#syncCard').classList.remove('hidden');
+  $('#syncMsg').innerHTML='';
+  $('#syncModo').innerHTML = OFFLINE()
+    ? '<b>Envio offline</b>Os bens ficam guardados no celular e cada item salvo fica aqui até você enviar pela internet ou exportar o arquivo.'
+    : '<b>Envio online</b>Cada item vai direto para a nuvem ao salvar. Se faltar internet, ele fica guardado aqui para enviar depois.';
+  const fila=await atualizarFilaUI();
+  $('#syncQtd').textContent=fila.length;
+  $('#syncQtdTxt').textContent=fila.length===1?'item guardado neste celular':'itens guardados neste celular';
+  const exp=fila.filter(f=>f.exportado_em&&f.exportado_em>=f.salvo_em).length;
+  $('#syncLista').innerHTML=fila.length?fila.sort((a,b)=>a.salvo_em<b.salvo_em?1:-1).map(f=>`<div><span>${esc(f.placa||'sem placa')} · ${esc((f.descricao||'').slice(0,34))}</span><small>${f.exportado_em&&f.exportado_em>=f.salvo_em?'exportado':dataHoraBR(f.salvo_em)}</small></div>`).join(''):'<div><span>Nada pendente. Tudo já está na nuvem.</span></div>';
+  $('#btnSincronizar').disabled=!fila.length; $('#btnExportarArquivo').disabled=!fila.length;
+  $('#btnLimparExportados').classList.toggle('hidden',!exp);
+  $('#btnBaixarBase').classList.toggle('hidden',!OFFLINE());
+  let quando=null; try{ quando=await idbGet('meta','baixado_em'); }catch(_){}
+  $('#baseInfo').textContent = OFFLINE() ? (quando?'Bens guardados no celular em '+dataHoraBR(quando)+'.':'Os bens ainda não foram baixados para este celular.') : '';
+}
+$('#btnEnvio').addEventListener('click',abrirEnvio);
+$('#modoBand').addEventListener('click',abrirEnvio);
+$('#btnFecharEnvio').addEventListener('click',()=>{ $('#syncCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
+$('#btnSincronizar').addEventListener('click',async()=>{
+  const msg=$('#syncMsg');
+  if(!navigator.onLine){ msg.innerHTML='<span class="err">Sem internet agora. Tente com sinal ou exporte o arquivo.</span>'; return; }
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ msg.innerHTML='<span class="err">Entre de novo com seu e-mail e senha para enviar.</span>'; SEM_SESSAO=true; showLogin(); return; }
+  const fila=await idbAll('fila'); let ok=0, falhas=0, ultimoErro='';
+  const btn=$('#btnSincronizar'); btn.disabled=true;
+  for(const reg of fila){
+    msg.innerHTML=`<span class="spin"></span> Enviando ${ok+falhas+1} de ${fila.length}...`;
+    try{ await enviarRegistro(reg); await idbDel('fila',reg.codigo); ok++; }
+    catch(e){ falhas++; ultimoErro=e.message||String(e); if(ehErroDeRede(e)) break; }
+  }
+  await refreshStats(); await abrirEnvio();
+  msg.innerHTML = falhas ? `<span class="err">${ok} enviado(s). ${fila.length-ok} ficaram no celular: ${esc(ultimoErro)}</span>` : `<span style="color:var(--ok);font-weight:600">${ok} item(ns) enviado(s) para a nuvem.</span>`;
+});
+$('#btnExportarArquivo').addEventListener('click',async()=>{
+  const fila=await idbAll('fila'); if(!fila.length) return;
+  const agora=new Date();
+  const arq={tipo:'levantamento-patrimonial-campo',versao:1,gerado_em:agora.toISOString(),usuario:USUARIO_EMAIL,registros:fila};
+  const nome='levantamento_campo_'+(USUARIO_EMAIL.split('@')[0]||'celular')+'_'+agora.toISOString().slice(0,16).replace(/[-:T]/g,'')+'.json';
+  const blob=new Blob([JSON.stringify(arq)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  for(const f of fila){ f.exportado_em=agora.toISOString(); await idbPut('fila',f); }
+  await abrirEnvio();
+  $('#syncMsg').innerHTML=`<span style="color:var(--ok);font-weight:600">Arquivo ${esc(nome)} gerado com ${fila.length} item(ns). Entregue ao administrador para importar no painel.</span>`;
+});
+$('#btnLimparExportados').addEventListener('click',async()=>{
+  const fila=await idbAll('fila'); const exp=fila.filter(f=>f.exportado_em&&f.exportado_em>=f.salvo_em);
+  if(!confirm(`Apagar do celular ${exp.length} item(ns) já exportados em arquivo?\n\nFaça isso só depois que o administrador confirmar que importou o arquivo.`)) return;
+  for(const f of exp) await idbDel('fila',f.codigo);
+  await abrirEnvio(); toast('Itens exportados apagados do celular');
+});
+$('#btnBaixarBase').addEventListener('click',async()=>{
+  if(!navigator.onLine){ $('#syncMsg').innerHTML='<span class="err">Precisa de internet para baixar os bens.</span>'; return; }
+  try{ await baixarBase(); await abrirEnvio(); }catch(e){ $('#syncMsg').innerHTML='<span class="err">Erro ao baixar: '+esc(e.message||e)+'</span>'; }
+});
+// quando a internet volta no modo online, envia o que ficou guardado
+window.addEventListener('online',async()=>{
+  if(OFFLINE()||SEM_SESSAO) return;
+  const fila=await idbAll('fila').catch(()=>[]); if(!fila.length) return;
+  let ok=0; for(const reg of fila){ try{ await enviarRegistro(reg); await idbDel('fila',reg.codigo); ok++; }catch(_){ break; } }
+  if(ok){ toast(ok+' item(ns) guardados foram enviados para a nuvem'); refreshStats(); atualizarFilaUI(); }
+});
 
 /* ====================== FOTOS ====================== */
 $('#btnPhoto').addEventListener('click',startPhoto);
@@ -1027,12 +1303,13 @@ function capturePhoto(){
 }
 function renderPhotos(){
   const box=$('#photoList');
-  const existHtml=(current.fotosExist||[]).map(u=>`<div class="thumb"><img src="${u}"></div>`).join('');
+  const existHtml=(current.fotosExist||[]).concat((current.fotosFila||[]).map(f=>f.data)).map(u=>`<div class="thumb"><img src="${u}"></div>`).join('');
   const novHtml=currentFotos.map((d,i)=>`<div class="thumb"><img src="${d}"><button class="x" data-i="${i}">×</button></div>`).join('');
   box.innerHTML=existHtml+novHtml;
   box.querySelectorAll('.x').forEach(btn=>btn.addEventListener('click',()=>{currentFotos.splice(+btn.dataset.i,1);renderPhotos();}));
 }
 async function loadFotosExistentes(codigo){
+  if(OFFLINE() || SEM_SESSAO || !navigator.onLine) return;
   try{
     const {data}=await sb.storage.from(FOTOS_BUCKET).list(codigo,{limit:20});
     if(!data||!data.length)return;
@@ -1069,83 +1346,7 @@ async function lerTudo(tabela, colunas, ordem){
 }
 async function lerColuna(tabela, coluna){ return (await lerTudo(tabela, coluna)).map(r=>r[coluna]); }
 
-/* ====================== EXPORTAÇÃO ATUALIZA.csv ====================== */
-$('#btnExport').addEventListener('click',exportAtualiza);
-function csvCell(v){v=(v??'').toString();return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
-function dataBR(s){ s=(s||'').toString().trim(); if(!s)return ''; const m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); if(m){let y=m[3];if(y.length===2)y='20'+y;return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${y}`;} const d=new Date(s); if(!isNaN(d))return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; return s; }
-function valorBR(s){ s=(s||'').toString().trim(); if(s==='')return ''; if(/,/.test(s))return s; const n=parseFloat(s); if(isNaN(n))return s; return n.toFixed(2).replace('.',','); }
-function hojeBR(){const d=new Date();return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}
-
-async function exportAtualiza(){
-  toast('Gerando ATUALIZA.csv...');
-  try{
-    // busca todos os levantamentos + dados do bem (join manual paginado)
-    let levs=[], from=0, page=1000;
-    while(true){
-      const {data,error}=await sb.from('levantamento').select('*').range(from,from+page-1);
-      if(error)throw error;
-      levs=levs.concat(data||[]);
-      if(!data||data.length<page)break;
-      from+=page;
-    }
-    if(!levs.length){toast('Nenhum item levantado ainda');return;}
-    // carrega os bens correspondentes em lotes (por código)
-    const codigos=levs.map(l=>l.codigo);
-    const bensMap={};
-    for(let i=0;i<codigos.length;i+=300){
-      const slice=codigos.slice(i,i+300);
-      const {data}=await sb.from('bens').select('*').in('codigo',slice);
-      (data||[]).forEach(b=>bensMap[b.codigo]=b);
-    }
-    const headers=['Data do Movimento','Placa','Descrição','Descrição Reduzida','Marca','Modelo',
-      'Código Localização','Código Classificação','Código Situação','Código Estado Conservação',
-      'Data da Aquisição','Código Tipo Ingresso','Código Fornecedor','Código Convênio','Valor Atual',
-      'inContabil','inDepreciavel','Código Método Depreciação','Vida Útil','Valor Residual',
-      'Data Início Depreciação','Código Motivo Movimentação','Código Comissão Avaliação'];
-    const lines=[headers.map(csvCell).join(',')];
-    const hoje=hojeBR();
-    const placasSaida=[]; // {placa, codigo} para conferir duplicidade antes de gerar
-    for(const lev of levs){
-      const b=bensMap[lev.codigo]; if(!b)continue;
-      const locMudou=(lev.cod_localizacao!=null && lev.cod_localizacao!==b.cod_localizacao);
-      const estMudou=(lev.cod_estado!=null && lev.cod_estado!==b.cod_estado);
-      const codLocal=lev.cod_localizacao||b.cod_localizacao;
-      const codEstado=lev.cod_estado||b.cod_estado;
-      const codSit=lev.cod_situacao||b.cod_situacao;
-      const dataMov=locMudou?(dataBR(lev.data_movimento)||hoje):hoje;
-      const placaSaida=(b.placa&&b.placa.trim())?b.placa:(lev.placa_nova||'');
-      if(placaSaida&&placaSaida.trim()) placasSaida.push({placa:stripZeros(placaSaida.trim()), codigo:b.codigo});
-      lines.push([
-        dataMov, placaSaida, b.descricao, b.descricao_reduzida, b.marca, b.modelo,
-        codLocal, b.cod_classificacao, codSit, codEstado,
-        dataBR(b.data_ingresso), b.tipo_ingresso, b.cod_fornecedor, b.cod_convenio, valorBR(b.valor_atual),
-        b.contabil, b.depreciavel, b.metodo_depreciacao, b.vida_util, valorBR(b.valor_residual),
-        dataBR(b.data_inicio_depreciacao), (lev.cod_motivo||MOTIVO_PADRAO), (lev.cod_comissao||'')
-      ].map(csvCell).join(','));
-    }
-    // CONFERÊNCIA: placas repetidas no conjunto que vai ser exportado
-    const porPlaca={};
-    placasSaida.forEach(x=>{ (porPlaca[x.placa]=porPlaca[x.placa]||[]).push(x.codigo); });
-    const dups=Object.keys(porPlaca).filter(p=>porPlaca[p].length>1);
-    if(dups.length){
-      const detalhe=dups.slice(0,10).map(p=>`• Placa ${p} → bens ${porPlaca[p].join(', ')}`).join('\n');
-      const extra=dups.length>10?`\n…e mais ${dups.length-10} placa(s).`:'';
-      const segue=confirm(
-        `⚠️ Atenção: ${dups.length} placa(s) aparecem repetidas no arquivo:\n\n${detalhe}${extra}\n\n`+
-        `Placas repetidas podem ser recusadas pelo sistema de patrimônio.\n\n`+
-        `Deseja gerar o ATUALIZA.csv mesmo assim?`
-      );
-      if(!segue){ toast('Exportação cancelada. Corrija as placas repetidas.'); return; }
-    }
-    const csv='\uFEFF'+lines.join('\r\n');
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='ATUALIZA.csv';
-    a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    toast(`✓ ATUALIZA.csv (${levs.length} itens)`);
-  }catch(e){ toast('Erro ao exportar: '+(e.message||e)); }
-}
+/* O arquivo ATUALIZA.csv para o sistema de patrimônio é gerado na página de administração. */
 
 /* ====================== INÍCIO ====================== */
 // registra o service worker (permite instalar como app)

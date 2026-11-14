@@ -47,14 +47,17 @@ Versão atual: `v2026.11.11-27` (aparece na tela de login).
 
 Não há etapa de build nem dependências para instalar. As bibliotecas estão embutidas no próprio `index.html`, e o app é servido como site estático.
 
-O service worker guarda em cache apenas a "casca" do app (a tela). Todas as consultas e gravações vão direto ao Supabase, então **o uso exige internet**.
+O service worker guarda em cache a "casca" do app (a tela). O envio dos dados segue o parâmetro **Envio dos dados do app de campo**, definido pelo administrador:
+
+- **Online:** cada item salvo vai direto para a nuvem. Se a internet cair no meio do trabalho, o item fica guardado no celular e é enviado sozinho quando a conexão voltar.
+- **Offline (exportação):** o app baixa a base para o celular e guarda os registros localmente. Pelo botão de nuvem no topo, a equipe envia tudo quando tiver internet ou exporta um arquivo `.json`, que o administrador recebe na aba **Configuração** do painel.
 
 ## Perfis de acesso
 
 | Perfil | O que pode fazer |
 | --- | --- |
-| **Equipe de campo** (usuário logado) | Buscar bens, registrar o levantamento, tirar fotos, informar placa de bem sem placa e exportar o `ATUALIZA.csv` |
-| **Administrador** | Tudo o que a equipe faz, mais a página de administração (`admin.html`): importar CSVs, cadastrar a comissão, baixar as listas de encontrados e não encontrados, reavaliar e emitir documentos |
+| **Equipe de campo** (usuário logado) | Buscar bens pela placa, pela câmera ou pelo nome, registrar o levantamento, tirar fotos, informar placa de bem sem placa e enviar ou exportar o que fez |
+| **Administrador** | Tudo o que a equipe faz, mais a página de administração (`admin.html`): importar CSVs, cadastrar usuários e a comissão, definir o modo de envio, receber arquivos do campo, baixar listas, gerar o `ATUALIZA.csv`, reavaliar e emitir documentos |
 
 Quem é administrador é definido no banco, pela tabela `admins` e pela função `is_admin()`, criadas pelo script [`supabase/seguranca.sql`](supabase/seguranca.sql). As regras de acesso do mesmo script é que de fato impedem um usuário comum de importar ou excluir dados; esconder a engrenagem é só a parte visual.
 
@@ -85,7 +88,8 @@ Toda a configuração é feita na página de administração (endereço do app s
 
 1. Em **Configuração**, **Importar localizações**, **Importar motivos** e **Importar bens**, nessa ordem.
 2. Cadastrar a **Comissão de avaliação** (código e descrição), na mesma aba.
-3. Criar os usuários da equipe no painel do Supabase, em Authentication, Users.
+3. Cadastrar a equipe na aba **Usuários** (nome, e-mail, senha inicial e perfil: campo ou administrador). Na mesma aba é possível trocar o perfil, bloquear, reativar e definir nova senha.
+4. Escolher, em **Configuração**, se o app de campo envia os dados **online** ou por **exportação de arquivo**.
 
 ### Importação
 
@@ -107,7 +111,9 @@ O levantamento usa uma única comissão. Ao salvar uma nova, ela substitui a ant
 
 ### Exportação
 
-O botão ⬇ no topo gera o `ATUALIZA.csv` com todos os itens levantados. Antes de gerar, o app confere se há placas repetidas e pede confirmação.
+Na aba **Documentos**, **Arquivo para o sistema de patrimônio** gera o `ATUALIZA.csv` com todos os itens levantados. Antes de gerar, o painel confere se há placas repetidas e pede confirmação.
+
+No modo offline, os arquivos `.json` exportados pelo app de campo são recebidos em **Configuração**, **Receber arquivo do app de campo**. Um registro mais antigo que o já gravado na nuvem é ignorado.
 
 ## Página de administração: reavaliação e documentos
 
@@ -293,7 +299,12 @@ on conflict do nothing;
 
 ### 4. Usuários
 
-Crie os usuários da equipe em Authentication, Users, no painel do Supabase. O app não tem tela de cadastro.
+O cadastro de usuários pela aba **Usuários** precisa de duas peças no Supabase:
+
+1. Rodar [`supabase/usuarios.sql`](supabase/usuarios.sql) no SQL Editor (depois do `seguranca.sql`).
+2. Publicar a função [`supabase/functions/usuarios`](supabase/functions/usuarios/index.ts) em Edge Functions (nome `usuarios`). Ela usa a chave de serviço do próprio Supabase, que nunca vai para o navegador, e só atende administradores.
+
+Sem essas peças, os usuários continuam podendo ser criados em Authentication, Users, no painel do Supabase.
 
 ### 5. Hospedagem
 
@@ -339,7 +350,7 @@ O service worker busca sempre a versão da rede quando há conexão. Se um apare
 
 ## Limitações conhecidas
 
-- **Sem modo offline:** buscar e salvar exigem internet.
+- **Modo offline:** as fotos tiradas sem internet ficam no celular até o envio; evite limpar os dados do navegador antes de enviar ou exportar.
 - **Sem registro de autoria:** o levantamento guarda a data da última alteração, mas não quem a fez, e não mantém histórico.
 - **Bem sem cadastro:** não há fluxo para registrar um bem encontrado em campo que não está na base.
 - **Não localizado:** é deduzido pela ausência de levantamento concluído; não há marcação explícita nem campo de observações.
@@ -359,5 +370,7 @@ icon-192.png            Ícone do app
 icon-512.png            Ícone do app
 supabase/seguranca.sql  Regras de acesso, perfil de administrador e bucket privado
 supabase/reavaliacao.sql  Tabelas da reavaliação e da configuração
+supabase/usuarios.sql   Tabela de perfil e situação dos usuários
+supabase/functions/usuarios/  Função que cadastra e controla usuários
 README.md               Este documento
 ```

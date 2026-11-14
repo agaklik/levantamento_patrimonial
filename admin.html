@@ -97,6 +97,18 @@
   .doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
   .doc-grid .card{margin:0;display:flex;flex-direction:column;gap:12px}
   .doc-grid .card .acts{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .u-form{display:grid;grid-template-columns:2fr 2fr 1.4fr 1.4fr auto;gap:12px;align-items:end;padding:16px;background:var(--surface2);border-radius:10px;margin-bottom:16px}
+  @media(max-width:1000px){.u-form{grid-template-columns:1fr 1fr}}
+  #tblUsu select{width:auto;padding:5px 8px}
+  #tblUsu td{vertical-align:middle}
+  #tblUsu .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  #tblUsu .acts button{padding:6px 11px;font-size:13px}
+  .opt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px}
+  .opt-cards label{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;font-weight:400;margin:0}
+  .opt-cards label:has(input:checked){border-color:var(--accent);background:#F2F5FB}
+  .opt-cards input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--accent)}
+  .opt-cards b{display:block;font-size:15px;margin-bottom:3px}
+  .opt-cards span{font-size:13.5px;color:var(--muted);line-height:1.4}
   .doc-grid label:has(input[type=checkbox]){display:flex;gap:8px;align-items:center;font-weight:400}
   /* pré-visualização / impressão */
   #preview{position:fixed;inset:0;background:#525659;z-index:100;overflow:auto}
@@ -161,6 +173,7 @@
     <button data-tab="painel" class="active">Painel</button>
     <button data-tab="reav">Reavaliação</button>
     <button data-tab="docs">Documentos</button>
+    <button data-tab="usu">Usuários</button>
     <button data-tab="cfg">Configuração</button>
   </nav>
   <div class="hdr-right"><a href="./">App de campo</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
@@ -235,9 +248,33 @@
         <div class="acts"><button class="btn" id="btnDocGeral">Gerar relatório</button><button class="btn-2" id="btnCsvReav">Baixar CSV</button></div>
       </div>
       <div class="card">
+        <h2>Arquivo para o sistema de patrimônio</h2>
+        <p class="sub">Gera o ATUALIZA.csv com todos os itens levantados, no layout de importação do sistema. Antes de gerar, confere se há placas repetidas.</p>
+        <div class="acts"><button class="btn" id="btnAtualiza">Gerar ATUALIZA.csv</button></div>
+      </div>
+      <div class="card">
         <h2>Listas do levantamento</h2>
         <p class="sub">Planilhas com código, placa, descrição e localização dos bens encontrados ou ainda não encontrados em campo.</p>
         <div class="acts"><button class="btn-2" id="btnCsvEnc">Baixar encontrados</button><button class="btn-2" id="btnCsvNao">Baixar não encontrados</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- USUÁRIOS -->
+  <section id="tab-usu" class="hidden">
+    <div class="card">
+      <h2>Usuários</h2>
+      <p class="sub">Quem pode entrar no app de campo e na administração. Administradores também usam o app de campo. Um usuário bloqueado não consegue mais entrar, e o que ele já levantou fica preservado.</p>
+      <div id="usuAviso" class="msg hidden"></div>
+      <div id="usuArea">
+        <div class="u-form">
+          <div><label for="uNome">Nome</label><input id="uNome" placeholder="Ex.: Maria Souza"></div>
+          <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com"></div>
+          <div><label for="uSenha">Senha inicial</label><input id="uSenha" placeholder="mínimo 8 caracteres"></div>
+          <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option></select></div>
+          <div><button class="btn" id="btnCriarUsu">Cadastrar usuário</button></div>
+        </div>
+        <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
       </div>
     </div>
   </section>
@@ -255,6 +292,22 @@
         <div><label>Ato de nomeação da comissão</label><input id="cAto" placeholder="Ex.: Portaria nº 123/2026"></div>
         <div><label>Modalidade da avaliação</label><select id="cModalidade"><option value="comissao">Comissão de servidores</option><option value="laudo">Laudo de responsável técnico</option><option value="ambos">Comissão e responsável técnico</option></select></div>
       </div>
+    </div>
+    <div class="card">
+      <h2>Envio dos dados do app de campo</h2>
+      <p class="sub">Define como o celular leva os registros para a nuvem. A escolha vale para toda a equipe na próxima vez que cada pessoa abrir o app com internet.</p>
+      <div class="opt-cards">
+        <label><input type="radio" name="modoEnvio" value="online" checked><div><b>Online</b><span>Cada item vai direto para a nuvem ao salvar. Se faltar sinal, o item fica guardado no celular e é enviado quando a internet voltar.</span></div></label>
+        <label><input type="radio" name="modoEnvio" value="offline"><div><b>Offline</b><span>Os bens são baixados para o celular e o levantamento é feito sem internet. A equipe envia depois, pelo botão de enviar ou exportando um arquivo para importar aqui.</span></div></label>
+      </div>
+      <button class="btn" id="btnSalvarModo">Salvar forma de envio</button>
+    </div>
+    <div class="card">
+      <h2>Receber arquivo do app de campo</h2>
+      <p class="sub">Use quando a equipe trabalhou sem internet e exportou o levantamento pelo celular. Os registros e as fotos do arquivo são gravados na nuvem; um item que já foi atualizado depois do arquivo não é sobrescrito.</p>
+      <button class="btn-2" id="btnImportCampo">Importar arquivo do celular (.json)</button>
+      <input type="file" id="fileCampo" accept=".json,application/json" class="hidden">
+      <div id="campoMsg" style="font-size:14px;margin-top:12px"></div>
     </div>
     <div class="card">
       <h2>Importar dados do sistema de patrimônio</h2>
@@ -527,7 +580,7 @@ async function carregar(){
       CFG.ec=Object.assign({},CFG_PADRAO.ec,CFG.ec||{});
     }catch(e){ if(tabelaAusente(e)) schemaOk=false; else throw e; }
     $('#schemaMsg').classList.toggle('hidden',schemaOk);
-    preencherFiltros(); preencherCfg(); renderPainel(); aplicarFiltro();
+    preencherFiltros(); preencherCfg(); preencherModo(); renderPainel(); aplicarFiltro();
     $('#loading').classList.add('hidden');
     mostrarAba(abaAtual);
   }catch(e){ $('#loading').textContent='Erro ao carregar: '+(e.message||e); }
@@ -537,7 +590,7 @@ async function carregar(){
 let abaAtual='painel';
 function mostrarAba(t){
   abaAtual=t;
-  ['painel','reav','docs','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
+  ['painel','reav','docs','usu','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
 }
 document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>mostrarAba(b.dataset.tab)));
@@ -773,6 +826,146 @@ async function fotosDoBem(codigo,limite){
     return urls.length?urls:paths.map(p=>sb.storage.from(FOTOS_BUCKET).getPublicUrl(p).data.publicUrl);
   }catch(_){ return []; }
 }
+
+/* ====================== FORMA DE ENVIO DO APP DE CAMPO ====================== */
+function preencherModo(){ const m=(CFG.modoEnvio==='offline')?'offline':'online'; document.querySelectorAll('input[name=modoEnvio]').forEach(r=>r.checked=r.value===m); }
+$('#btnSalvarModo').addEventListener('click',async()=>{
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
+  const m=(document.querySelector('input[name=modoEnvio]:checked')||{}).value||'online';
+  const dados=Object.assign({},CFG,{modoEnvio:m});
+  const {error}=await sb.from('configuracao').upsert({id:1,dados,atualizado_em:new Date().toISOString()},{onConflict:'id'});
+  if(error){ toast('Erro ao salvar: '+error.message,5000); return; }
+  CFG=dados; toast(m==='offline'?'Envio offline salvo':'Envio online salvo');
+});
+
+/* ====================== ARQUIVO EXPORTADO PELO APP DE CAMPO ====================== */
+function blobDeDataUrl(d){ const [h,b]=d.split(','); const mime=(h.match(/:(.*?);/)||[])[1]||'image/jpeg'; const bin=atob(b); const arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i); return new Blob([arr],{type:mime}); }
+$('#btnImportCampo').addEventListener('click',()=>{ $('#fileCampo').value=''; $('#fileCampo').click(); });
+$('#fileCampo').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const msg=$('#campoMsg');
+  let arq; try{ arq=JSON.parse(await f.text()); }catch(_){ msg.innerHTML='<span class="neg">O arquivo não é um levantamento exportado pelo app.</span>'; return; }
+  if(!arq||arq.tipo!=='levantamento-patrimonial-campo'||!Array.isArray(arq.registros)){ msg.innerHTML='<span class="neg">O arquivo não é um levantamento exportado pelo app.</span>'; return; }
+  const regs=arq.registros;
+  if(!confirm(`Importar ${regs.length} item(ns) levantados${arq.usuario?' por '+arq.usuario:''} em ${new Date(arq.gerado_em).toLocaleString('pt-BR')}?`)) return;
+  let ok=0, mantidos=0, fotos=0, erros=[];
+  for(const reg of regs){
+    msg.textContent=`Importando ${ok+mantidos+erros.length+1} de ${regs.length}...`;
+    try{
+      for(const ft of (reg.fotos||[])){
+        const {error}=await sb.storage.from(FOTOS_BUCKET).upload(`${reg.codigo}/${ft.id}.jpg`,blobDeDataUrl(ft.data),{contentType:'image/jpeg',upsert:false});
+        if(error && !/exist|duplicate/i.test(error.message||'') && String(error.statusCode)!=='409') throw new Error('foto: '+error.message);
+        if(!error) fotos++;
+      }
+      const atual=LEV[reg.codigo];
+      if(atual && atual.atualizado_em && reg.row.atualizado_em && atual.atualizado_em>reg.row.atualizado_em){ mantidos++; continue; }
+      const {error}=await sb.from('levantamento').upsert(reg.row,{onConflict:'codigo'}); if(error) throw error;
+      if(reg.placa_nova){ const {error:eb}=await sb.from('bens').update({placa:reg.placa_nova}).eq('codigo',reg.codigo); if(eb) throw eb; }
+      ok++;
+    }catch(err){ erros.push(reg.codigo+': '+(err.message||err)); }
+  }
+  msg.innerHTML=`<b>${ok}</b> item(ns) gravados, <b>${fotos}</b> foto(s) novas`+(mantidos?`, ${mantidos} mantidos por já terem registro mais recente`:'')+(erros.length?`. <span class="neg">${erros.length} com erro: ${esc(erros.slice(0,3).join('; '))}</span>`:'.');
+  await carregar();
+});
+
+/* ====================== ATUALIZA.csv (layout de importação do sistema de patrimônio) ====================== */
+function csvVirg(v){v=(v??'').toString();return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function dataTxtBR(s){ s=(s||'').toString().trim(); if(!s)return ''; const m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/); if(m){let y=m[3];if(y.length===2)y='20'+y;return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${y}`;} const d=new Date(s); if(!isNaN(d))return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; return s; }
+function valorBR(s){ s=(s||'').toString().trim(); if(s==='')return ''; if(/,/.test(s))return s; const n=parseFloat(s); if(isNaN(n))return s; return n.toFixed(2).replace('.',','); }
+$('#btnAtualiza').addEventListener('click',()=>{
+  const levs=Object.values(LEV);
+  if(!levs.length){ toast('Nenhum item levantado ainda'); return; }
+  const bensMap={}; BENS.forEach(b=>bensMap[b.codigo]=b);
+  const headers=['Data do Movimento','Placa','Descrição','Descrição Reduzida','Marca','Modelo',
+    'Código Localização','Código Classificação','Código Situação','Código Estado Conservação',
+    'Data da Aquisição','Código Tipo Ingresso','Código Fornecedor','Código Convênio','Valor Atual',
+    'inContabil','inDepreciavel','Código Método Depreciação','Vida Útil','Valor Residual',
+    'Data Início Depreciação','Código Motivo Movimentação','Código Comissão Avaliação'];
+  const lines=[headers.map(csvVirg).join(',')];
+  const d=new Date(), hoje=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const placasSaida=[];
+  for(const lev of levs){
+    const b=bensMap[lev.codigo]; if(!b) continue;
+    const locMudou=(lev.cod_localizacao!=null && lev.cod_localizacao!==b.cod_localizacao);
+    const codLocal=lev.cod_localizacao||b.cod_localizacao, codEstado=lev.cod_estado||b.cod_estado, codSit=lev.cod_situacao||b.cod_situacao;
+    const dataMov=locMudou?(dataTxtBR(lev.data_movimento)||hoje):hoje;
+    const placaSaida=(b.placa&&String(b.placa).trim())?b.placa:(lev.placa_nova||'');
+    if(placaSaida&&String(placaSaida).trim()) placasSaida.push({placa:String(placaSaida).trim().replace(/^0+(?=\d)/,''),codigo:b.codigo});
+    lines.push([dataMov,placaSaida,b.descricao,b.descricao_reduzida,b.marca,b.modelo,codLocal,b.cod_classificacao,codSit,codEstado,
+      dataTxtBR(b.data_ingresso),b.tipo_ingresso,b.cod_fornecedor,b.cod_convenio,valorBR(b.valor_atual),b.contabil,b.depreciavel,b.metodo_depreciacao,
+      b.vida_util,valorBR(b.valor_residual),dataTxtBR(b.data_inicio_depreciacao),(lev.cod_motivo||'22'),(lev.cod_comissao||'')].map(csvVirg).join(','));
+  }
+  const porPlaca={}; placasSaida.forEach(x=>{(porPlaca[x.placa]=porPlaca[x.placa]||[]).push(x.codigo);});
+  const dups=Object.keys(porPlaca).filter(p=>porPlaca[p].length>1);
+  if(dups.length){
+    const det=dups.slice(0,10).map(p=>`• Placa ${p} → bens ${porPlaca[p].join(', ')}`).join('\n');
+    if(!confirm(`Atenção: ${dups.length} placa(s) aparecem repetidas no arquivo:\n\n${det}${dups.length>10?`\n…e mais ${dups.length-10}.`:''}\n\nPlacas repetidas podem ser recusadas pelo sistema de patrimônio. Gerar o ATUALIZA.csv mesmo assim?`)){ toast('Exportação cancelada'); return; }
+  }
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ATUALIZA.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast(`ATUALIZA.csv gerado com ${lines.length-1} itens`);
+});
+
+/* ====================== USUÁRIOS (função "usuarios" no Supabase) ====================== */
+let USUARIOS=[], usuCarregado=false;
+async function chamarUsuarios(body){
+  const {data,error}=await sb.functions.invoke('usuarios',{body});
+  if(error){
+    let m=error.message||String(error);
+    try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){}
+    const e=new Error(m); e.semFuncao=/not found|404|failed to send|FunctionsFetchError|FunctionsRelayError/i.test((error.name||'')+' '+m); throw e;
+  }
+  return data;
+}
+async function carregarUsuarios(){
+  const aviso=$('#usuAviso');
+  try{
+    const d=await chamarUsuarios({acao:'listar'});
+    USUARIOS=d.usuarios||[]; usuCarregado=true; aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
+    renderUsuarios();
+  }catch(e){
+    $('#usuArea').classList.toggle('hidden',!!e.semFuncao);
+    aviso.classList.remove('hidden');
+    aviso.innerHTML = e.semFuncao
+      ? 'O cadastro de usuários ainda não está instalado no Supabase. Execute o script <b>supabase/usuarios.sql</b> no SQL Editor e publique a função <b>usuarios</b> (pasta supabase/functions/usuarios). Até lá, os usuários continuam sendo criados no painel do Supabase, em Authentication.'
+      : 'Não foi possível carregar os usuários: '+esc(e.message);
+  }
+}
+function renderUsuarios(){
+  const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'nunca entrou';
+  $('#usuBody').innerHTML=USUARIOS.length?USUARIOS.map(u=>`<tr data-id="${esc(u.id)}">
+    <td>${esc(u.nome||'—')}</td><td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}</td>
+    <td><select class="uPerfil" ${u.id===USER.id?'disabled':''}><option value="campo"${u.perfil!=='admin'?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option></select></td>
+    <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}</td>
+    <td style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(u.ultimo_acesso)}</td>
+    <td><div class="acts">${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button></div></td></tr>`).join('')
+    :'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
+  document.querySelectorAll('#usuBody tr[data-id]').forEach(tr=>{
+    const u=USUARIOS.find(x=>x.id===tr.dataset.id);
+    const sel=tr.querySelector('.uPerfil'); if(sel) sel.onchange=()=>atualizarUsuario(u,{perfil:sel.value});
+    const ba=tr.querySelector('.uAtivo'); if(ba) ba.onclick=()=>{ if(u.ativo&&!confirm(`Bloquear ${u.email}? A pessoa não consegue mais entrar até ser reativada.`)) return; atualizarUsuario(u,{ativo:!u.ativo}); };
+    tr.querySelector('.uSenha').onclick=async()=>{
+      const senha=prompt(`Nova senha para ${u.email} (mínimo 8 caracteres):`); if(!senha) return;
+      if(senha.length<8){ toast('A senha precisa ter pelo menos 8 caracteres'); return; }
+      try{ await chamarUsuarios({acao:'senha',id:u.id,senha}); toast('Senha alterada. Informe a nova senha à pessoa.'); }catch(e){ toast('Erro: '+e.message,5000); }
+    };
+  });
+}
+async function atualizarUsuario(u,mud){
+  try{ await chamarUsuarios(Object.assign({acao:'atualizar',id:u.id},mud)); Object.assign(u,mud); renderUsuarios(); toast('Usuário atualizado'); }
+  catch(e){ toast('Erro: '+e.message,5000); renderUsuarios(); }
+}
+$('#btnCriarUsu').addEventListener('click',async()=>{
+  const nome=$('#uNome').value.trim(), email=$('#uEmail').value.trim().toLowerCase(), senha=$('#uSenha').value, perfil=$('#uPerfil').value;
+  if(!nome||!email){ toast('Informe nome e e-mail'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('E-mail inválido'); return; }
+  if((senha||'').length<8){ toast('A senha inicial precisa ter pelo menos 8 caracteres'); return; }
+  const btn=$('#btnCriarUsu'); btn.disabled=true;
+  try{ await chamarUsuarios({acao:'criar',nome,email,senha,perfil}); ['#uNome','#uEmail','#uSenha'].forEach(i=>$(i).value=''); toast('Usuário cadastrado. Passe o e-mail e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
+  catch(e){ toast('Erro: '+e.message,5000); }
+  finally{ btn.disabled=false; }
+});
+document.querySelector('#nav button[data-tab=usu]').addEventListener('click',()=>{ if(!usuCarregado) carregarUsuarios(); });
 
 /* ====================== COMISSÃO DO LEVANTAMENTO (única) ====================== */
 function preencherComissao(){
@@ -1011,7 +1204,8 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     rtNome:$('#cRtNome').value.trim(), rtTitulo:$('#cRtTitulo').value.trim(), rtRegistro:$('#cRtRegistro').value.trim(),
     pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0.1),
     ec:{'1':nv('#cEc1',10),'2':nv('#cEc2',8),'3':nv('#cEc3',5),'4':nv('#cEc4',2)},
-    fundamento:$('#cFundamento').value.trim()
+    fundamento:$('#cFundamento').value.trim(),
+    modoEnvio:CFG.modoEnvio||'online'
   };
   const {error}=await sb.from('configuracao').upsert({id:1,dados:novo,atualizado_em:new Date().toISOString()},{onConflict:'id'});
   if(error){ toast('Erro ao salvar: '+error.message); return; }
