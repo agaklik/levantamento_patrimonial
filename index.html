@@ -5,308 +5,402 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Levantamento Patrimonial</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#18212B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Patrimônio">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
+  @font-face{font-family:'Archivo';src:url(vendor/archivo.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
   :root{
-    --bg:#f4f1ea; --surface:#ffffff; --surface2:#f0ebe0; --border:#d9d0bf;
-    --txt:#2b2a26; --muted:#8a8170; --accent:#0f766e; --accent-2:#c2410c; --ok:#15803d; --warn:#b45309; --danger:#b91c1c;
+    /* papel de repartição, tinta de carimbo, azul de ofício e o amarelo das etiquetas de inventário */
+    --bg:#ECEFF2; --surface:#ffffff; --surface2:#F4F6F8; --border:#D3D9DF; --line:#E3E7EB;
+    --txt:#18212B; --muted:#5B6672; --accent:#2347A8; --accent-ink:#1A3680; --accent-2:#A15C00;
+    --signal:#F5C518; --signal-ink:#3A2E00;
+    --ok:#1F7A4D; --warn:#A15C00; --danger:#B42318;
+    --alu-1:#F1F3F5; --alu-2:#C9D0D6; --alu-3:#9AA4AD;
+    --r:10px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:15px}
-  header{position:sticky;top:0;z-index:50;background:var(--accent);color:#fff;border-bottom:3px solid var(--accent-2);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-  .hdr-center{flex:1;text-align:center;min-width:0}
-  header h1{font-size:16px;margin:0;font-weight:700;color:#fff;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .stats{font-size:11px;color:rgba(255,255,255,.85);margin-top:1px}
-  .stats b{color:#fff}
-  .hdr-icon{flex:none;width:40px;height:40px;padding:0;font-size:18px;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center}
+  html{background:var(--bg)}
+  body{margin:0;font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-stretch:100%;background:var(--bg);color:var(--txt);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  :focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ---------- cabeçalho ---------- */
+  header{position:sticky;top:0;z-index:50;background:var(--txt);color:#fff;padding:10px 12px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+  .hdr-center{flex:1;min-width:0}
+  header h1{font-size:17px;margin:0;font-weight:700;font-stretch:92%;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+  .stats{display:none}
+  #progWrap{margin-top:7px!important}
+  #progWrap>div:first-child{height:6px!important;background:rgba(255,255,255,.16)!important;border-radius:3px!important}
+  #progBar{background:var(--signal)!important;border-radius:3px!important}
+  #progText{text-align:left!important;color:rgba(255,255,255,.78)!important;font-size:12.5px!important;margin-top:5px!important;font-variant-numeric:tabular-nums}
+  .hdr-icon{flex:none;width:42px;height:42px;padding:0;border-radius:10px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center}
+  .hdr-icon svg{width:20px;height:20px}
+  .hdr-icon:active{background:rgba(255,255,255,.12)}
   .hdr-icon.hidden{display:flex;visibility:hidden}
-  main{padding:16px;max-width:760px;margin:0 auto}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-  button{font:inherit;border:none;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:8px;justify-content:center}
-  button:active{transform:scale(.97)}
+
+  main{padding:14px 14px 28px;max-width:640px;margin:0 auto}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 16px;margin-bottom:14px}
+
+  /* ---------- botões ---------- */
+  button{font:inherit;border:none;border-radius:var(--r);padding:12px 16px;min-height:48px;cursor:pointer;font-weight:600;transition:background-color .15s,transform .1s;display:inline-flex;align-items:center;gap:8px;justify-content:center;color:inherit}
+  button:active{transform:scale(.98)}
+  button:disabled{opacity:.55;cursor:default}
+  button svg{width:20px;height:20px;flex:none}
   .btn{background:var(--accent);color:#fff}
-  .btn-2{background:var(--surface2);color:var(--txt);border:1px solid var(--border)}
-  .seg-btn{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:8px;font-weight:600;font-size:14px;cursor:pointer}
-  .seg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:active{background:var(--accent-ink)}
+  .btn-2{background:var(--surface);color:var(--txt);border:1.5px solid var(--border)}
+  .btn-2:active{background:var(--surface2)}
   .btn-ok{background:var(--ok);color:#fff}
-  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
   .btn-block{width:100%}
-  label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px;text-transform:uppercase;letter-spacing:.4px}
-  input,select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px;color:var(--txt);font:inherit;margin-bottom:14px}
-  input:focus,select:focus{outline:none;border-color:var(--accent)}
-  .row{display:flex;gap:10px}
+  .btn-scan{background:var(--signal);color:var(--signal-ink);min-height:64px;font-size:18px;font-weight:700;font-stretch:108%;border-radius:12px;width:100%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+  .btn-scan svg{width:30px;height:24px}
+  .seg{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:3px;gap:3px;margin-bottom:10px}
+  .seg-btn{flex:1;background:transparent;color:var(--muted);border:none;border-radius:8px;padding:8px;min-height:40px;font-weight:600;font-size:15px;cursor:pointer}
+  .seg-btn.active{background:var(--surface);color:var(--txt);box-shadow:0 0 0 1px var(--border),0 1px 2px rgba(24,33,43,.08)}
+
+  /* ---------- formulários ---------- */
+  label{display:block;font-size:14px;font-weight:600;color:var(--txt);margin:0 0 6px}
+  input,select{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:12px;min-height:48px;color:var(--txt);font:inherit;margin-bottom:16px;appearance:none;-webkit-appearance:none}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235B6672' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(35,71,168,.15)}
+  input:disabled,select:disabled{background:var(--surface2);color:var(--muted)}
+  input::placeholder{color:#8A949E}
+  .row{display:flex;gap:8px}
   .row>*{flex:1}
   .hidden{display:none!important}
-  .field{margin-bottom:4px}
-  .field .val{background:var(--surface2);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
-  .field-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  #scanWrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3;margin-bottom:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+  .hint{font-size:13px;color:var(--muted);margin:0 0 12px}
+
+  /* ---------- ficha do bem: dados do cadastro (só leitura) ---------- */
+  .facts{background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:6px;display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+  .facts .wide{grid-column:1/-1}
+  .field{margin:0}
+  .field-label{font-size:12.5px;color:var(--muted);margin-bottom:1px}
+  .field .val{font-size:16px;font-weight:500;line-height:1.3;word-break:break-word}
+  .field .val:empty::before{content:'—';color:var(--muted)}
+  #dDesc{font-size:18px;font-weight:600;font-stretch:104%}
+  #dValor{font-variant-numeric:tabular-nums}
+  .section-title{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;font-stretch:110%;margin:22px 0 14px;color:var(--txt)}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* ---------- a plaqueta de patrimônio ---------- */
+  .tag-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+  .plate-box{position:relative;display:inline-block;min-width:150px;max-width:100%;padding:9px 26px 10px;border-radius:7px;
+    background:linear-gradient(180deg,var(--alu-1) 0%,#DDE2E6 45%,var(--alu-2) 100%);
+    box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(0,0,0,.18),0 0 0 1px var(--alu-3),0 2px 4px rgba(24,33,43,.18)}
+  .plate-box::before,.plate-box::after{content:'';position:absolute;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#fff,var(--alu-3) 70%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .plate-box::before{left:9px}.plate-box::after{right:9px}
+  .plate-label{font-size:11px;font-weight:700;font-stretch:120%;letter-spacing:.06em;color:#4A545E}
+  .plate-num{font-weight:800;font-stretch:72%;letter-spacing:.02em;color:#1E262E;font-variant-numeric:tabular-nums;line-height:1;word-break:break-all;font-size:clamp(34px,12vw,48px);text-shadow:0 1px 0 rgba(255,255,255,.7)}
+
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap}
+  .pill::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor}
+  .pill.done{background:#E3F2EA;color:var(--ok)}
+  .pill.pend{background:#FBEFD9;color:var(--warn)}
+
+  /* blocos de destaque dentro da ficha */
+  .note{border-radius:12px;padding:14px;margin-bottom:16px;border:1.5px solid}
+  .note label{margin-bottom:8px}
+  .note-warn{background:#FFF7E6;border-color:#E8C27A}
+  .note-warn label{color:var(--warn)}
+  .note-info{background:var(--surface2);border-color:var(--border)}
+  .note select{margin-bottom:0}
+  .note .val-strong{font-weight:600}
+  .note small{color:var(--muted);display:block;margin-top:8px;font-size:13px}
+  #movWrap label span{font-weight:400;color:var(--muted)}
+
+  /* scanner e câmera */
+  #scanWrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3;margin:14px 0 0}
   #scanVideo,#photoVideo{width:100%;height:100%;object-fit:cover;display:block}
-  .scanline{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--accent-2);box-shadow:0 0 12px var(--accent-2);animation:scan 2s linear infinite}
+  .scanline{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--signal);box-shadow:0 0 10px var(--signal);animation:scan 2s ease-in-out infinite}
   @keyframes scan{0%{top:25%}50%{top:75%}100%{top:25%}}
-  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
-  .pill.done{background:rgba(21,128,61,.14);color:var(--ok)}
-  .pill.pend{background:rgba(180,83,9,.14);color:var(--warn)}
-  .photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+  #scanStatus{background:#000;color:#fff!important}
+
+  .photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .thumb{position:relative;width:76px;height:76px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
   .thumb img{width:100%;height:100%;object-fit:cover}
-  .thumb .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center;font-size:13px;cursor:pointer;padding:0}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);padding:12px 20px;border-radius:10px;z-index:100;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
-  .toast.show{opacity:1}
+  .thumb .x{position:absolute;top:3px;right:3px;background:rgba(24,33,43,.8);color:#fff;border-radius:50%;width:24px;height:24px;min-height:0;line-height:24px;text-align:center;font-size:15px;cursor:pointer;padding:0}
+
+  .checkrow{display:flex;align-items:center;gap:12px;background:var(--surface);padding:14px;border-radius:12px;border:1.5px solid var(--border);margin:18px 0 0;cursor:pointer;font-size:16px;font-weight:600;color:var(--txt)}
+  .checkrow input{width:24px;height:24px;min-height:0;margin:0;flex:none;appearance:auto;-webkit-appearance:checkbox;accent-color:var(--ok)}
+  .checkrow:has(input:checked){border-color:var(--ok);background:#F0F8F3}
+
+  /* barra de salvar fixa no rodapé da ficha */
+  .actions{position:sticky;bottom:0;z-index:20;display:flex;gap:8px;margin:16px -16px -18px;padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--border);border-radius:0 0 14px 14px;backdrop-filter:blur(6px)}
+  .actions #btnSave{flex:1;min-height:52px;font-size:17px}
+
+  .toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(8px);background:var(--txt);color:#fff;padding:12px 18px;border-radius:10px;z-index:100;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:90%;font-size:15px;font-weight:500}
+  .toast.show{opacity:1;transform:translateX(-50%)}
   .empty{text-align:center;color:var(--muted);padding:40px 20px}
-  .empty svg{opacity:.4;margin-bottom:12px}
   .search-results{max-height:240px;overflow:auto;margin-top:8px}
   .res-item{padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .res-item:hover{border-color:var(--accent)}
   .res-item small{color:var(--muted);display:block}
-  .checkrow{display:flex;align-items:center;gap:10px;background:var(--surface2);padding:14px;border-radius:10px;border:1px solid var(--border);margin-bottom:14px;cursor:pointer}
-  .checkrow input{width:22px;height:22px;margin:0;flex:none}
-  .checkrow span{font-weight:600}
   .filterbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
   .filterbar select,.filterbar input{margin:0}
-  .err{color:var(--danger);font-size:13px}
-  .plate-box{display:inline-block;min-width:120px;border:2.5px solid var(--accent-2);border-radius:12px;padding:10px 16px;background:linear-gradient(180deg,#fff,var(--surface2));box-shadow:inset 0 0 0 1px rgba(194,65,12,.12),0 2px 6px rgba(194,65,12,.12)}
-  .plate-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent-2)}
-  .plate-num{font-weight:800;letter-spacing:2px;color:var(--txt);font-variant-numeric:tabular-nums;line-height:1.05;word-break:break-all;font-size:clamp(20px,9vw,34px)}
+  .err{color:var(--danger);font-size:14px;font-weight:500}
+  #searchMsg:not(:empty){margin-top:12px}
+
+  /* localização */
   #locPicker{position:relative}
-  .loc-suggest{position:absolute;left:0;right:0;top:calc(100% - 10px);z-index:30;background:var(--surface2);border:1px solid var(--accent);border-radius:9px;max-height:220px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-  .loc-suggest .opt{padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border)}
+  .loc-suggest{position:absolute;left:0;right:0;top:calc(100% - 12px);z-index:30;background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--r);max-height:240px;overflow:auto;box-shadow:0 10px 28px rgba(24,33,43,.18)}
+  .loc-suggest .opt{padding:12px;cursor:pointer;border-bottom:1px solid var(--line)}
   .loc-suggest .opt:last-child{border-bottom:none}
-  .loc-suggest .opt:hover,.loc-suggest .opt.active{background:var(--accent);color:#001220}
-  .loc-suggest .opt small{display:block;opacity:.7;font-size:11px}
+  .loc-suggest .opt:hover,.loc-suggest .opt.active{background:#E9EEFA}
+  .loc-suggest .opt small{display:block;color:var(--muted);font-size:12.5px}
   .loc-suggest .opt.empty{cursor:default;color:var(--muted)}
-  .loc-suggest .opt.empty:hover{background:transparent;color:var(--muted)}
-  .loc-selected{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .loc-selected .x{background:transparent;color:var(--muted);border:none;font-size:18px;padding:0 4px;flex:none}
+  .loc-suggest .opt.empty:hover{background:transparent}
+  .loc-selected{background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--r);padding:10px 8px 10px 12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .loc-selected .x{background:transparent;color:var(--muted);border:none;font-size:18px;padding:0;width:40px;min-height:40px;flex:none}
   .loc-selected b{font-weight:600}
-  .loc-selected small{color:var(--muted);display:block;font-size:11px}
+  .loc-selected small{color:var(--muted);display:block;font-size:12.5px}
+  #dUnidadeGestora{font-weight:600}
+
+  /* engrenagem */
+  #toolsCard h3{margin:0 0 4px;font-size:16px;font-weight:700;font-stretch:108%}
+  #toolsCard h3.big{font-size:20px;font-stretch:112%;margin-bottom:6px}
+  #toolsCard hr{border:none;border-top:1px solid var(--border);margin:22px 0}
+  #toolsCard .stack{display:flex;flex-direction:column;gap:8px}
+  #toolsInfo b{color:var(--txt)}
+  .admin-link{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--r);min-height:48px;font-weight:600}
+  .ne-item{background:var(--surface)!important}
 </style>
 
 <style>
-  .login-wrap{max-width:380px;margin:8vh auto;padding:0 20px}
-  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 22px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-  .login-card h2{margin:0 0 4px;font-size:20px;color:var(--accent)}
-  .login-card p.sub{margin:0 0 20px;color:var(--muted);font-size:13px}
+  /* ---------- login ---------- */
+  #loginScreen{min-height:100vh;min-height:100dvh;background:var(--txt);display:flex;align-items:center;justify-content:center;padding:24px 18px}
+  .login-wrap{margin:0}
+  .login-card{width:100%;max-width:380px;background:var(--surface);border-radius:16px;padding:26px 22px 22px}
+  .login-card .plate-box{display:block;margin:0 0 20px;padding:12px 30px 13px}
+  .login-card .plate-num{font-size:30px;font-stretch:80%;word-break:normal;line-height:1.05}
+  .login-card p.sub{margin:0 0 18px;color:var(--muted);font-size:15px}
+  .app-version{font-size:12.5px;color:var(--muted);text-align:center;margin-top:16px;font-variant-numeric:tabular-nums}
+  .pass-wrap{position:relative}
+  .pass-wrap input{padding-right:52px}
+  #btnTogglePass{position:absolute;right:4px;top:4px;min-height:40px;width:44px;padding:0;background:none;color:var(--muted);font-size:18px}
   .badge-user{font-size:11px;color:rgba(255,255,255,.9);display:flex;align-items:center;gap:6px}
   .spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:rot .7s linear infinite;vertical-align:middle}
+  .btn .spin{border-color:rgba(255,255,255,.35);border-top-color:#fff}
   @keyframes rot{to{transform:rotate(360deg)}}
   .center-load{text-align:center;padding:50px 20px;color:var(--muted)}
 </style>
 
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-barcode" viewBox="0 0 30 24"><g fill="currentColor"><rect x="0" y="0" width="2.5" height="24"/><rect x="4" y="0" width="1.2" height="24"/><rect x="7" y="0" width="3" height="24"/><rect x="11.5" y="0" width="1.2" height="24"/><rect x="14" y="0" width="2.2" height="24"/><rect x="18" y="0" width="1.2" height="24"/><rect x="20.5" y="0" width="3" height="24"/><rect x="25" y="0" width="1.2" height="24"/><rect x="27.5" y="0" width="2.5" height="24"/></g></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 8.5A1.5 1.5 0 0 1 4.5 7h3l1.5-2.5h6L16.5 7h3A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-exit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 8l-4 4 4 4M6 12h10"/></symbol>
+</svg>
+
 <!-- ====== TELA DE LOGIN ====== -->
 <div id="loginScreen" class="login-wrap">
   <div class="login-card">
-    <h2>Levantamento Patrimonial</h2>
-    <p class="sub">Entre com seu e-mail e senha para começar.</p>
-    <div id="appVersion" style="text-align:center;font-size:12px;font-weight:600;color:var(--accent);background:rgba(15,118,110,.08);border:1px solid var(--accent);border-radius:8px;padding:6px;margin:0 0 16px"></div>
-    <label>E-mail</label>
+    <div class="plate-box"><div class="plate-label">Patrimônio</div><div class="plate-num">Levantamento patrimonial</div></div>
+    <p class="sub">Entre com o e-mail e a senha que você recebeu para o trabalho de campo.</p>
+    <label for="loginEmail">E-mail</label>
     <input type="email" id="loginEmail" autocomplete="username" inputmode="email" placeholder="voce@exemplo.com">
-    <label>Senha</label>
-    <div style="position:relative">
-      <input type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••" style="padding-right:44px">
-      <button type="button" id="btnTogglePass" aria-label="Mostrar senha"
-        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--muted)">👁️</button>
+    <label for="loginPass">Senha</label>
+    <div class="pass-wrap">
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="Sua senha">
+      <button type="button" id="btnTogglePass" aria-label="Mostrar senha">👁️</button>
     </div>
-    <button class="btn btn-block" id="btnLogin" style="margin-top:6px">Entrar</button>
-    <div id="loginMsg" style="margin-top:12px;font-size:13px"></div>
+    <button class="btn btn-block" id="btnLogin">Entrar</button>
+    <div id="loginMsg" style="margin-top:12px;font-size:14px"></div>
+    <div id="appVersion" class="app-version"></div>
   </div>
 </div>
 
 <!-- ====== APP (após login) ====== -->
 <div id="appScreen" class="hidden">
 <header>
-  <button id="btnReopenImport" class="hdr-icon hidden" title="Tabelas" aria-label="Tabelas">⚙️</button>
+  <button id="btnReopenImport" class="hdr-icon hidden" title="Tabelas e dados" aria-label="Tabelas e dados"><svg><use href="#i-gear"/></svg></button>
   <div class="hdr-center">
-    <h1>Levantamento Patrimonial</h1>
+    <h1>Levantamento patrimonial</h1>
     <div class="stats" id="stats"></div>
-    <div id="progWrap" style="margin-top:6px">
-      <div style="height:8px;background:rgba(0,0,0,.12);border-radius:5px;overflow:hidden">
-        <div id="progBar" style="height:100%;width:0%;border-radius:5px;transition:width .4s,background-color .4s;background:#dc2626"></div>
+    <div id="progWrap">
+      <div style="overflow:hidden">
+        <div id="progBar" style="height:100%;width:0%;transition:width .4s"></div>
       </div>
-      <div id="progText" style="font-size:11px;color:#fff;margin-top:3px;text-align:center;opacity:.95"></div>
+      <div id="progText"></div>
     </div>
   </div>
-  <button id="btnExport" class="hdr-icon" title="Exportar" aria-label="Exportar">⬇</button>
-  <button id="btnLogout" class="hdr-icon" title="Sair" aria-label="Sair">⏏</button>
+  <button id="btnExport" class="hdr-icon" title="Exportar arquivo" aria-label="Exportar arquivo"><svg><use href="#i-download"/></svg></button>
+  <button id="btnLogout" class="hdr-icon" title="Sair" aria-label="Sair"><svg><use href="#i-exit"/></svg></button>
 </header>
 
 <main>
   <!-- BUSCA / SCANNER -->
   <div class="card" id="searchCard">
-    <div class="row" style="margin-bottom:14px;flex-direction:column;gap:8px">
-      <button class="btn" id="btnScan">📷 Ler código de barras</button>
-    </div>
-    <label>Buscar por placa ou código</label>
-    <div class="row" style="gap:6px;margin-bottom:8px">
-      <button type="button" class="seg-btn active" id="segPlaca" data-modo="placa" style="flex:1">Por placa</button>
-      <button type="button" class="seg-btn" id="segCodigo" data-modo="codigo" style="flex:1">Por código</button>
-    </div>
-    <div class="row">
-      <input type="search" id="plateInput" inputmode="numeric" placeholder="Digite a placa..." style="margin:0">
-      <button class="btn-2" id="btnSearch" style="flex:none">Buscar</button>
-    </div>
+    <button class="btn-scan" id="btnScan"><svg><use href="#i-barcode"/></svg>Ler código de barras</button>
     <div id="scanWrap" class="hidden">
       <video id="scanVideo" playsinline></video>
       <div class="scanline"></div>
-      <div id="scanStatus" style="display:none;text-align:center;font-size:12px;color:var(--muted);padding:6px 0"></div>
+      <div id="scanStatus" style="display:none;text-align:center;font-size:13px;padding:6px 0"></div>
     </div>
     <button class="btn-ghost btn-block hidden" id="btnStopScan" style="margin-top:8px">Parar leitura</button>
 
-    
-    <div id="searchMsg" style="margin-top:10px;font-size:13px"></div>
+    <div class="section-title">Ou digite a etiqueta</div>
+    <div class="seg" role="group" aria-label="Buscar por">
+      <button type="button" class="seg-btn active" id="segPlaca" data-modo="placa">Por placa</button>
+      <button type="button" class="seg-btn" id="segCodigo" data-modo="codigo">Por código</button>
+    </div>
+    <div class="row">
+      <input type="search" id="plateInput" inputmode="numeric" placeholder="Número da placa" aria-label="Placa ou código" style="margin:0">
+      <button class="btn" id="btnSearch" style="flex:none;padding:12px 18px">Buscar</button>
+    </div>
+    <div id="searchMsg" style="font-size:14px"></div>
   </div>
 
   <!-- DETALHE DO BEM -->
   <div class="card hidden" id="detailCard">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px">
+    <div class="tag-row">
       <div class="plate-box">
-        <div class="plate-label">Placa do bem</div>
+        <div class="plate-label">Patrimônio</div>
         <div class="plate-num" id="dPlaca"></div>
       </div>
       <span class="pill" id="dStatus"></span>
     </div>
 
-    <div id="semPlacaWrap" class="hidden" style="background:rgba(180,83,9,.08);border:1px solid var(--warn);border-radius:10px;padding:12px;margin-bottom:14px">
-      <label style="color:var(--warn)">Item sem placa — informe a placa encontrada</label>
+    <div id="semPlacaWrap" class="note note-warn hidden">
+      <label for="fPlacaNova">Item sem placa: informe a placa encontrada</label>
       <div class="row">
-        <input type="text" id="fPlacaNova" inputmode="numeric" placeholder="Digite ou escaneie a placa..." style="margin:0">
-        <button class="btn-2" id="btnScanPlacaNova" style="flex:none" title="Escanear">📷</button>
+        <input type="text" id="fPlacaNova" inputmode="numeric" placeholder="Digite ou escaneie a placa" style="margin:0">
+        <button class="btn-2" id="btnScanPlacaNova" style="flex:none;width:52px;padding:0" title="Escanear placa" aria-label="Escanear placa"><svg style="pointer-events:none"><use href="#i-barcode"/></svg></button>
       </div>
-      <small style="color:var(--muted);display:block;margin-top:6px">Deixe em branco se o item realmente não tiver placa.</small>
-      <div id="placaNovaAviso" style="display:none;margin-top:8px;font-size:13px;font-weight:600"></div>
+      <small>Deixe em branco se o item realmente não tiver placa.</small>
+      <div id="placaNovaAviso" style="display:none;margin-top:8px;font-size:14px;font-weight:600"></div>
     </div>
 
-    <div class="grid2" style="margin-bottom:14px">
-      <div class="field"><div class="field-label">Código do Item</div><div class="val" id="dCodigo"></div></div>
-      <div class="field"><div class="field-label">Cód. Classificação</div><div class="val" id="dClassCod"></div></div>
-    </div>
-    <div class="field" style="margin-bottom:14px"><div class="field-label">Descrição</div><div class="val" id="dDesc"></div></div>
-    <div class="field" style="margin-bottom:14px"><div class="field-label">Classificação</div><div class="val" id="dClassif"></div></div>
-    <div class="grid2" style="margin-bottom:14px">
+    <div class="facts">
+      <div class="field wide"><div class="field-label">Descrição</div><div class="val" id="dDesc"></div></div>
+      <div class="field"><div class="field-label">Código do item</div><div class="val" id="dCodigo"></div></div>
+      <div class="field"><div class="field-label">Valor atual</div><div class="val" id="dValor"></div></div>
+      <div class="field wide"><div class="field-label">Classificação</div><div class="val"><span id="dClassif"></span> <span style="color:var(--muted)">· <span id="dClassCod"></span></span></div></div>
       <div class="field"><div class="field-label">Marca</div><div class="val" id="dMarca"></div></div>
       <div class="field"><div class="field-label">Modelo</div><div class="val" id="dModelo"></div></div>
     </div>
-    <div class="field" style="margin-bottom:14px"><div class="field-label">Valor atual</div><div class="val" id="dValor"></div></div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
+    <div class="section-title">Conferência em campo</div>
 
-    <label>Localização</label>
+    <label for="fLocal">Localização</label>
     <div id="locPicker">
-      <input type="text" id="fLocal" autocomplete="off" placeholder="Digite para buscar a localização...">
+      <input type="text" id="fLocal" autocomplete="off" placeholder="Digite para buscar a sala ou setor">
       <div id="locSuggest" class="loc-suggest hidden"></div>
     </div>
     <div id="locSelected" class="loc-selected hidden"></div>
 
-    <div id="ugWrap" style="margin:14px 0">
-      <label>Unidade Gestora</label>
-      <div id="dUnidadeGestora" style="font-weight:600;color:var(--txt);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px">—</div>
+    <div id="ugWrap" style="margin:0 0 16px">
+      <div class="field-label">Unidade gestora</div>
+      <div id="dUnidadeGestora">—</div>
     </div>
 
-    <div id="movWrap" class="hidden" style="background:rgba(194,65,12,.06);border:1px solid var(--accent-2);border-radius:10px;padding:12px;margin-bottom:14px">
-      <label style="color:var(--accent-2)">Motivo da movimentação <span style="text-transform:none">(padrão do levantamento)</span></label>
+    <div id="movWrap" class="note note-info hidden">
+      <label for="fMotivo">Motivo da movimentação <span>(padrão do levantamento)</span></label>
       <select id="fMotivo"><option value="">— selecione o motivo —</option></select>
     </div>
 
     <div class="grid2" style="align-items:end">
       <div>
-        <label>Estado de conservação</label>
+        <label for="fEstado">Estado de conservação</label>
         <select id="fEstado"><option value="">— estado —</option></select>
       </div>
       <div>
-        <label>Situação</label>
+        <label for="fSituacao">Situação</label>
         <select id="fSituacao"><option value="">— situação —</option></select>
       </div>
     </div>
 
-    <div id="comWrap" class="hidden" style="background:rgba(15,118,110,.06);border:1px solid var(--accent);border-radius:10px;padding:12px;margin:14px 0">
-      <label style="color:var(--accent)">Comissão de avaliação</label>
-      <div id="comInfoDetalhe" style="font-weight:600;color:var(--txt)">—</div>
+    <div id="comWrap" class="hidden" style="margin:0 0 18px">
+      <div class="field-label">Comissão de avaliação</div>
+      <div id="comInfoDetalhe" style="font-weight:600">—</div>
     </div>
 
-    <label>Registro fotográfico</label>
-    <button class="btn-2 btn-block" id="btnPhoto">📸 Tirar foto</button>
+    <label>Fotos do bem</label>
+    <button class="btn-2 btn-block" id="btnPhoto"><svg><use href="#i-camera"/></svg>Tirar foto</button>
     <div id="photoCamWrap" class="hidden" style="margin-top:10px">
       <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3">
         <video id="photoVideo" playsinline></video>
       </div>
       <div class="row" style="margin-top:8px">
-        <button class="btn-ok" id="btnCapture">✓ Capturar</button>
+        <button class="btn-ok" id="btnCapture">Capturar foto</button>
         <button class="btn-ghost" id="btnCancelPhoto" style="flex:none">Cancelar</button>
       </div>
     </div>
     <div class="photos" id="photoList"></div>
 
-    <label class="checkrow" style="margin-top:18px" for="fDone">
+    <label class="checkrow" for="fDone">
       <input type="checkbox" id="fDone">
-      <span>Levantamento deste item concluído</span>
+      <span>Item conferido, levantamento concluído</span>
     </label>
 
-    <div class="row">
-      <button class="btn btn-block" id="btnSave">💾 Salvar item</button>
+    <div class="actions">
       <button class="btn-ghost" id="btnBack" style="flex:none">Voltar</button>
+      <button class="btn btn-block" id="btnSave">Salvar item</button>
     </div>
   </div>
 
   <!-- TABELAS DE APOIO (engrenagem) -->
   <div class="card hidden" id="toolsCard">
-    <h3 style="margin-top:0">Tabelas e dados</h3>
-    <div id="toolsInfo" style="font-size:13px;color:var(--muted)"></div>
-    <div id="segAviso" class="hidden" style="background:rgba(180,83,9,.08);border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:10px;margin-top:10px;font-size:12px;font-weight:600">⚠️ Regras de acesso não configuradas no banco: qualquer usuário logado vê esta tela. Execute o script supabase/seguranca.sql no painel do Supabase.</div>
-    <button class="btn-2 btn-block" id="btnReloadAux" style="margin-top:12px">↻ Recarregar tabelas de apoio</button>
+    <h3 class="big">Tabelas e dados</h3>
+    <div id="toolsInfo" style="font-size:14px;color:var(--muted)"></div>
+    <div id="segAviso" class="note note-warn hidden" style="margin:12px 0 0;font-size:14px;font-weight:600;color:var(--warn)">Regras de acesso não configuradas no banco: qualquer usuário logado vê esta tela. Execute o script supabase/seguranca.sql no painel do Supabase.</div>
+    <button class="btn-2 btn-block" id="btnReloadAux" style="margin-top:12px">Recarregar tabelas de apoio</button>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
-    <h3 style="margin-top:0;font-size:15px">Importar dados (CSV)</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Atualiza a tabela escolhida com o arquivo enviado. O levantamento já feito é sempre preservado.</p>
-    <div class="row" style="flex-direction:column;gap:8px">
-      <button class="btn-2 btn-block" data-import="bens">📦 Importar Bens</button>
-      <button class="btn-2 btn-block" data-import="localizacoes">📍 Importar Localizações</button>
-      <button class="btn-2 btn-block" data-import="motivos">🏷️ Importar Motivos</button>
+    <hr>
+    <h3>Importar dados (CSV)</h3>
+    <p class="hint">Atualiza a tabela escolhida com o arquivo enviado. O levantamento já feito é sempre preservado.</p>
+    <div class="stack">
+      <button class="btn-2 btn-block" data-import="bens">Importar bens</button>
+      <button class="btn-2 btn-block" data-import="localizacoes">Importar localizações</button>
+      <button class="btn-2 btn-block" data-import="motivos">Importar motivos</button>
     </div>
     <input type="file" id="importFile" accept=".csv,text/csv" style="display:none">
     <div id="importProgress" class="hidden" style="margin-top:14px">
-      <div style="font-size:13px;color:var(--txt);margin-bottom:6px" id="importMsg"></div>
-      <div style="height:10px;background:var(--surface2);border-radius:6px;overflow:hidden">
+      <div style="font-size:14px;margin-bottom:6px" id="importMsg"></div>
+      <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;border:1px solid var(--border)">
         <div id="importBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div>
       </div>
     </div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
-    <h3 style="margin-top:0;font-size:15px">Comissão de Avaliação</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Cadastre a comissão do levantamento. Ela será usada nos itens e no arquivo de exportação.</p>
-    <label>Código da comissão</label>
-    <input type="text" id="comCod" inputmode="numeric" placeholder="Ex.: 1" style="margin:0 0 10px">
-    <label>Descrição</label>
+    <hr>
+    <h3>Comissão de avaliação</h3>
+    <p class="hint">Cadastre a comissão do levantamento. Ela é usada nos itens e no arquivo de exportação.</p>
+    <label for="comCod">Código da comissão</label>
+    <input type="text" id="comCod" inputmode="numeric" placeholder="Ex.: 1" style="margin:0 0 12px">
+    <label for="comDesc">Descrição</label>
     <input type="text" id="comDesc" placeholder="Ex.: Comissão de Avaliação 2026" style="margin:0 0 12px">
     <button class="btn-ok btn-block" id="btnSalvarComissao">Salvar comissão</button>
-    <div id="comCard" style="display:none;margin-top:12px;background:rgba(15,118,110,.06);border:1px solid var(--accent);border-radius:10px;padding:12px">
-      <div style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Comissão cadastrada</div>
-      <div id="comCardTexto" style="font-weight:600;color:var(--txt)">—</div>
-      <button class="btn-2 btn-block" id="btnEditarComissao" style="margin-top:10px">✏️ Editar</button>
+    <div id="comCard" class="note note-info" style="display:none;margin:12px 0 0">
+      <div class="field-label">Comissão cadastrada</div>
+      <div id="comCardTexto" style="font-weight:600">—</div>
+      <button class="btn-2 btn-block" id="btnEditarComissao" style="margin-top:10px">Editar comissão</button>
     </div>
-    <div id="comInfo" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    <div id="comInfo" style="font-size:13px;color:var(--muted);margin-top:8px"></div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
-    <h3 style="margin-top:0;font-size:15px">Acompanhamento do levantamento</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Listas de bens por situação. Toque em um item para abri-lo.</p>
-    <button class="btn-2 btn-block" id="btnVerNaoEncontrados">📋 Ver não encontrados</button>
-    <button class="btn-2 btn-block" id="btnBaixarNaoEncontrados" style="margin-top:8px">⬇️ Baixar não encontrados (CSV)</button>
-    <button class="btn-2 btn-block" id="btnVerEncontrados" style="margin-top:14px">✅ Ver encontrados</button>
-    <button class="btn-2 btn-block" id="btnBaixarEncontrados" style="margin-top:8px">⬇️ Baixar encontrados (CSV)</button>
-    <div id="naoEncMsg" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    <hr>
+    <h3>Acompanhamento</h3>
+    <p class="hint">Listas de bens por situação. Toque em um item para abrir a ficha.</p>
+    <div class="stack">
+      <button class="btn-2 btn-block" id="btnVerNaoEncontrados">Ver não encontrados</button>
+      <button class="btn-ghost btn-block" id="btnBaixarNaoEncontrados">Baixar não encontrados (CSV)</button>
+      <button class="btn-2 btn-block" id="btnVerEncontrados" style="margin-top:8px">Ver encontrados</button>
+      <button class="btn-ghost btn-block" id="btnBaixarEncontrados">Baixar encontrados (CSV)</button>
+    </div>
+    <div id="naoEncMsg" style="font-size:13px;color:var(--muted);margin-top:10px"></div>
     <div id="naoEncLista" style="margin-top:10px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
-    <h3 style="margin-top:0;font-size:15px">Reavaliação e documentos</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 12px">Depois do levantamento, a reavaliação dos bens e a emissão de laudos, termos e relatórios são feitas na página de administração (melhor no computador).</p>
-    <a href="admin.html" class="btn-2 btn-block" style="display:block;text-align:center;text-decoration:none;padding:11px 16px;border-radius:10px;font-weight:600">🖥️ Abrir página de administração</a>
-    <button class="btn-ghost btn-block" id="btnCloseTools" style="margin-top:16px">Fechar</button>
+    <hr>
+    <h3>Reavaliação e documentos</h3>
+    <p class="hint">Depois do levantamento, a reavaliação dos bens e a emissão de laudos, termos e relatórios são feitas na página de administração, melhor no computador.</p>
+    <a href="admin.html" class="admin-link">Abrir página de administração</a>
+    <button class="btn-ghost btn-block" id="btnCloseTools" style="margin-top:18px">Fechar</button>
   </div>
 </main>
 </div>
@@ -768,8 +862,8 @@ function aplicarModoLeitura(somenteLeitura){
   if(somenteLeitura){
     if(!aviso){
       aviso=document.createElement('div'); aviso.id='leituraAviso';
-      aviso.style.cssText='background:rgba(15,118,110,.08);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:8px;margin-bottom:12px;font-size:13px;font-weight:600;text-align:center';
-      aviso.textContent='👁️ Item já encontrado — somente visualização';
+      aviso.style.cssText='background:#E9EEFA;border:1.5px solid #B9C7EC;color:var(--accent-ink);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:14px;font-weight:600;text-align:center';
+      aviso.textContent='Item já encontrado: somente visualização';
       const card=$('#detailCard'); card.insertBefore(aviso, card.firstChild);
     }
     aviso.style.display='block';
@@ -928,7 +1022,7 @@ async function saveItem(){
   if(!current.temPlaca && current.placa_nova){
     $('#btnSave').disabled=true; $('#btnSave').innerHTML='<span class="spin"></span> Verificando placa...';
     const conflito=await placaJaExiste(current.placa_nova, b.codigo);
-    $('#btnSave').disabled=false; $('#btnSave').innerHTML='💾 Salvar item';
+    $('#btnSave').disabled=false; $('#btnSave').innerHTML='Salvar item';
     if(conflito){ toast('⚠️ '+conflito); return; }
   }
   const locMudou=(current.nova_local_cod!==b.cod_localizacao);
@@ -986,7 +1080,7 @@ async function saveItem(){
     await refreshStats();
     $('#btnBack').click();
   }catch(e){ toast('Erro ao salvar: '+(e.message||e)); }
-  finally{ $('#btnSave').disabled=false; $('#btnSave').innerHTML='💾 Salvar item'; }
+  finally{ $('#btnSave').disabled=false; $('#btnSave').innerHTML='Salvar item'; }
 }
 
 /* ====================== FOTOS ====================== */
