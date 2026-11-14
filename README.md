@@ -153,6 +153,18 @@ Fator = (4 × EC + 6 × PVU − 3 × PUB) ÷ 100
 
 PVU e PUB chegam preenchidos com uma sugestão e podem ser alterados pelo avaliador. Pesos, notas, fator mínimo e percentual de valor residual são ajustáveis na aba Configuração. **Confira esses parâmetros com a norma adotada pelo órgão antes de emitir os laudos.**
 
+### Conclusão das localizações e valor por tipo de bem
+
+A reavaliação segue a ordem do levantamento:
+
+1. Ao terminar uma sala ou setor, a equipe toca em **Concluir uma localização** no app de campo. O banco registra quem concluiu, a data e a hora. A conclusão precisa de internet.
+2. A aba **Painel** traz a lista **Conclusão das localizações**, com bens, levantados, quem concluiu e quando. O administrador pode concluir por ali ou **reabrir** uma localização.
+3. Na aba **Reavaliação**, só os bens de localizações concluídas ficam liberados (filtro "Liberados, a reavaliar").
+4. Cada descrição de bem tem **um único valor de referência**, guardado na tabela `referencias`. Ao salvar o valor de um bem, o painel oferece aplicar o mesmo valor aos outros bens liberados com a mesma descrição; o fator de cada um vem do estado e do tempo de uso dele. Quando outra localização é concluída depois, o botão **Valores por tipo de bem** aplica os valores já definidos aos novos bens, sem nova pesquisa.
+5. Alterar o valor de referência de um tipo exige confirmação e recalcula todos os bens daquele tipo já reavaliados, para que bens iguais nunca fiquem com referências diferentes.
+
+Instalação: rodar [`supabase/conclusao.sql`](supabase/conclusao.sql) no SQL Editor. Sem ele, o painel funciona como antes (todos os bens encontrados liberados).
+
 ### Pesquisa de preços de referência
 
 Na ficha do bem, ao lado do valor de referência, o botão **Pesquisar preços** consulta os preços pagos em compras públicas, na base de dados abertos do Compras.gov.br (módulo Pesquisa de Preço):

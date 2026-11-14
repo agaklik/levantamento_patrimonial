@@ -266,6 +266,13 @@
       <p class="sub">Somente bens encontrados no levantamento.</p>
       <div class="tblwrap"><table id="tblClass"></table></div>
     </div>
+    <div class="card" id="cardConc">
+      <h2>Conclusão das localizações</h2>
+      <p class="sub">A equipe marca a localização como concluída no app de campo ao terminar o levantamento dela. Só os bens de localizações concluídas ficam liberados para a reavaliação.</p>
+      <div class="msg hidden" id="concMsg">Para usar a conclusão de localizações, execute o script supabase/conclusao.sql no Supabase. Enquanto isso, todos os bens encontrados ficam liberados para a reavaliação.</div>
+      <div class="toolbar" style="margin-bottom:10px"><div style="flex:2"><input type="search" id="concBusca" placeholder="Filtrar localização"></div><div class="fix"><select id="concFiltro"><option value="">Todas</option><option value="ok">Concluídas</option><option value="pend">Em andamento</option></select></div><div style="text-align:right;color:var(--muted);font-size:13px" id="concInfo"></div></div>
+      <div class="tblwrap" style="max-height:460px;overflow-y:auto"><table><thead><tr><th>Localização</th><th class="n">Bens</th><th class="n">Levantados</th><th>Situação</th><th>Concluída por</th><th>Data e hora</th><th></th></tr></thead><tbody id="concCorpo"></tbody></table></div>
+    </div>
   </section>
 
   <!-- REAVALIAÇÃO -->
@@ -276,6 +283,8 @@
         <div><label>Localização</label><select id="fLoc"></select></div>
         <div><label>Classificação</label><select id="fClass"></select></div>
         <div><label>Situação</label><select id="fStatus">
+          <option value="liberados">Liberados, a reavaliar</option>
+          <option value="aguardando">Aguardando conclusão da localização</option>
           <option value="encontrados">Encontrados (todos)</option>
           <option value="pendentes">Encontrados, a reavaliar</option>
           <option value="reavaliados">Reavaliados</option>
@@ -286,6 +295,7 @@
       <div class="toolbar" style="margin-bottom:10px">
         <div class="fix"><button class="btn-2" id="btnPlanilha">Baixar planilha de pesquisa de preços</button></div>
         <div class="fix"><button class="btn-2" id="btnImportar">Importar valores de referência</button><input type="file" id="fileImport" accept=".csv,text/csv" class="hidden"></div>
+        <div class="fix"><button class="btn-2" id="btnTipos">Valores por tipo de bem</button></div>
         <div class="fix"><button class="btn-2" id="btnLaudosSel" disabled>Laudos dos selecionados</button></div>
         <div style="text-align:right;color:var(--muted);font-size:13px" id="selInfo"></div>
       </div>
@@ -462,7 +472,7 @@
     </div>
     <div id="boxFator" style="margin-top:12px">
       <div class="grid g4">
-        <div style="grid-column:span 2"><label>Valor de referência (bem novo)</label><div class="ref-row"><input id="rRef" inputmode="decimal" placeholder="0,00"><button type="button" class="btn-2" id="btnPrecos" title="Pesquisar preços em compras públicas">Pesquisar preços</button></div><div id="rPrecosInfo" style="font-size:12px;color:var(--muted);margin-top:4px"></div></div>
+        <div style="grid-column:span 2"><label>Valor de referência (bem novo)</label><div class="ref-row"><input id="rRef" inputmode="decimal" placeholder="0,00"><button type="button" class="btn-2" id="btnPrecos" title="Pesquisar preços em compras públicas">Pesquisar preços</button></div><div id="rPrecosInfo" style="font-size:12px;color:var(--muted);margin-top:4px"></div><div id="rRefInfo" style="font-size:12px;color:var(--muted);margin-top:2px"></div></div>
         <div><label>Estado (EC)</label><select id="rEc"></select></div>
         <div><label>Fator</label><input id="rFator" readonly></div>
         <div style="grid-column:span 2"><label>Tempo de uso em anos (PUB)</label><input type="number" id="rPub" min="0" max="10" step="1"></div>
@@ -491,7 +501,7 @@
       <button class="btn-danger" id="btnExcluir" style="margin-left:auto">Excluir reavaliação</button>
     </div>
   </div>
-  <div class="msg hidden" id="iNao">Este bem não foi localizado no levantamento. A reavaliação só é feita em bens encontrados.</div>
+  <div class="msg hidden" id="iNao"></div>
 </aside>
 
 <!-- ===== PRÉ-VISUALIZAÇÃO ===== -->
@@ -515,6 +525,18 @@
   <ul class="pw-rules" id="sRegras"></ul>
   <div class="fld-err" id="sErro"></div>
   <div class="acts"><button class="btn-2" id="sCancelar">Cancelar</button><button class="btn" id="sSalvar">Salvar senha</button></div>
+</dialog>
+<dialog class="dlg largo" id="dlgTipos">
+  <div class="pz-top">
+    <h3>Valores de referência por tipo de bem</h3>
+    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Cada descrição de bem tem um único valor de referência, usado em todas as localizações e em qualquer data. Defina o valor uma vez e aplique aos bens liberados; o fator de cada bem continua vindo do estado de conservação e do tempo de uso dele.</p>
+    <div class="pz-row"><div><input type="search" id="tpBusca" placeholder="Filtrar descrição"></div><div class="fix"><select id="tpFiltro"><option value="">Todos os tipos</option><option value="sem">Sem valor de referência</option><option value="aplicar">Com bens a aplicar</option></select></div></div>
+  </div>
+  <div class="pz-body">
+    <div class="pz-info" id="tpInfo"></div>
+    <div class="tblwrap"><table id="tpTabela" style="font-size:13.5px"><thead><tr><th>Descrição</th><th class="n">Liberados</th><th class="n">A reavaliar</th><th class="n">Valor de referência</th><th>Fonte</th><th></th></tr></thead><tbody id="tpCorpo"></tbody></table></div>
+  </div>
+  <div class="pz-foot"><div class="pz-stats" id="tpStats"></div><div style="margin-left:auto;display:flex;gap:8px"><button class="btn-2" id="tpFechar">Fechar</button><button class="btn" id="tpAplicarTodos">Aplicar a todos os liberados</button></div></div>
 </dialog>
 <dialog class="dlg largo" id="dlgPrecos">
   <div class="pz-top">
@@ -625,8 +647,13 @@ const dataExtenso=iso=>{const d=parseData(iso)||new Date();return d.toLocaleDate
 const lev=b=>LEV[b.codigo]||null;
 const encontrado=b=>!!(lev(b)&&lev(b).concluido);
 const reav=b=>REAV[b.codigo]||null;
+let CONC={}, REFS={}, concOk=false;
+const liberado=b=>!concOk||!!CONC[locCod(b)];
+const chaveRef=b=>semAcento(b.descricao||b.descricao_reduzida||'').toUpperCase().replace(/\s+/g,' ').trim();
+const refDe=b=>REFS[chaveRef(b)]||null;
 const reavOk=b=>!!(reav(b)&&reav(b).concluido&&reav(b).valor_reavaliado!=null);
 const locCod=b=>(lev(b)&&lev(b).cod_localizacao)||b.cod_localizacao||'';
+const dataHoraBR=iso=>{ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); };
 const locDesc=b=>{const c=locCod(b);return (LOCS[c]&&LOCS[c].desc)||(lev(b)&&lev(b).localizacao)||b.localizacao||c||'—';};
 const estCod=b=>String((lev(b)&&lev(b).cod_estado)||b.cod_estado||'');
 const estDesc=b=>ESTADOS[estCod(b)]||(lev(b)&&lev(b).estado)||b.estado||'—';
@@ -751,6 +778,13 @@ async function carregar(){
       CFG=Object.assign(structuredClone(CFG_PADRAO), (c.data&&c.data.dados)||{});
       CFG.ec=Object.assign({},CFG_PADRAO.ec,CFG.ec||{});
     }catch(e){ if(tabelaAusente(e)) schemaOk=false; else throw e; }
+    CONC={}; REFS={}; concOk=true;
+    try{
+      (await lerTudo('localizacoes_concluidas','*','cod')).forEach(r=>CONC[r.cod]=r);
+      (await lerTudo('referencias','*','chave')).forEach(r=>REFS[r.chave]=r);
+    }catch(e){ if(tabelaAusente(e)) concOk=false; else throw e; }
+    $('#concMsg').classList.toggle('hidden',concOk);
+    $('#fStatus').value=concOk?'liberados':'pendentes';
     $('#schemaMsg').classList.toggle('hidden',schemaOk);
     preencherFiltros(); preencherCfg(); preencherModo(); renderPainel(); aplicarFiltro();
     $('#loading').classList.add('hidden');
@@ -786,7 +820,41 @@ function renderPainel(){
   const g=porClassificacao(enc);
   $('#tblClass').innerHTML='<thead><tr><th>Classificação</th><th class="n">Encontrados</th><th class="n">Reavaliados</th><th class="n">Valor atual</th><th class="n">Valor reavaliado</th></tr></thead><tbody>'+
     g.map(x=>`<tr style="cursor:default"><td>${esc(x.nome)}</td><td class="n">${x.qtd}</td><td class="n">${x.qtdR}</td><td class="n">${brl(x.vAtual)}</td><td class="n">${x.qtdR?brl(x.vNovo):'—'}</td></tr>`).join('')+'</tbody>';
+  renderConclusao();
 }
+function renderConclusao(){
+  const m={};
+  BENS.forEach(b=>{ const c=locCod(b); const x=m[c]||(m[c]={cod:c,desc:locDesc(b),total:0,enc:0}); x.total++; if(encontrado(b)) x.enc++; });
+  Object.keys(CONC).forEach(c=>{ if(!m[c]) m[c]={cod:c,desc:CONC[c].descricao||c,total:0,enc:0}; });
+  const q=semAcento($('#concBusca').value.trim()), f=$('#concFiltro').value;
+  const todas=Object.values(m), feitas=todas.filter(x=>CONC[x.cod]).length;
+  const lista=todas.filter(x=>(!q||semAcento(x.cod+' '+x.desc).includes(q))&&(!f||(f==='ok')===!!CONC[x.cod]))
+    .sort((a,b)=>{ const ca=CONC[a.cod], cb=CONC[b.cod]; if(!!ca!==!!cb) return ca?-1:1; if(ca&&cb) return ca.concluido_em<cb.concluido_em?1:-1; return (b.enc/(b.total||1))-(a.enc/(a.total||1))||String(a.desc).localeCompare(String(b.desc),'pt-BR'); });
+  $('#concInfo').textContent=`${feitas} de ${todas.length} localizações concluídas`;
+  $('#concCorpo').innerHTML=lista.map(x=>{ const c=CONC[x.cod];
+    return `<tr style="cursor:default" data-c="${esc(x.cod)}"><td>${esc(x.desc)}<small style="display:block;color:var(--muted);font-size:12px">Código ${esc(x.cod||'—')}</small></td><td class="n">${x.total}</td><td class="n">${x.enc}</td>
+      <td>${c?'<span class="pill p-ok">Concluída</span>':x.enc?'<span class="pill p-pend">Em andamento</span>':'<span class="pill p-mut">Não iniciada</span>'}</td>
+      <td>${c?esc(c.concluido_nome||'—'):''}</td><td>${c?dataHoraBR(c.concluido_em):''}</td>
+      <td style="text-align:right">${!concOk?'':c?'<button class="btn-2 cReabrir" style="padding:5px 10px;font-size:12.5px">Reabrir</button>':'<button class="btn-2 cConcluir" style="padding:5px 10px;font-size:12.5px">Concluir</button>'}</td></tr>`; }).join('')
+    || '<tr style="cursor:default"><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhuma localização.</td></tr>';
+  $('#concCorpo').querySelectorAll('.cConcluir').forEach(b=>b.onclick=()=>concluirLocal(m[b.closest('tr').dataset.c]));
+  $('#concCorpo').querySelectorAll('.cReabrir').forEach(b=>b.onclick=()=>reabrirLocal(m[b.closest('tr').dataset.c]));
+}
+async function concluirLocal(x){
+  if(!confirm(`Concluir o levantamento de "${x.desc}"?\n\n${x.enc} de ${x.total} bens levantados.`+(x.total>x.enc?`\n${x.total-x.enc} bem(ns) ficarão como não localizados.`:''))) return;
+  const {data,error}=await sb.from('localizacoes_concluidas').insert({cod:x.cod,descricao:x.desc,total:x.total,encontrados:x.enc}).select().single();
+  if(error){ toast('Erro: '+error.message,4500); return; }
+  CONC[x.cod]=data; toast('✓ Localização concluída'); renderConclusao(); aplicarFiltro(true);
+}
+async function reabrirLocal(x){
+  const n=BENS.filter(b=>locCod(b)===x.cod&&reav(b)).length;
+  if(!confirm(`Reabrir "${x.desc}"?\n\nA equipe poderá voltar a levantar bens nela, e os bens saem da lista de liberados até a nova conclusão.`+(n?`\n\n${n} bem(ns) desta localização já têm reavaliação; ela é mantida.`:''))) return;
+  const {error}=await sb.from('localizacoes_concluidas').delete().eq('cod',x.cod);
+  if(error){ toast('Erro: '+error.message,4500); return; }
+  delete CONC[x.cod]; toast('Localização reaberta'); renderConclusao(); aplicarFiltro(true);
+}
+$('#concBusca').addEventListener('input',()=>renderConclusao());
+$('#concFiltro').addEventListener('input',()=>renderConclusao());
 function porClassificacao(lista){
   const m={};
   lista.forEach(b=>{
@@ -812,6 +880,8 @@ function aplicarFiltro(manterPagina){
   const q=semAcento($('#fBusca').value.trim()), loc=$('#fLoc').value, cl=$('#fClass').value, st=$('#fStatus').value;
   filtrados=BENS.filter(b=>{
     const e=encontrado(b);
+    if(st==='liberados'&&(!e||!liberado(b)||reavOk(b))) return false;
+    if(st==='aguardando'&&(!e||liberado(b))) return false;
     if(st==='encontrados'&&!e) return false;
     if(st==='pendentes'&&(!e||reavOk(b))) return false;
     if(st==='reavaliados'&&!reavOk(b)) return false;
@@ -829,6 +899,7 @@ function pillStatus(b){
   if(!encontrado(b)) return '<span class="pill p-no">Não localizado</span>';
   if(reavOk(b)) return '<span class="pill p-ok">Reavaliado</span>';
   if(reav(b)) return '<span class="pill p-pend">Em andamento</span>';
+  if(!liberado(b)) return '<span class="pill p-mut">Aguardando localização</span>';
   return '<span class="pill p-mut">A reavaliar</span>';
 }
 function variacao(b){
@@ -887,8 +958,10 @@ function abrirItem(codigo){
   $('#iFotos').innerHTML='';
   fotosDoBem(b.codigo,6).then(urls=>{ if(atual===b) $('#iFotos').innerHTML=urls.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Foto do bem"></a>`).join(''); });
   const enc=encontrado(b);
-  $('#iForm').classList.toggle('hidden',!enc); $('#iNao').classList.toggle('hidden',enc);
-  if(enc) preencherForm(b);
+  const lib=liberado(b)||!!reav(b), ok=enc&&lib;
+  $('#iForm').classList.toggle('hidden',!ok); $('#iNao').classList.toggle('hidden',ok);
+  $('#iNao').textContent=!enc?'Este bem não foi localizado no levantamento. A reavaliação só é feita em bens encontrados.':`A localização "${locDesc(b)}" ainda não foi marcada como concluída. A reavaliação é liberada quando a equipe conclui o levantamento da localização (app de campo ou aba Painel).`;
+  if(ok) preencherForm(b);
   $('#drawer').classList.remove('hidden'); $('#drawerBg').classList.remove('hidden'); $('#drawer').scrollTop=0;
 }
 function fecharItem(){ atual=null; $('#drawer').classList.add('hidden'); $('#drawerBg').classList.add('hidden'); }
@@ -910,7 +983,10 @@ function preencherForm(b){
   $('#rResidual').value=r.valor_residual!=null?dec(+r.valor_residual):'';
   $('#rResidual').dataset.auto=r.valor_residual!=null?'':'1';
   $('#rFonte').value=r.fonte||''; $('#rObs').value=r.observacao||'';
-  PRECOS_SEL=r.precos||null; PRECOS_MUDOU=false; infoPrecos();
+  PRECOS_SEL=r.precos||null; PRECOS_MUDOU=false;
+  const rf=refDe(b);
+  if(rf&&r.valor_referencia==null){ $('#rRef').value=dec(+rf.valor); if(!r.fonte) $('#rFonte').value=rf.fonte||''; if(rf.precos){ PRECOS_SEL=rf.precos; PRECOS_MUDOU=true; } }
+  infoPrecos(); infoRef();
   $('#rConcluido').checked=r.concluido!=null?!!r.concluido:true;
   $('#rAtual').textContent=brl(num(b.valor_atual));
   $('#btnExcluir').classList.toggle('hidden',!reav(b));
@@ -940,6 +1016,7 @@ function recalc(){
   if($('#rResidual').dataset.auto&&o.valor_reavaliado!=null) $('#rResidual').value=dec(r2(o.valor_reavaliado*(+CFG.residualPct||0)/100));
 }
 ['#rMetodo','#rRef','#rEc','#rPub','#rPvu','#rValorDireto'].forEach(s=>$(s).addEventListener('input',recalc));
+$('#rRef').addEventListener('input',()=>infoRef());
 $('#rResidual').addEventListener('input',()=>{ $('#rResidual').dataset.auto=''; });
 
 /* ====================== PESQUISA DE PREÇOS (Compras.gov.br) ====================== */
@@ -1079,7 +1156,7 @@ function pzUsar(criterio){
   PRECOS_MUDOU=true;
   $('#rRef').value=dec(valor);
   $('#rFonte').value=`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
-  infoPrecos(); recalc(); $('#dlgPrecos').close();
+  infoPrecos(); recalc(); infoRef(); $('#dlgPrecos').close();
   toast(`Valor de referência: ${brl(valor)} (${nome}). Confira e salve.`,4000);
 }
 $('#btnPrecos').onclick=abrirPrecos;
@@ -1094,6 +1171,53 @@ $('#pzUsarMenor').onclick=()=>pzUsar('menor');
 $('#pzUsarMedia').onclick=()=>pzUsar('media');
 $('#pzUsarMediana').onclick=()=>pzUsar('mediana');
 
+function infoRef(){
+  if(!atual){ return; } const rf=refDe(atual), n=BENS.filter(x=>chaveRef(x)===chaveRef(atual)).length, v=num($('#rRef').value);
+  const el=$('#rRefInfo');
+  if(!concOk){ el.textContent=''; return; }
+  if(!rf){ el.textContent=n>1?`Este valor passa a valer para os ${n} bens com esta descrição.`:''; el.style.color='var(--muted)'; return; }
+  if(v!=null&&Math.abs(v-(+rf.valor))>0.004){ el.textContent=`Diferente da referência deste tipo de bem (${brl(+rf.valor)}). Ao salvar, o novo valor passa a valer para os ${n} bens com esta descrição.`; el.style.color='var(--warn)'; }
+  else{ el.textContent=`Valor de referência deste tipo de bem, definido em ${dataBR(rf.atualizado_em)}. Vale para os ${n} bens com esta descrição.`; el.style.color='var(--muted)'; }
+}
+// reavaliação automática de um bem pelo método do fator, com os parâmetros sugeridos
+function linhaAuto(b,ref,fonte,precos){
+  const ant=reav(b)||{}, s=sugestao(b);
+  const ec=ant.ec!=null?+ant.ec:notaEc(b), pub=ant.pub!=null?+ant.pub:s.pub, pvu=ant.pvu!=null?+ant.pvu:s.pvu;
+  const fator=calcFator(ec,pvu,pub); if(fator==null) return null;
+  const valor=r2(ref*fator);
+  const row=linhaReav(b,{metodo:'fator',valor_referencia:ref,ec,pvu,pub,fator,valor_reavaliado:valor},{
+    vida_util_remanescente:ant.vida_util_remanescente!=null?ant.vida_util_remanescente:pvu,
+    valor_residual:r2(valor*(+CFG.residualPct||0)/100),
+    fonte:fonte||ant.fonte||null, observacao:ant.observacao||null,
+    data_avaliacao:ant.data_avaliacao||CFG.dataBase||hojeISO(), concluido:true
+  });
+  if(precos!==undefined&&schemaPrecos) row.precos=precos;
+  return row;
+}
+let schemaPrecos=true;
+async function gravarReavs(rows){
+  for(let i=0;i<rows.length;i+=500){ const {error}=await sb.from('reavaliacao').upsert(rows.slice(i,i+500),{onConflict:'codigo'}); if(error) throw error; }
+  rows.forEach(r=>REAV[r.codigo]=Object.assign({},REAV[r.codigo],r));
+}
+async function gravarRef(b,valor,fonte,precos){
+  const row={chave:chaveRef(b),descricao:b.descricao||b.descricao_reduzida||'',valor,fonte:fonte||null,precos:precos||null,atualizado_em:new Date().toISOString(),atualizado_por:USER?USER.id:null};
+  const {error}=await sb.from('referencias').upsert(row,{onConflict:'chave'}); if(error) throw error;
+  REFS[row.chave]=row; return row;
+}
+// bens do mesmo tipo (mesma descrição) que ainda não usam o valor de referência do tipo
+function pendentesDoTipo(chave,exceto){
+  const rf=REFS[chave]; if(!rf) return {novos:[],recalc:[]};
+  const novos=[], recalc=[];
+  BENS.forEach(x=>{ if(x.codigo===exceto||chaveRef(x)!==chave||!encontrado(x)) return; const r=reav(x);
+    if(!r||r.valor_referencia==null){ if(liberado(x)&&(!r||r.metodo==='fator')) novos.push(x); }
+    else if(r.metodo==='fator'&&Math.abs(+r.valor_referencia-(+rf.valor))>0.004) recalc.push(x); });
+  return {novos,recalc};
+}
+async function aplicarRef(chave,lista){
+  const rf=REFS[chave]; const rows=lista.map(x=>linhaAuto(x,+rf.valor,rf.fonte,rf.precos)).filter(Boolean);
+  if(rows.length) await gravarReavs(rows);
+  return {feitos:rows.length,pulados:lista.length-rows.length};
+}
 function linhaReav(b,o,extra){
   return Object.assign({
     codigo:b.codigo, metodo:o.metodo, valor_anterior:num(b.valor_atual),
@@ -1113,15 +1237,33 @@ async function salvarItem(proximo){
     data_avaliacao:$('#rData').value||null, concluido
   });
   if(PRECOS_MUDOU) row.precos=PRECOS_SEL;
+  // um único valor de referência por tipo de bem (mesma descrição)
+  const usaRef=concOk&&o.metodo==='fator'&&o.valor_referencia!=null, chave=chaveRef(b), rfAnt=REFS[chave];
+  const mudouRef=usaRef&&rfAnt&&Math.abs(+rfAnt.valor-o.valor_referencia)>0.004;
+  if(mudouRef){
+    const outros=BENS.filter(x=>x.codigo!==b.codigo&&chaveRef(x)===chave&&reav(x)&&reav(x).metodo==='fator'&&reav(x).valor_referencia!=null).length;
+    if(!confirm(`O valor de referência de "${b.descricao||''}" é ${brl(+rfAnt.valor)}.\n\nAlterar para ${brl(o.valor_referencia)} vale para todos os bens com esta descrição, em qualquer localização.`+(outros?`\n\n${outros} bem(ns) já reavaliados serão recalculados com o novo valor.`:'')+'\n\nOK = alterar para todos · Cancelar = voltar')) return false;
+  }
   const {error}=await sb.from('reavaliacao').upsert(row,{onConflict:'codigo'});
   if(error){ toast(/precos/.test(error.message)?'Execute antes o script supabase/precos.sql no Supabase.':'Erro ao salvar: '+error.message,4500); return false; }
   PRECOS_MUDOU=false;
   REAV[b.codigo]=Object.assign({},REAV[b.codigo],row); toast('✓ Reavaliação salva');
+  if(usaRef&&(!rfAnt||mudouRef||PRECOS_SEL&&!rfAnt.precos)){
+    try{
+      await gravarRef(b,o.valor_referencia,row.fonte,PRECOS_SEL||(rfAnt&&!mudouRef?rfAnt.precos:null));
+      const {novos,recalc}=pendentesDoTipo(chave,b.codigo);
+      const perguntar=mudouRef?novos:novos.concat(recalc);
+      const sim=perguntar.length&&confirm(`Aplicar ${brl(o.valor_referencia)} aos outros ${perguntar.length} bem(ns) liberados com a descrição "${b.descricao||''}"?\n\nO fator de cada um é calculado pelo estado de conservação e pelo tempo de uso dele.`);
+      const alvo=(mudouRef?recalc:[]).concat(sim?perguntar:[]);
+      if(alvo.length){ const r=await aplicarRef(chave,alvo); toast(`✓ Valor aplicado a ${r.feitos} bem(ns)`+(r.pulados?`; ${r.pulados} sem data de ingresso ficaram de fora`:''),4500); }
+    }catch(e){ toast('Reavaliação salva, mas o valor por tipo de bem não foi gravado: '+(e.message||e),5000); }
+    infoRef();
+  }
   renderPainel();
   if(proximo){
     const i=filtrados.findIndex(x=>x.codigo===b.codigo);
     aplicarFiltro(true);
-    const prox=filtrados.slice(Math.max(0,i)).find(x=>x.codigo!==b.codigo&&encontrado(x)&&!reavOk(x));
+    const prox=filtrados.slice(Math.max(0,i)).find(x=>x.codigo!==b.codigo&&encontrado(x)&&liberado(x)&&!reavOk(x));
     if(prox) abrirItem(prox.codigo); else { fecharItem(); toast('✓ Salvo. Não há mais itens a reavaliar neste filtro.'); }
   }else{ aplicarFiltro(true); $('#btnExcluir').classList.remove('hidden'); }
   return true;
@@ -1544,37 +1686,66 @@ $('#btnImportar').addEventListener('click',()=>{ $('#fileImport').value=''; $('#
 $('#fileImport').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0]; if(!f) return;
   if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
-  const {rows,ignorados}=montarImportacao(lerCsv(await f.text()));
+  const {rows,ignorados,refs}=montarImportacao(lerCsv(await f.text()));
   if(!rows.length){ toast('Nenhuma linha com código e valor_referencia válidos.',4000); return; }
-  if(!confirm(`${rows.length} bem(ns) serão reavaliados pelo método do fator, com estado, tempo de uso e vida útil sugeridos pelo sistema.`+(ignorados?`\n${ignorados} linha(s) ignoradas (sem valor, bem não encontrado ou sem data de ingresso).`:'')+'\n\nContinuar?')) return;
+  if(!confirm(`${rows.length} bem(ns) serão reavaliados pelo método do fator, com estado, tempo de uso e vida útil sugeridos pelo sistema.`+(ignorados?`\n${ignorados} linha(s) ignoradas (sem valor, bem não encontrado, localização não concluída ou sem data de ingresso).`:'')+'\n\nContinuar?')) return;
   try{
-    for(let i=0;i<rows.length;i+=500){
-      const {error}=await sb.from('reavaliacao').upsert(rows.slice(i,i+500),{onConflict:'codigo'});
-      if(error) throw error;
-    }
-    rows.forEach(r=>REAV[r.codigo]=r);
+    await gravarReavs(rows);
+    if(concOk) for(const k of Object.keys(refs)) await gravarRef(refs[k].b,refs[k].valor,refs[k].fonte,null);
     toast(`✓ ${rows.length} reavaliação(ões) importadas`); renderPainel(); aplicarFiltro(true);
   }catch(err){ toast('Erro ao importar: '+(err.message||err),5000); }
 });
 function montarImportacao(dados){
-  const rows=[]; let ignorados=0;
+  const rows=[], refs={}; let ignorados=0;
   dados.forEach(d=>{
-    const cod=(d.codigo||'').replace(/^0+(?=\d)/,''), ref=num(d.valor_referencia), b=bemPorCodigo(cod);
-    if(!b||ref==null||ref<=0||!encontrado(b)){ ignorados++; return; }
-    const ant=reav(b)||{}, s=sugestao(b);
-    const ec=ant.ec!=null?+ant.ec:notaEc(b), pub=ant.pub!=null?+ant.pub:s.pub, pvu=ant.pvu!=null?+ant.pvu:s.pvu;
-    const fator=calcFator(ec,pvu,pub);
-    if(fator==null){ ignorados++; return; }
-    const valor=r2(ref*fator);
-    rows.push(linhaReav(b,{metodo:'fator',valor_referencia:ref,ec,pvu,pub,fator,valor_reavaliado:valor},{
-      vida_util_remanescente:ant.vida_util_remanescente!=null?ant.vida_util_remanescente:pvu,
-      valor_residual:ant.valor_residual!=null?ant.valor_residual:r2(valor*(+CFG.residualPct||0)/100),
-      fonte:d.fonte||ant.fonte||null, observacao:ant.observacao||null,
-      data_avaliacao:ant.data_avaliacao||CFG.dataBase||hojeISO(), concluido:true
-    }));
+    const cod=(d.codigo||'').replace(/^0+(?=\d)/,''), b=bemPorCodigo(cod); let ref=num(d.valor_referencia);
+    if(!b||ref==null||ref<=0||!encontrado(b)||!liberado(b)){ ignorados++; return; }
+    // mesma descrição = mesmo valor: vale o primeiro valor do arquivo para o tipo de bem
+    const k=chaveRef(b); if(refs[k]) ref=refs[k].valor; else refs[k]={b,valor:ref,fonte:d.fonte||null};
+    const row=linhaAuto(b,ref,refs[k].fonte);
+    if(!row){ ignorados++; return; }
+    rows.push(row);
   });
-  return {rows,ignorados};
+  return {rows,ignorados,refs};
 }
+
+/* ====================== VALORES POR TIPO DE BEM ====================== */
+function tiposDeBem(){
+  const m={};
+  BENS.forEach(b=>{ if(!encontrado(b)||!liberado(b)) return; const k=chaveRef(b); const x=m[k]||(m[k]={chave:k,desc:b.descricao||b.descricao_reduzida||'(sem descrição)',bens:[],pend:0,valor:0}); x.bens.push(b); x.valor+=num(b.valor_atual)||0; if(!reavOk(b)) x.pend++; });
+  return Object.values(m).sort((a,b)=>b.bens.length-a.bens.length||b.valor-a.valor);
+}
+function renderTipos(){
+  const q=semAcento($('#tpBusca').value.trim()), f=$('#tpFiltro').value, todos=tiposDeBem();
+  const lista=todos.filter(x=>(!q||semAcento(x.desc).includes(q))&&(f!=='sem'||!REFS[x.chave])&&(f!=='aplicar'||(REFS[x.chave]&&x.pend)));
+  const comRef=todos.filter(x=>REFS[x.chave]), aAplicar=comRef.reduce((s,x)=>s+pendentesDoTipo(x.chave).novos.length+pendentesDoTipo(x.chave).recalc.length,0);
+  $('#tpInfo').textContent=todos.length?`${todos.length} tipo(s) de bem em localizações concluídas, do que tem mais bens para o que tem menos. Comece pelos primeiros: poucos tipos cobrem a maior parte dos bens.`:'Nenhum bem liberado ainda. Conclua uma localização para começar.';
+  $('#tpStats').innerHTML=`<span>Com valor de referência <b>${comRef.length} de ${todos.length}</b></span><span>Bens a aplicar <b>${aAplicar}</b></span>`;
+  $('#tpAplicarTodos').disabled=!aAplicar;
+  $('#tpCorpo').innerHTML=lista.slice(0,300).map(x=>{ const rf=REFS[x.chave], p=rf?pendentesDoTipo(x.chave):null, n=p?p.novos.length+p.recalc.length:0;
+    return `<tr style="cursor:default" data-k="${esc(x.chave)}"><td>${esc(x.desc)}</td><td class="n">${x.bens.length}</td><td class="n">${x.pend}</td><td class="n">${rf?'<b>'+brl(+rf.valor)+'</b>':'—'}</td><td style="font-size:12px;color:var(--muted);max-width:280px">${rf?esc((rf.fonte||'').slice(0,110)):''}</td>
+    <td style="text-align:right;white-space:nowrap">${n?`<button class="btn tAplicar" style="padding:5px 10px;font-size:12.5px">Aplicar a ${n}</button> `:''}<button class="btn-2 tDefinir" style="padding:5px 10px;font-size:12.5px">${rf?'Alterar':'Definir valor'}</button></td></tr>`; }).join('')
+    || '<tr style="cursor:default"><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhum tipo de bem com esses filtros.</td></tr>';
+  const por=k=>todos.find(x=>x.chave===k);
+  $('#tpCorpo').querySelectorAll('.tDefinir').forEach(b=>b.onclick=()=>{ const x=por(b.closest('tr').dataset.k); const alvo=x.bens.find(y=>!reavOk(y))||x.bens[0]; $('#dlgTipos').close(); mostrarAba('reav'); abrirItem(alvo.codigo); });
+  $('#tpCorpo').querySelectorAll('.tAplicar').forEach(b=>b.onclick=async()=>{ const k=b.closest('tr').dataset.k, p=pendentesDoTipo(k); b.disabled=true;
+    try{ const r=await aplicarRef(k,p.novos.concat(p.recalc)); toast(`✓ Valor aplicado a ${r.feitos} bem(ns)`+(r.pulados?`; ${r.pulados} sem data de ingresso ficaram de fora`:''),4500); }catch(e){ toast('Erro: '+(e.message||e),5000); }
+    renderTipos(); renderPainel(); aplicarFiltro(true); });
+}
+$('#btnTipos').addEventListener('click',()=>{ if(!concOk){ toast('Execute antes o script supabase/conclusao.sql no Supabase.',4500); return; } $('#tpBusca').value=''; $('#tpFiltro').value=''; renderTipos(); $('#dlgTipos').showModal(); });
+$('#tpBusca').addEventListener('input',()=>renderTipos());
+$('#tpFiltro').addEventListener('input',()=>renderTipos());
+$('#tpFechar').addEventListener('click',()=>$('#dlgTipos').close());
+$('#tpAplicarTodos').addEventListener('click',async()=>{
+  const tipos=tiposDeBem().filter(x=>REFS[x.chave]); let feitos=0, pulados=0;
+  const total=tipos.reduce((s,x)=>{ const p=pendentesDoTipo(x.chave); return s+p.novos.length+p.recalc.length; },0);
+  if(!confirm(`Aplicar os valores de referência já definidos a ${total} bem(ns) liberados?\n\nCada bem é reavaliado pelo método do fator, com o estado, o tempo de uso e a vida útil sugeridos pelo sistema. Depois é possível abrir qualquer bem e ajustar.`)) return;
+  $('#tpAplicarTodos').disabled=true;
+  try{ for(const x of tipos){ const p=pendentesDoTipo(x.chave), l=p.novos.concat(p.recalc); if(!l.length) continue; const r=await aplicarRef(x.chave,l); feitos+=r.feitos; pulados+=r.pulados; }
+    toast(`✓ ${feitos} bem(ns) reavaliados`+(pulados?`; ${pulados} sem data de ingresso ficaram de fora`:''),5000); }
+  catch(e){ toast('Erro: '+(e.message||e),5000); }
+  renderTipos(); renderPainel(); aplicarFiltro(true);
+});
 
 /* ====================== CONFIGURAÇÃO ====================== */
 function preencherCfg(){

@@ -347,6 +347,24 @@
     </div>
     <div id="searchMsg" style="font-size:14px"></div>
     <div id="searchResults" class="results hidden"></div>
+    <button class="btn-ghost btn-block" id="btnLocais" style="margin-top:14px">Concluir uma localização</button>
+  </div>
+
+  <!-- CONCLUSÃO DE LOCALIZAÇÃO -->
+  <div class="card hidden" id="locCard">
+    <h3>Concluir localização</h3>
+    <p class="hint" style="margin:0 0 12px">Ao terminar de levantar todos os bens de uma sala ou setor, marque a localização como concluída. Ela fica liberada para a reavaliação no painel.</p>
+    <input type="search" id="lcBusca" placeholder="Nome ou código da localização" aria-label="Localização" style="margin:0">
+    <div class="results" id="lcLista"></div>
+    <div id="lcDetalhe" class="hidden">
+      <div class="sync-count"><b id="lcQtd">—</b><span id="lcQtdTxt"></span></div>
+      <div id="lcStatus" style="font-size:14px;margin:8px 0"></div>
+      <div class="sync-list hidden" id="lcFaltam"></div>
+      <button class="btn btn-block" id="btnConcluirLoc">Marcar como concluída</button>
+      <button class="btn-ghost btn-block" id="btnOutraLoc" style="margin-top:8px">Escolher outra localização</button>
+    </div>
+    <div id="lcMsg" style="font-size:14px;margin-top:10px"></div>
+    <button class="btn-ghost btn-block" id="btnFecharLoc" style="margin-top:16px">Voltar à busca</button>
   </div>
 
   <!-- ENVIO DOS DADOS -->
@@ -507,7 +525,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-4'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-5'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1377,7 +1395,7 @@ async function atualizarFilaUI(){
 }
 function dataHoraBR(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
 async function abrirEnvio(){
-  stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#syncCard').classList.remove('hidden');
+  stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#locCard').classList.add('hidden'); $('#syncCard').classList.remove('hidden');
   $('#syncMsg').innerHTML='';
   $('#syncModo').innerHTML = OFFLINE()
     ? '<b>Envio offline</b>Os bens ficam guardados no celular e cada item salvo fica aqui até você enviar pela internet ou exportar o arquivo.'
@@ -1393,6 +1411,66 @@ async function abrirEnvio(){
   let quando=null; try{ quando=await idbGet('meta','baixado_em'); }catch(_){}
   $('#baseInfo').textContent = OFFLINE() ? (quando?'Bens guardados no celular em '+dataHoraBR(quando)+'.':'Os bens ainda não foram baixados para este celular.') : '';
 }
+/* ====== conclusão de localização ====== */
+let LC_SEL=null, LC_FEITAS={};
+async function abrirLocais(){
+  stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#syncCard').classList.add('hidden'); $('#locCard').classList.remove('hidden');
+  LC_SEL=null; $('#lcBusca').value=''; $('#lcBusca').classList.remove('hidden'); $('#lcDetalhe').classList.add('hidden'); $('#lcMsg').innerHTML='';
+  try{ const {data,error}=await sb.from('localizacoes_concluidas').select('cod,concluido_nome,concluido_em'); if(error) throw error; LC_FEITAS={}; (data||[]).forEach(r=>LC_FEITAS[r.cod]=r); }
+  catch(e){ if(!ehErroDeRede(e)) $('#lcMsg').innerHTML='<span class="err">A conclusão de localizações ainda não foi instalada no banco (supabase/conclusao.sql).</span>'; }
+  listarLocais();
+}
+function listarLocais(){
+  const q=semAcento($('#lcBusca').value.trim());
+  const lista=(q?LOCS.filter(l=>semAcento(l.cod+' '+l.desc).includes(q)):LOCS).slice(0,40);
+  $('#lcLista').classList.remove('hidden');
+  $('#lcLista').innerHTML=lista.length?lista.map(l=>`<button type="button" data-cod="${esc(l.cod)}"><span><b>${esc(l.desc||'(sem descrição)')}</b><small>Código ${esc(l.cod)}${LC_FEITAS[l.cod]?' · concluída em '+dataHoraBR(LC_FEITAS[l.cod].concluido_em):''}</small></span>${LC_FEITAS[l.cod]?'<span class="pl" style="color:var(--ok)">✓</span>':''}</button>`).join(''):'<p class="hint">Nenhuma localização encontrada.</p>';
+  $('#lcLista').querySelectorAll('button').forEach(b=>b.onclick=()=>escolherLocal(LOCS.find(l=>l.cod===b.dataset.cod)));
+}
+// bens da localização: os cadastrados nela que não foram movidos, mais os movidos para ela no levantamento
+async function situacaoDoLocal(cod){
+  const bens=[]; for(let i=0;;i+=1000){ const {data,error}=await sb.from('bens').select('codigo,placa,descricao').eq('cod_localizacao',cod).range(i,i+999); if(error) throw error; bens.push(...data); if(data.length<1000) break; }
+  const levs={};
+  const {data:aqui,error:e1}=await sb.from('levantamento').select('codigo,cod_localizacao,concluido').eq('cod_localizacao',cod).limit(5000); if(e1) throw e1;
+  aqui.forEach(l=>levs[l.codigo]=l);
+  for(let i=0;i<bens.length;i+=150){ const {data,error}=await sb.from('levantamento').select('codigo,cod_localizacao,concluido').in('codigo',bens.slice(i,i+150).map(b=>b.codigo)); if(error) throw error; data.forEach(l=>levs[l.codigo]=l); }
+  const daqui=bens.filter(b=>!levs[b.codigo]||!levs[b.codigo].cod_localizacao||levs[b.codigo].cod_localizacao===cod);
+  const cods=new Set(daqui.map(b=>b.codigo)); let vindos=0, vindosOk=0;
+  aqui.forEach(l=>{ if(!cods.has(l.codigo)){ vindos++; if(l.concluido) vindosOk++; } });
+  const faltam=daqui.filter(b=>!(levs[b.codigo]&&levs[b.codigo].concluido));
+  return {total:daqui.length+vindos, encontrados:daqui.length-faltam.length+vindosOk, faltam};
+}
+async function escolherLocal(l){
+  if(!l) return; LC_SEL={loc:l,sit:null};
+  $('#lcLista').classList.add('hidden'); $('#lcBusca').classList.add('hidden'); $('#lcDetalhe').classList.remove('hidden'); $('#lcMsg').innerHTML='';
+  $('#lcQtd').textContent='…'; $('#lcQtdTxt').textContent=l.desc||l.cod; $('#lcFaltam').classList.add('hidden');
+  const feita=LC_FEITAS[l.cod];
+  $('#btnConcluirLoc').classList.toggle('hidden',!!feita); $('#btnConcluirLoc').disabled=true;
+  $('#lcStatus').innerHTML=feita?`<b style="color:var(--ok)">✓ Concluída</b> por ${esc(feita.concluido_nome||'—')} em ${dataHoraBR(feita.concluido_em)}. Para reabrir, peça ao administrador no painel.`:'Conferindo os bens desta localização...';
+  try{
+    const sit=await situacaoDoLocal(l.cod); if(!LC_SEL||LC_SEL.loc!==l) return; LC_SEL.sit=sit;
+    $('#lcQtd').textContent=`${sit.encontrados} de ${sit.total}`; $('#lcQtdTxt').textContent='bens levantados em '+(l.desc||l.cod);
+    if(!feita) $('#lcStatus').textContent=sit.faltam.length?`Faltam ${sit.faltam.length} bem(ns). Se não estão no local, pode concluir: eles ficam como não localizados.`:'Todos os bens desta localização foram levantados.';
+    if(sit.faltam.length){ $('#lcFaltam').innerHTML=sit.faltam.slice(0,60).map(b=>`<div><span>${esc(b.placa||'sem placa')} · ${esc((b.descricao||'').slice(0,34))}</span><small>falta</small></div>`).join(''); $('#lcFaltam').classList.remove('hidden'); }
+    $('#btnConcluirLoc').disabled=false;
+  }catch(e){ $('#lcQtd').textContent='—'; $('#lcStatus').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. A conclusão da localização precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
+}
+$('#btnLocais').addEventListener('click',abrirLocais);
+$('#lcBusca').addEventListener('input',listarLocais);
+$('#btnOutraLoc').addEventListener('click',()=>{ LC_SEL=null; $('#lcDetalhe').classList.add('hidden'); $('#lcBusca').classList.remove('hidden'); $('#lcMsg').innerHTML=''; listarLocais(); });
+$('#btnFecharLoc').addEventListener('click',()=>{ $('#locCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
+$('#btnConcluirLoc').addEventListener('click',async()=>{
+  if(!LC_SEL||!LC_SEL.sit) return; const {loc,sit}=LC_SEL;
+  try{ const fila=await idbAll('fila'); if(fila.length){ toast('Envie antes os '+fila.length+' item(ns) guardados no celular.',3600); return; } }catch(_){}
+  if(!confirm(`Concluir o levantamento de "${loc.desc||loc.cod}"?\n\n${sit.encontrados} de ${sit.total} bens levantados.`+(sit.faltam.length?`\n${sit.faltam.length} bem(ns) ficarão como não localizados.`:''))) return;
+  const btn=$('#btnConcluirLoc'); btn.disabled=true;
+  try{
+    const {data,error}=await sb.from('localizacoes_concluidas').insert({cod:loc.cod,descricao:loc.desc||null,total:sit.total,encontrados:sit.encontrados}).select().single();
+    if(error) throw error;
+    LC_FEITAS[loc.cod]=data||{cod:loc.cod,concluido_em:new Date().toISOString(),concluido_nome:USUARIO_EMAIL};
+    toast('✓ Localização concluída'); escolherLocal(loc);
+  }catch(e){ btn.disabled=false; $('#lcMsg').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. Tente de novo quando houver conexão.':/duplicate|23505/.test((e.code||'')+(e.message||''))?'Esta localização já foi concluída por outra pessoa.':'Erro: '+esc(e.message||e))+'</span>'; }
+});
 $('#btnEnvio').addEventListener('click',abrirEnvio);
 $('#modoBand').addEventListener('click',abrirEnvio);
 $('#btnFecharEnvio').addEventListener('click',()=>{ $('#syncCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
