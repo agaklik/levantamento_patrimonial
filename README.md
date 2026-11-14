@@ -163,6 +163,8 @@ A reavaliação segue a ordem do levantamento:
 4. Cada descrição de bem tem **um único valor de referência**, guardado na tabela `referencias`. Ao salvar o valor de um bem, o painel oferece aplicar o mesmo valor aos outros bens liberados com a mesma descrição; o fator de cada um vem do estado e do tempo de uso dele. Quando outra localização é concluída depois, o botão **Valores por tipo de bem** aplica os valores já definidos aos novos bens, sem nova pesquisa.
 5. Alterar o valor de referência de um tipo exige confirmação e recalcula todos os bens daquele tipo já reavaliados, para que bens iguais nunca fiquem com referências diferentes.
 
+**Localização temporária.** Quando, antes da importação, todos os bens são transferidos no sistema para uma única localização temporária, indique-a em Configuração, **Localização temporária**. Ela fica fora da conclusão das localizações: cada bem encontrado sai dela para a sala onde está, as salas mostram só os bens encontrados, e o que sobrar na temporária ao final é tratado como não localizado.
+
 Instalação: rodar [`supabase/conclusao.sql`](supabase/conclusao.sql) no SQL Editor. Sem ele, o painel funciona como antes (todos os bens encontrados liberados).
 
 ### Pesquisa de preços de referência
