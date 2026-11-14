@@ -1979,6 +1979,10 @@ $('#btnDocGeral').addEventListener('click',()=>{
   if(!lista.length){ toast('Ainda não há bens com reavaliação concluída.'); return; }
   const tA=lista.reduce((s,b)=>s+(num(b.valor_atual)||0),0), tN=lista.reduce((s,b)=>s+(+reav(b).valor_reavaliado),0);
   const cls=porClassificacao(lista);
+  // fontes dos valores: numeradas na ordem em que aparecem, citadas em cada bem
+  const fontes=[], nFonte=b=>{ const r=reav(b), f=(r.fonte||'').trim()||(r.metodo==='laudo'?'Laudo técnico do responsável pela avaliação':r.metodo==='mercado'?'Valor de mercado de bem equivalente, apurado pelo avaliador':'Fonte não informada'); let x=fontes.find(y=>y.f===f); if(!x){ x={f,n:fontes.length+1,qtd:0,precos:r.precos||null}; fontes.push(x); } if(!x.precos&&r.precos) x.precos=r.precos; return x; };
+  lista.forEach(b=>nFonte(b).qtd++);
+  const semFonte=fontes.find(x=>x.f==='Fonte não informada');
   abrirPreview(`<div class="page land">${cabecalho()}
     <h1>Relatório Geral da Reavaliação de Bens</h1>
     <div class="num">${CFG.ato?esc(CFG.ato)+' · ':''}Data-base: ${dataBR(CFG.dataBase)||dataBR(new Date())}</div>
@@ -1988,10 +1992,14 @@ $('#btnDocGeral').addEventListener('click',()=>{
     <tbody>${cls.map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${x.qtdR}</td><td class="n">${dec(x.vAnt)}</td><td class="n">${dec(x.vNovo)}</td><td class="n">${dec(x.vNovo-x.vAnt)}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td>Total</td><td class="n">${lista.length}</td><td class="n">${dec(tA)}</td><td class="n">${dec(tN)}</td><td class="n">${dec(tN-tA)}</td></tr></tfoot></table>
     <h3>Bens reavaliados</h3>
-    <table><thead><tr><th>Placa</th><th>Código</th><th>Descrição</th><th>Localização</th><th>Estado</th><th>Método</th><th>Valor anterior</th><th>Valor reavaliado</th><th>Variação</th><th>Vida útil</th></tr></thead>
-    <tbody>${lista.map(b=>{const r=reav(b),a=num(b.valor_atual)||0;return `<tr><td>${esc(placa(b))}</td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td><td>${esc(locDesc(b))}</td><td>${esc(estDesc(b))}</td><td>${r.metodo==='fator'?'Fator '+(+r.fator).toFixed(2).replace('.',','):(r.metodo==='laudo'?'Laudo':'Mercado')}</td><td class="n">${dec(a)}</td><td class="n">${dec(+r.valor_reavaliado)}</td><td class="n">${dec(+r.valor_reavaliado-a)}</td><td class="n">${r.vida_util_remanescente!=null?+r.vida_util_remanescente:''}</td></tr>`;}).join('')}</tbody></table>
+    <table><thead><tr><th>Placa</th><th>Código</th><th>Descrição</th><th>Localização</th><th>Estado</th><th>Método</th><th>Valor de referência</th><th>Fonte</th><th>Valor anterior</th><th>Valor reavaliado</th><th>Variação</th><th>Vida útil</th></tr></thead>
+    <tbody>${lista.map(b=>{const r=reav(b),a=num(b.valor_atual)||0;return `<tr><td>${esc(placa(b))}</td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td><td>${esc(locDesc(b))}</td><td>${esc(estDesc(b))}</td><td>${r.metodo==='fator'?'Fator '+(+r.fator).toFixed(2).replace('.',','):(r.metodo==='laudo'?'Laudo':'Mercado')}</td><td class="n">${r.valor_referencia!=null?dec(+r.valor_referencia):''}</td><td class="n">[${nFonte(b).n}]</td><td class="n">${dec(a)}</td><td class="n">${dec(+r.valor_reavaliado)}</td><td class="n">${dec(+r.valor_reavaliado-a)}</td><td class="n">${r.vida_util_remanescente!=null?+r.vida_util_remanescente:''}</td></tr>`;}).join('')}</tbody></table>
+    <h3>Fontes dos valores de reavaliação</h3>
+    <p>A coluna "Fonte" da relação de bens indica, pelo número, a origem do valor de referência de cada bem.</p>
+    <table><thead><tr><th>Nº</th><th>Fonte</th><th>Bens</th></tr></thead>
+    <tbody>${fontes.map(x=>`<tr><td class="n">[${x.n}]</td><td>${esc(x.f)}${x.precos&&x.precos.itens?`<br><span style="font-size:10px">${x.precos.itens.length} preço(s) de compras públicas considerados, de ${brl(Math.min(...x.precos.itens.map(i=>+i.valor)))} a ${brl(Math.max(...x.precos.itens.map(i=>+i.valor)))}; a relação completa consta no laudo de cada bem.</span>`:''}</td><td class="n">${x.qtd}</td></tr>`).join('')}</tbody></table>
     ${localData()}${assinaturas()}
-  </div>`,`${lista.length} bem(ns) reavaliado(s). Na impressão, escolha a orientação paisagem.`);
+  </div>`,`${lista.length} bem(ns) reavaliado(s). Na impressão, escolha a orientação paisagem.`+(semFonte?` Atenção: ${semFonte.qtd} bem(ns) sem fonte informada.`:''));
 });
 
 $('#btnCsvReav').addEventListener('click',()=>{
