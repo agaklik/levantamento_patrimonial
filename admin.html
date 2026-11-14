@@ -64,6 +64,7 @@
   th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
   th{background:var(--surface2);font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap;position:sticky;top:0;border-bottom-color:var(--border)}
   td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .btn-lt{padding:5px 10px;font-size:12.5px}
   #tbody tr{cursor:pointer}#tbody tr:hover{background:#F2F5FB}
   #tbody td:nth-child(2){font-weight:700;font-stretch:88%;font-variant-numeric:tabular-nums;font-size:15px}
   tbody tr:last-child td{border-bottom:none}
@@ -297,12 +298,11 @@
         <div class="fix"><button class="btn-2" id="btnImportar">Importar valores de referência</button><input type="file" id="fileImport" accept=".csv,text/csv" class="hidden"></div>
         <div class="fix"><button class="btn-2" id="btnTipos">Valores por tipo de bem</button></div>
         <div class="fix"><button class="btn" id="btnReavSel" disabled>Reavaliar selecionados</button></div>
-        <div class="fix"><button class="btn-2" id="btnLaudoTecSel" disabled title="Para imóveis, veículos e máquinas avaliados por profissional habilitado">Laudo técnico de engenheiro</button></div>
         <div class="fix"><button class="btn-2" id="btnLaudosSel" disabled>Laudos dos selecionados</button></div>
         <div style="text-align:right;color:var(--muted);font-size:13px" id="selInfo"></div>
       </div>
       <div class="tblwrap"><table>
-        <thead><tr><th><input type="checkbox" id="chkAll" title="Selecionar a página"></th><th>Placa</th><th>Código</th><th>Descrição</th><th>Localização</th><th>Estado</th><th class="n">Valor atual</th><th class="n">Reavaliado</th><th class="n">Variação</th><th>Situação</th></tr></thead>
+        <thead><tr><th><input type="checkbox" id="chkAll" title="Selecionar a página"></th><th>Placa</th><th>Código</th><th>Descrição</th><th>Localização</th><th>Estado</th><th class="n">Valor atual</th><th class="n">Reavaliado</th><th class="n">Variação</th><th>Situação</th><th></th></tr></thead>
         <tbody id="tbody"></tbody>
       </table></div>
       <div class="pager"><span id="pgInfo"></span><span><button class="btn-2" id="pgPrev">‹ Anterior</button> <button class="btn-2" id="pgNext">Próxima ›</button></span></div>
@@ -964,8 +964,8 @@ function renderTabela(){
     <td><b>${esc(placa(b))}</b></td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td>
     <td>${esc(locDesc(b))}</td><td>${esc(estDesc(b))}</td>
     <td class="n">${dec(num(b.valor_atual))}</td><td class="n">${reav(b)&&reav(b).valor_reavaliado!=null?dec(+reav(b).valor_reavaliado):''}</td>
-    <td class="n">${variacao(b)}</td><td>${pillStatus(b)}</td></tr>`).join('')
-    || '<tr style="cursor:default"><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">Nenhum bem com esses filtros.</td></tr>';
+    <td class="n">${variacao(b)}</td><td>${pillStatus(b)}</td><td style="white-space:nowrap"><button type="button" class="btn-2 btn-lt" title="Incluir ou editar o laudo técnico de engenheiro deste bem">${reav(b)&&reav(b).laudo_tecnico?'Laudo técnico ✓':'+ Laudo técnico'}</button></td></tr>`).join('')
+    || '<tr style="cursor:default"><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">Nenhum bem com esses filtros.</td></tr>';
   $('#pgInfo').textContent=`${filtrados.length.toLocaleString('pt-BR')} bem(ns) · página ${pagina+1} de ${paginas}`;
   $('#pgPrev').disabled=pagina===0; $('#pgNext').disabled=pagina>=paginas-1;
   $('#chkAll').checked=fatia.length>0&&fatia.every(b=>selecionados.has(b.codigo));
@@ -973,7 +973,7 @@ function renderTabela(){
 }
 function atualizarSel(){
   $('#selInfo').textContent=selecionados.size?selecionados.size+' selecionado(s)':'';
-  $('#btnLaudosSel').disabled=!selecionados.size; $('#btnLaudoTecSel').disabled=!selecionados.size; $('#btnReavSel').disabled=!selecionados.size;
+  $('#btnLaudosSel').disabled=!selecionados.size; $('#btnReavSel').disabled=!selecionados.size;
 }
 $('#pgPrev').addEventListener('click',()=>{pagina--;renderTabela();});
 $('#pgNext').addEventListener('click',()=>{pagina++;renderTabela();});
@@ -987,6 +987,7 @@ $('#tbody').addEventListener('click',e=>{
   if(e.target.classList.contains('chk')){ e.target.checked?selecionados.add(c):selecionados.delete(c); atualizarSel(); return; }
   if(e.target.closest('td')===tr.cells[0]) return;
   abrirItem(c);
+  if(e.target.closest('.btn-lt')&&atual) $('#btnLaudoTec').click();
 });
 
 /* ====================== ITEM (painel lateral) ====================== */
@@ -1246,10 +1247,6 @@ $('#btnLaudoTec').addEventListener('click',()=>{
   $('#ltArquivo').value=''; $('#ltArqInfo').textContent=l.arquivo?'Arquivo já anexado: '+(l.arquivo_nome||'laudo')+'. Escolha outro para substituir.':'';
   $('#ltErro').textContent=''; $('#ltRemover').classList.toggle('hidden',!LAUDO_SEL);
   $('#dlgLaudoTec').showModal(); $('#ltNumero').focus();
-});
-$('#btnLaudoTecSel').addEventListener('click',()=>{
-  if(selecionados.size!==1){ toast('O laudo técnico é de um bem por vez. Deixe marcado só o bem do laudo.',4500); return; }
-  abrirItem([...selecionados][0]); if(atual) $('#btnLaudoTec').click();
 });
 $('#ltCancelar').addEventListener('click',()=>$('#dlgLaudoTec').close());
 $('#ltRemover').addEventListener('click',()=>{ LAUDO_SEL=null; LAUDO_MUDOU=true; infoLaudo(); $('#dlgLaudoTec').close(); toast('Laudo removido. Escolha o método e salve.',3500); });
