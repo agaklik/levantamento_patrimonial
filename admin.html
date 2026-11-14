@@ -296,6 +296,7 @@
         <div class="fix"><button class="btn-2" id="btnPlanilha">Baixar planilha de pesquisa de preços</button></div>
         <div class="fix"><button class="btn-2" id="btnImportar">Importar valores de referência</button><input type="file" id="fileImport" accept=".csv,text/csv" class="hidden"></div>
         <div class="fix"><button class="btn-2" id="btnTipos">Valores por tipo de bem</button></div>
+        <div class="fix"><button class="btn" id="btnReavSel" disabled>Reavaliar selecionados</button></div>
         <div class="fix"><button class="btn-2" id="btnLaudosSel" disabled>Laudos dos selecionados</button></div>
         <div style="text-align:right;color:var(--muted);font-size:13px" id="selInfo"></div>
       </div>
@@ -525,6 +526,22 @@
   <ul class="pw-rules" id="sRegras"></ul>
   <div class="fld-err" id="sErro"></div>
   <div class="acts"><button class="btn-2" id="sCancelar">Cancelar</button><button class="btn" id="sSalvar">Salvar senha</button></div>
+</dialog>
+<dialog class="dlg largo" id="dlgLote">
+  <div class="pz-top">
+    <h3>Reavaliar os bens selecionados</h3>
+    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Informe o valor de referência (preço de um bem novo equivalente) de cada bem. O valor reavaliado é calculado pelo fator, com o estado, o tempo de uso e a vida útil sugeridos pelo sistema; depois é possível abrir qualquer bem e ajustar. Bens com a mesma descrição recebem sempre o mesmo valor de referência.</p>
+    <div class="pz-row">
+      <div class="fix" style="min-width:200px"><label for="ltValor">Mesmo valor para todos</label><input id="ltValor" inputmode="decimal" placeholder="0,00"></div>
+      <div class="fix"><button class="btn-2" id="ltPreencher">Preencher</button></div>
+      <div><label for="ltFonte">Fonte da pesquisa de preços</label><input id="ltFonte" placeholder="Ex.: 3 cotações em lojas online, 14/11/2026"></div>
+    </div>
+  </div>
+  <div class="pz-body">
+    <div class="pz-info" id="ltInfo"></div>
+    <div class="tblwrap"><table style="font-size:13.5px"><thead><tr><th>Placa</th><th>Descrição</th><th>Estado</th><th class="n">Valor atual</th><th class="n" style="width:150px">Valor de referência</th><th class="n">Fator</th><th class="n">Valor reavaliado</th></tr></thead><tbody id="ltCorpo"></tbody></table></div>
+  </div>
+  <div class="pz-foot"><div class="pz-stats" id="ltStats"></div><div style="margin-left:auto;display:flex;gap:8px"><button class="btn-2" id="ltFechar">Cancelar</button><button class="btn" id="ltSalvar" disabled>Reavaliar</button></div></div>
 </dialog>
 <dialog class="dlg largo" id="dlgTipos">
   <div class="pz-top">
@@ -933,7 +950,7 @@ function renderTabela(){
 }
 function atualizarSel(){
   $('#selInfo').textContent=selecionados.size?selecionados.size+' selecionado(s)':'';
-  $('#btnLaudosSel').disabled=!selecionados.size;
+  $('#btnLaudosSel').disabled=!selecionados.size; $('#btnReavSel').disabled=!selecionados.size;
 }
 $('#pgPrev').addEventListener('click',()=>{pagina--;renderTabela();});
 $('#pgNext').addEventListener('click',()=>{pagina++;renderTabela();});
@@ -1715,6 +1732,55 @@ function montarImportacao(dados){
   });
   return {rows,ignorados,refs};
 }
+
+/* ====================== REAVALIAR SELECIONADOS ====================== */
+let LOTE=[];
+function fatorSugerido(b){ const ant=reav(b)||{}, s=sugestao(b); return calcFator(ant.ec!=null?+ant.ec:notaEc(b), ant.pvu!=null?+ant.pvu:s.pvu, ant.pub!=null?+ant.pub:s.pub); }
+function abrirLote(){
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
+  const sel=BENS.filter(b=>selecionados.has(b.codigo));
+  LOTE=sel.filter(b=>encontrado(b)&&liberado(b)).map(b=>({b,fator:fatorSugerido(b)}));
+  const fora=sel.length-LOTE.length, semFator=LOTE.filter(x=>x.fator==null).length;
+  if(!LOTE.length){ toast('Nenhum dos selecionados está liberado para a reavaliação (bem encontrado em localização concluída).',5000); return; }
+  $('#ltValor').value=''; $('#ltFonte').value='';
+  $('#ltInfo').textContent=`${LOTE.length} bem(ns).`+(fora?` ${fora} selecionado(s) ficaram de fora por não estarem liberados.`:'')+(semFator?` ${semFator} sem data de ingresso não têm fator sugerido e precisam ser reavaliados um a um.`:'');
+  $('#ltCorpo').innerHTML=LOTE.map((x,i)=>{ const b=x.b, r=reav(b), rf=refDe(b), v=r&&r.valor_referencia!=null?+r.valor_referencia:(rf?+rf.valor:null);
+    return `<tr style="cursor:default" data-i="${i}"><td><b>${esc(placa(b))}</b></td><td>${esc(b.descricao||b.descricao_reduzida||'')}<small style="display:block;color:var(--muted);font-size:12px">${esc(locDesc(b))}</small></td><td>${esc(estDesc(b))}</td><td class="n">${dec(num(b.valor_atual))}</td>
+      <td class="n"><input class="ltRef" inputmode="decimal" placeholder="0,00" value="${v!=null?dec(v):''}" style="margin:0;text-align:right;padding:6px 8px"${x.fator==null?' disabled':''}></td><td class="n">${x.fator!=null?x.fator.toFixed(2).replace('.',','):'—'}</td><td class="n ltNovo"></td></tr>`; }).join('');
+  $('#ltCorpo').querySelectorAll('.ltRef').forEach(inp=>inp.addEventListener('input',()=>{
+    // mesma descrição = mesmo valor de referência
+    const i=+inp.closest('tr').dataset.i, k=chaveRef(LOTE[i].b);
+    $('#ltCorpo').querySelectorAll('.ltRef').forEach(o=>{ if(o!==inp&&!o.disabled&&chaveRef(LOTE[+o.closest('tr').dataset.i].b)===k) o.value=inp.value; });
+    loteCalc(); }));
+  loteCalc(); $('#dlgLote').showModal();
+}
+function loteCalc(){
+  let n=0, antes=0, depois=0;
+  $('#ltCorpo').querySelectorAll('tr').forEach(tr=>{ const x=LOTE[+tr.dataset.i], v=num(tr.querySelector('.ltRef').value), ok=v!=null&&v>0&&x.fator!=null;
+    tr.querySelector('.ltNovo').innerHTML=ok?'<b>'+brl(r2(v*x.fator))+'</b>':''; if(ok){ n++; antes+=num(x.b.valor_atual)||0; depois+=r2(v*x.fator); } });
+  $('#ltStats').innerHTML=n?`<span>Com valor <b>${n} de ${LOTE.length}</b></span><span>Valor atual <b>${brl(antes)}</b></span><span>Reavaliado <b>${brl(depois)}</b></span>`:'';
+  $('#ltSalvar').disabled=!n; $('#ltSalvar').textContent=n?`Reavaliar ${n} bem(ns)`:'Reavaliar';
+}
+$('#btnReavSel').addEventListener('click',abrirLote);
+$('#ltFechar').addEventListener('click',()=>$('#dlgLote').close());
+$('#ltPreencher').addEventListener('click',()=>{ const v=num($('#ltValor').value); if(v==null||v<=0){ toast('Informe o valor.'); return; } $('#ltCorpo').querySelectorAll('.ltRef').forEach(o=>{ if(!o.disabled) o.value=dec(v); }); loteCalc(); });
+$('#ltSalvar').addEventListener('click',async()=>{
+  const fonte=$('#ltFonte').value.trim()||null, rows=[], refs={};
+  $('#ltCorpo').querySelectorAll('tr').forEach(tr=>{ const x=LOTE[+tr.dataset.i], v=num(tr.querySelector('.ltRef').value); if(v==null||v<=0||x.fator==null) return;
+    const row=linhaAuto(x.b,v,fonte); if(!row) return; rows.push(row); refs[chaveRef(x.b)]={b:x.b,valor:v}; });
+  if(!rows.length) return;
+  // se o valor de um tipo de bem mudou, os outros bens do mesmo tipo já reavaliados acompanham
+  const extras=[];
+  if(concOk) Object.keys(refs).forEach(k=>{ const ja=new Set(rows.map(r=>r.codigo)); BENS.forEach(y=>{ const r=reav(y); if(ja.has(y.codigo)||chaveRef(y)!==k||!r||r.metodo!=='fator'||r.valor_referencia==null||Math.abs(+r.valor_referencia-refs[k].valor)<=0.004) return; const row=linhaAuto(y,refs[k].valor,fonte); if(row) extras.push(row); }); });
+  if(extras.length&&!confirm(`${extras.length} outro(s) bem(ns) com a mesma descrição já foram reavaliados com outro valor de referência.\n\nEles serão recalculados com o novo valor, para que bens iguais não fiquem com referências diferentes.\n\nOK = continuar · Cancelar = voltar`)) return;
+  const btn=$('#ltSalvar'); btn.disabled=true;
+  try{
+    await gravarReavs(rows.concat(extras));
+    if(concOk) for(const k of Object.keys(refs)) await gravarRef(refs[k].b,refs[k].valor,fonte||(REFS[k]&&REFS[k].fonte)||null,(REFS[k]&&Math.abs(+REFS[k].valor-refs[k].valor)<=0.004)?REFS[k].precos:null);
+    selecionados.clear(); $('#dlgLote').close();
+    toast(`✓ ${rows.length} bem(ns) reavaliados`+(extras.length?` e ${extras.length} recalculados`:''),4500); renderPainel(); aplicarFiltro(true);
+  }catch(e){ btn.disabled=false; toast('Erro ao salvar: '+(e.message||e),5000); }
+});
 
 /* ====================== VALORES POR TIPO DE BEM ====================== */
 function tiposDeBem(){

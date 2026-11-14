@@ -179,6 +179,10 @@ O valor vai para o campo de referência, a fonte é preenchida sozinha e os pre�
 
 ### Reavaliar em lote
 
+**Pela tela:** na aba Reavaliação, marque os bens na lista e clique em **Reavaliar selecionados**. Informe o valor de referência de cada bem (ou um mesmo valor para todos) e a fonte; o painel calcula o fator de cada um e grava tudo de uma vez. Bens com a mesma descrição recebem sempre o mesmo valor.
+
+**Pela planilha:**
+
 1. Na aba Reavaliação, filtre os bens e clique em **Planilha de pesquisa de preços**. O arquivo traz código, placa, descrição, marca, modelo, estado e valor atual.
 2. Preencha as colunas `valor_referencia` e `fonte`.
 3. Clique em **Importar valores de referência**. Cada bem com valor preenchido é reavaliado pelo método do fator, com os parâmetros sugeridos. Depois é possível abrir qualquer bem e ajustar.
