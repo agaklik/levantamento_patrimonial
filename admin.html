@@ -97,7 +97,7 @@
   .doc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
   .doc-grid .card{margin:0;display:flex;flex-direction:column;gap:12px}
   .doc-grid .card .acts{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
-  .u-form{display:grid;grid-template-columns:2fr 2fr 1.4fr 1.4fr auto;gap:12px;align-items:end;padding:16px;background:var(--surface2);border-radius:10px;margin-bottom:16px}
+  .u-form{display:grid;grid-template-columns:2fr 1.4fr 2fr 1.5fr 1.3fr;gap:12px;align-items:end;padding:16px;background:var(--surface2);border-radius:10px;margin-bottom:16px}
   @media(max-width:1000px){.u-form{grid-template-columns:1fr 1fr}}
   #tblUsu select{width:auto;padding:5px 8px}
   #tblUsu td{vertical-align:middle}
@@ -139,6 +139,38 @@
     thead{display:table-header-group}tr{page-break-inside:avoid}
   }
   @media(max-width:800px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:12px}header{padding:10px 12px;gap:8px 16px}nav button{padding:8px 10px}.hdr-right{padding-bottom:4px}}
+  /* ---------- menus em vidro ---------- */
+  body{background:radial-gradient(50vmax 34vmax at 105% -10%,rgba(35,71,168,.14),transparent 60%),radial-gradient(40vmax 30vmax at -10% 40%,rgba(245,197,24,.12),transparent 60%),var(--bg);background-attachment:fixed}
+  header{top:10px;margin:10px 16px 0;border-radius:22px;padding:6px 8px 6px 20px;align-items:center;gap:20px;min-height:56px;
+    background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.76));
+    -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.26),0 0 0 1px rgba(255,255,255,.07),0 12px 32px rgba(24,33,43,.26)}
+  header::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(110deg,rgba(255,255,255,.18),rgba(255,255,255,0) 28%,rgba(255,255,255,0) 75%,rgba(255,255,255,.07))}
+  nav{flex:1 1 auto;flex-grow:0;align-self:center;padding:4px;gap:2px;border-radius:16px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 2px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.08)}
+  nav button{border:0;border-radius:12px;padding:8px 16px;color:rgba(255,255,255,.75);transition:background-color .2s,color .2s,box-shadow .2s}
+  nav button:hover{background:rgba(255,255,255,.08)}
+  nav button.active{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,.14));box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 0 0 1px rgba(255,255,255,.16),0 4px 12px rgba(0,0,0,.25)}
+  .hdr-right{margin-left:auto}
+  .hdr-right a,.hdr-right button{border:0;border-radius:999px;padding:8px 14px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.12)}
+  .hdr-right a:hover,.hdr-right button:hover{background:rgba(255,255,255,.26)}
+  .toast{border-radius:18px;background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.78));-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 28px rgba(24,33,43,.3)}
+  #drawerBg{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .login{background:radial-gradient(70vmax 50vmax at 100% 0%,rgba(35,71,168,.55),transparent 60%),radial-gradient(60vmax 40vmax at 0% 100%,rgba(245,197,24,.22),transparent 60%),var(--txt)}
+  .login .card{background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 1px 0 #fff,0 24px 60px rgba(0,0,0,.35)}
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ header{background:var(--txt)} .login .card{background:var(--surface)} }
+  .link-btn{background:none;border:0;color:var(--accent);font-weight:600;width:100%;margin-top:6px}
+  .pw-rules{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+  .pw-rules li{display:flex;align-items:center;gap:6px}
+  .pw-rules li::before{content:'';width:12px;height:12px;border-radius:50%;border:1.5px solid var(--border);flex:none}
+  .pw-rules li.ok{color:var(--ok)}
+  .pw-rules li.ok::before{background:var(--ok);border-color:var(--ok)}
+  .u-form .full{grid-column:1/-1}
+  .fld-err{color:var(--danger);font-size:12.5px;margin-top:4px;min-height:0}
+  dialog.dlg{border:0;border-radius:18px;padding:22px;width:min(460px,92vw);box-shadow:0 24px 60px rgba(24,33,43,.35)}
+  dialog.dlg::backdrop{background:rgba(24,33,43,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  dialog.dlg h3{margin:0 0 4px;font-size:18px}
+  dialog.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  dialog.dlg input{margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -148,9 +180,25 @@
   <div class="card">
     <h2>Administração</h2>
     <p class="sub">Levantamento patrimonial. Acesso restrito a administradores.</p>
-    <label>E-mail</label><input type="email" id="loginEmail" autocomplete="username" style="margin-bottom:10px">
-    <label>Senha</label><input type="password" id="loginPass" autocomplete="current-password" style="margin-bottom:14px">
-    <button class="btn" id="btnLogin" style="width:100%">Entrar</button>
+    <div id="pEntrar">
+      <label>E-mail ou nome de usuário</label><input type="text" id="loginEmail" autocomplete="username" autocapitalize="none" spellcheck="false" style="margin-bottom:10px">
+      <label>Senha</label><input type="password" id="loginPass" autocomplete="current-password" style="margin-bottom:14px">
+      <button class="btn" id="btnLogin" style="width:100%">Entrar</button>
+      <button type="button" class="link-btn" id="btnEsqueci">Esqueci minha senha</button>
+    </div>
+    <div id="pRecuperar" class="hidden">
+      <p class="sub" style="margin-bottom:10px">Informe o e-mail ou o nome de usuário. Se houver cadastro, enviamos um link para o e-mail cadastrado.</p>
+      <label>E-mail ou nome de usuário</label><input type="text" id="recLogin" autocapitalize="none" spellcheck="false" style="margin-bottom:14px">
+      <button class="btn" id="btnEnviarLink" style="width:100%">Enviar link</button>
+      <button type="button" class="link-btn" id="btnVoltarLogin">Voltar para entrar</button>
+    </div>
+    <div id="pNovaSenha" class="hidden">
+      <p class="sub" style="margin-bottom:10px">Crie uma nova senha para a sua conta.</p>
+      <label>Nova senha</label><input type="password" id="novaSenha" autocomplete="new-password" style="margin-bottom:10px">
+      <label>Repita a nova senha</label><input type="password" id="novaSenha2" autocomplete="new-password" style="margin-bottom:8px">
+      <ul class="pw-rules" id="novaSenhaRegras" style="margin-bottom:14px"></ul>
+      <button class="btn" id="btnSalvarSenha" style="width:100%">Salvar nova senha</button>
+    </div>
     <div id="loginMsg" style="margin-top:10px;font-size:13px;color:var(--danger)"></div>
   </div>
 </div>
@@ -268,13 +316,14 @@
       <div id="usuAviso" class="msg hidden"></div>
       <div id="usuArea">
         <div class="u-form">
-          <div><label for="uNome">Nome</label><input id="uNome" placeholder="Ex.: Maria Souza"></div>
-          <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com"></div>
-          <div><label for="uSenha">Senha inicial</label><input id="uSenha" placeholder="mínimo 8 caracteres"></div>
+          <div><label for="uNome">Nome completo</label><input id="uNome" placeholder="Ex.: Maria Souza da Silva" autocomplete="off"></div>
+          <div><label for="uUsuario">Nome de usuário <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input id="uUsuario" placeholder="Ex.: maria.souza" autocapitalize="none" spellcheck="false" autocomplete="off"></div>
+          <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com" autocomplete="off"></div>
+          <div><label for="uSenha">Senha inicial <button type="button" class="link-btn" id="btnGerarSenha" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="uSenha" autocomplete="new-password" spellcheck="false"></div>
           <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option></select></div>
-          <div><button class="btn" id="btnCriarUsu">Cadastrar usuário</button></div>
+          <div class="full" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><ul class="pw-rules" id="uSenhaRegras"></ul><button class="btn" id="btnCriarUsu">Cadastrar usuário</button></div>
         </div>
-        <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
+        <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
       </div>
     </div>
   </section>
@@ -425,6 +474,20 @@
 
 <div class="toast" id="toast"></div>
 
+<dialog class="dlg" id="dlgEditar">
+  <h3>Editar usuário</h3><p class="sub" id="dlgEditarEmail" style="margin:0 0 14px;color:var(--muted)"></p>
+  <label for="eNome">Nome completo</label><input id="eNome">
+  <label for="eUsuario">Nome de usuário <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input id="eUsuario" autocapitalize="none" spellcheck="false">
+  <div class="fld-err" id="eErro"></div>
+  <div class="acts"><button class="btn-2" id="eCancelar">Cancelar</button><button class="btn" id="eSalvar">Salvar</button></div>
+</dialog>
+<dialog class="dlg" id="dlgSenha">
+  <h3>Nova senha</h3><p class="sub" id="dlgSenhaEmail" style="margin:0 0 14px;color:var(--muted)"></p>
+  <label for="sNova">Nova senha <button type="button" class="link-btn" id="sGerar" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="sNova" spellcheck="false" autocomplete="new-password">
+  <ul class="pw-rules" id="sRegras"></ul>
+  <div class="fld-err" id="sErro"></div>
+  <div class="acts"><button class="btn-2" id="sCancelar">Cancelar</button><button class="btn" id="sSalvar">Salvar senha</button></div>
+</dialog>
 <script src="vendor/supabase.js"></script>
 <script>
 /* ====================== CONFIG ====================== */
@@ -432,6 +495,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
+let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo'};
@@ -513,7 +577,8 @@ function sugestao(b){
 function tela(id){ ['loginScreen','blockScreen','app'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id)); }
 async function iniciar(){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){ tela('loginScreen'); return; }
+  if(LINK_RECUPERACAO){ LINK_RECUPERACAO=false; history.replaceState(null,'',location.pathname); if(session){ tela('loginScreen'); painelLogin('pNovaSenha'); return; } }
+  if(!session){ tela('loginScreen'); if(LINK_ERRO){ $('#loginMsg').textContent='O link de recuperação venceu ou já foi usado. Peça um novo em “Esqueci minha senha”.'; LINK_ERRO=''; history.replaceState(null,'',location.pathname); } return; }
   USER=session.user;
   let admin=false, falta=false;
   try{
@@ -533,13 +598,41 @@ async function iniciar(){
 $('#btnLogin').addEventListener('click',entrar);
 $('#loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
 async function entrar(){
-  const email=$('#loginEmail').value.trim(), password=$('#loginPass').value;
-  if(!email||!password){ $('#loginMsg').textContent='Informe e-mail e senha.'; return; }
+  const login=$('#loginEmail').value.trim().toLowerCase(), password=$('#loginPass').value;
+  if(!login||!password){ $('#loginMsg').textContent='Informe o e-mail ou nome de usuário e a senha.'; return; }
   $('#loginMsg').textContent='';
-  const {error}=await sb.auth.signInWithPassword({email,password});
-  if(error){ $('#loginMsg').textContent=error.message; return; }
+  if(login.includes('@')){
+    const {error}=await sb.auth.signInWithPassword({email:login,password});
+    if(error){ $('#loginMsg').textContent=/invalid login/i.test(error.message)?'E-mail ou senha incorretos.':error.message; return; }
+  }else{
+    const {data,error}=await sb.functions.invoke('usuarios',{body:{acao:'entrar',usuario:login,senha:password}});
+    if(error){ let m='Usuário ou senha incorretos.'; try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){} $('#loginMsg').textContent=m; return; }
+    const r=await sb.auth.setSession(data.session); if(r.error){ $('#loginMsg').textContent=r.error.message; return; }
+  }
   iniciar();
 }
+function painelLogin(id){ ['pEntrar','pRecuperar','pNovaSenha'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id)); $('#loginMsg').textContent=''; $('#loginMsg').style.color='var(--danger)'; if(id==='pNovaSenha') mostrarRegras($('#novaSenhaRegras'),'',''); }
+$('#btnEsqueci').onclick=()=>{ $('#recLogin').value=$('#loginEmail').value; painelLogin('pRecuperar'); };
+$('#btnVoltarLogin').onclick=()=>painelLogin('pEntrar');
+$('#btnEnviarLink').onclick=async()=>{
+  const login=$('#recLogin').value.trim().toLowerCase(); if(!login){ $('#loginMsg').textContent='Informe o e-mail ou o nome de usuário.'; return; }
+  const redirect=location.origin+location.pathname; $('#btnEnviarLink').disabled=true;
+  let r=await sb.functions.invoke('usuarios',{body:{acao:'recuperar',login,redirect}});
+  if(r.error&&login.includes('@')) r=await sb.auth.resetPasswordForEmail(login,{redirectTo:redirect});
+  $('#btnEnviarLink').disabled=false;
+  $('#loginMsg').style.color=r.error?'var(--danger)':'var(--ok)';
+  $('#loginMsg').textContent=r.error?'Não foi possível enviar agora. Tente de novo em alguns minutos.':'Se houver cadastro, o link chega ao e-mail em alguns minutos. Confira também o spam.';
+};
+['#novaSenha','#novaSenha2'].forEach(i=>$(i).addEventListener('input',()=>{ $('#loginMsg').textContent=''; mostrarRegras($('#novaSenhaRegras'),$('#novaSenha').value,$('#novaSenha2').value); }));
+$('#btnSalvarSenha').onclick=async()=>{
+  const s1=$('#novaSenha').value, s2=$('#novaSenha2').value;
+  const {data:{session}}=await sb.auth.getSession();
+  const err=erroSenha(s1,session&&session.user&&session.user.email,'')||(s1!==s2?'As duas senhas não são iguais.':'');
+  if(err){ $('#loginMsg').textContent=err; return; }
+  const {error}=await sb.auth.updateUser({password:s1});
+  if(error){ $('#loginMsg').textContent=/same|different/i.test(error.message)?'A nova senha precisa ser diferente da anterior.':error.message; return; }
+  painelLogin('pEntrar'); toast('Senha alterada'); iniciar();
+};
 async function sair(){ await sb.auth.signOut(); location.reload(); }
 $('#btnLogout').addEventListener('click',sair);
 $('#btnBlockLogout').addEventListener('click',sair);
@@ -931,37 +1024,103 @@ async function carregarUsuarios(){
       : 'Não foi possível carregar os usuários: '+esc(e.message);
   }
 }
+/* regras de cadastro (as mesmas da função "usuarios" no servidor) */
+const RX_EMAIL=/^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i;
+const RX_USUARIO=/^[a-z0-9][a-z0-9._]{2,29}$/;
+const RX_PARTE=/^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'.-]*$/;
+const limparNome=s=>(s||'').trim().replace(/\s+/g,' ');
+function erroNome(n){
+  const p=limparNome(n).split(' ').filter(Boolean);
+  if(p.length<2) return 'Informe o nome completo, com nome e sobrenome.';
+  if(!p.every(x=>RX_PARTE.test(x))) return 'O nome deve ter só letras.';
+  if(p.filter(x=>x.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g,'').length>=2).length<2) return 'Informe o nome completo, com nome e sobrenome.';
+  return '';
+}
+const erroUsuario=u=>u&&!RX_USUARIO.test(u)?'Nome de usuário: de 3 a 30 caracteres, só letras minúsculas sem acento, números, ponto e sublinhado.':'';
+const REGRAS_SENHA=[[s=>s.length>=10,'10 ou mais caracteres'],[s=>/[a-z]/.test(s),'minúscula'],[s=>/[A-Z]/.test(s),'maiúscula'],[s=>/\d/.test(s),'número'],[s=>/[^A-Za-z0-9]/.test(s),'símbolo (! @ # -)']];
+function erroSenha(s,email,usuario){
+  if(!REGRAS_SENHA.every(([f])=>f(s))) return 'A senha ainda não atende a todas as regras.';
+  const l=(email||'').split('@')[0].toLowerCase(), x=s.toLowerCase();
+  if((l.length>=4&&x.includes(l))||(usuario&&usuario.length>=4&&x.includes(usuario))) return 'A senha não pode conter o e-mail nem o nome de usuário.';
+  return '';
+}
+function mostrarRegras(el,s,s2){
+  const it=REGRAS_SENHA.map(([f,t])=>`<li class="${f(s)?'ok':''}">${t}</li>`);
+  if(s2!==undefined) it.push(`<li class="${s&&s===s2?'ok':''}">as duas iguais</li>`);
+  el.innerHTML=it.join('');
+}
+function gerarSenha(){
+  const A='ABCDEFGHJKLMNPQRSTUVWXYZ',a='abcdefghijkmnpqrstuvwxyz',n='23456789',y='!@#$%&*-+?';
+  const r=k=>{const v=new Uint32Array(1);crypto.getRandomValues(v);return v[0]%k;};
+  const pick=c=>c[r(c.length)];
+  const t=[pick(A),pick(a),pick(n),pick(y)]; const all=A+a+n+y;
+  while(t.length<12) t.push(pick(all));
+  for(let i=t.length-1;i>0;i--){const j=r(i+1);[t[i],t[j]]=[t[j],t[i]];}
+  return t.join('');
+}
 function renderUsuarios(){
   const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'nunca entrou';
   $('#usuBody').innerHTML=USUARIOS.length?USUARIOS.map(u=>`<tr data-id="${esc(u.id)}">
-    <td>${esc(u.nome||'—')}</td><td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}</td>
+    <td>${esc(u.nome||'—')}${u.nome&&erroNome(u.nome)?' <span class="pill p-pend" title="Cadastro sem nome completo">completar</span>':''}</td>
+    <td style="font-variant-numeric:tabular-nums">${u.usuario?esc(u.usuario):'<span style="color:var(--muted)">—</span>'}</td>
+    <td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}</td>
     <td><select class="uPerfil" ${u.id===USER.id?'disabled':''}><option value="campo"${u.perfil!=='admin'?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option></select></td>
     <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}</td>
     <td style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(u.ultimo_acesso)}</td>
-    <td><div class="acts">${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button></div></td></tr>`).join('')
-    :'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
+    <td><div class="acts"><button class="btn-2 uEditar">Editar</button>${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button></div></td></tr>`).join('')
+    :'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
   document.querySelectorAll('#usuBody tr[data-id]').forEach(tr=>{
     const u=USUARIOS.find(x=>x.id===tr.dataset.id);
     const sel=tr.querySelector('.uPerfil'); if(sel) sel.onchange=()=>atualizarUsuario(u,{perfil:sel.value});
     const ba=tr.querySelector('.uAtivo'); if(ba) ba.onclick=()=>{ if(u.ativo&&!confirm(`Bloquear ${u.email}? A pessoa não consegue mais entrar até ser reativada.`)) return; atualizarUsuario(u,{ativo:!u.ativo}); };
-    tr.querySelector('.uSenha').onclick=async()=>{
-      const senha=prompt(`Nova senha para ${u.email} (mínimo 8 caracteres):`); if(!senha) return;
-      if(senha.length<8){ toast('A senha precisa ter pelo menos 8 caracteres'); return; }
-      try{ await chamarUsuarios({acao:'senha',id:u.id,senha}); toast('Senha alterada. Informe a nova senha à pessoa.'); }catch(e){ toast('Erro: '+e.message,5000); }
-    };
+    tr.querySelector('.uEditar').onclick=()=>abrirEditar(u);
+    tr.querySelector('.uSenha').onclick=()=>abrirSenha(u);
   });
 }
 async function atualizarUsuario(u,mud){
-  try{ await chamarUsuarios(Object.assign({acao:'atualizar',id:u.id},mud)); Object.assign(u,mud); renderUsuarios(); toast('Usuário atualizado'); }
-  catch(e){ toast('Erro: '+e.message,5000); renderUsuarios(); }
+  try{ await chamarUsuarios(Object.assign({acao:'atualizar',id:u.id},mud)); Object.assign(u,mud); renderUsuarios(); toast('Usuário atualizado'); return true; }
+  catch(e){ toast('Erro: '+e.message,5000); renderUsuarios(); return false; }
 }
+let USU_ED=null;
+function abrirEditar(u){
+  USU_ED=u; $('#dlgEditarEmail').textContent=u.email; $('#eNome').value=u.nome||''; $('#eUsuario').value=u.usuario||''; $('#eErro').textContent='';
+  $('#dlgEditar').showModal(); $('#eNome').focus();
+}
+$('#eCancelar').onclick=()=>$('#dlgEditar').close();
+$('#eSalvar').onclick=async()=>{
+  const nome=limparNome($('#eNome').value), usuario=$('#eUsuario').value.trim().toLowerCase();
+  const err=erroNome(nome)||erroUsuario(usuario)||(usuario&&USUARIOS.some(x=>x.usuario===usuario&&x.id!==USU_ED.id)?'Este nome de usuário já está em uso.':'');
+  if(err){ $('#eErro').textContent=err; return; }
+  $('#eSalvar').disabled=true;
+  try{ await chamarUsuarios({acao:'atualizar',id:USU_ED.id,nome,usuario}); Object.assign(USU_ED,{nome,usuario}); renderUsuarios(); $('#dlgEditar').close(); toast('Usuário atualizado'); }
+  catch(e){ $('#eErro').textContent=e.message; }
+  finally{ $('#eSalvar').disabled=false; }
+};
+function abrirSenha(u){
+  USU_ED=u; $('#dlgSenhaEmail').textContent=u.email; $('#sNova').value=''; $('#sErro').textContent=''; mostrarRegras($('#sRegras'),'');
+  $('#dlgSenha').showModal(); $('#sNova').focus();
+}
+$('#sNova').oninput=()=>{ $('#sErro').textContent=''; mostrarRegras($('#sRegras'),$('#sNova').value); };
+$('#sGerar').onclick=()=>{ $('#sNova').value=gerarSenha(); $('#sNova').oninput(); };
+$('#sCancelar').onclick=()=>$('#dlgSenha').close();
+$('#sSalvar').onclick=async()=>{
+  const senha=$('#sNova').value, err=erroSenha(senha,USU_ED.email,USU_ED.usuario);
+  if(err){ $('#sErro').textContent=err; return; }
+  $('#sSalvar').disabled=true;
+  try{ await chamarUsuarios({acao:'senha',id:USU_ED.id,senha}); $('#dlgSenha').close(); toast('Senha alterada. Informe a nova senha à pessoa.',4500); }
+  catch(e){ $('#sErro').textContent=e.message; }
+  finally{ $('#sSalvar').disabled=false; }
+};
+$('#uSenha').addEventListener('input',()=>mostrarRegras($('#uSenhaRegras'),$('#uSenha').value));
+$('#btnGerarSenha').addEventListener('click',()=>{ $('#uSenha').value=gerarSenha(); mostrarRegras($('#uSenhaRegras'),$('#uSenha').value); });
+mostrarRegras($('#uSenhaRegras'),'');
 $('#btnCriarUsu').addEventListener('click',async()=>{
-  const nome=$('#uNome').value.trim(), email=$('#uEmail').value.trim().toLowerCase(), senha=$('#uSenha').value, perfil=$('#uPerfil').value;
-  if(!nome||!email){ toast('Informe nome e e-mail'); return; }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('E-mail inválido'); return; }
-  if((senha||'').length<8){ toast('A senha inicial precisa ter pelo menos 8 caracteres'); return; }
+  const nome=limparNome($('#uNome').value), usuario=$('#uUsuario').value.trim().toLowerCase(), email=$('#uEmail').value.trim().toLowerCase(), senha=$('#uSenha').value, perfil=$('#uPerfil').value;
+  const err=erroNome(nome)||erroUsuario(usuario)||(usuario&&USUARIOS.some(x=>x.usuario===usuario)?'Este nome de usuário já está em uso.':'')
+    ||(!RX_EMAIL.test(email)?'Informe um e-mail válido.':'')||erroSenha(senha,email,usuario);
+  if(err){ toast(err,4500); return; }
   const btn=$('#btnCriarUsu'); btn.disabled=true;
-  try{ await chamarUsuarios({acao:'criar',nome,email,senha,perfil}); ['#uNome','#uEmail','#uSenha'].forEach(i=>$(i).value=''); toast('Usuário cadastrado. Passe o e-mail e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
+  try{ await chamarUsuarios({acao:'criar',nome,usuario,email,senha,perfil}); ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); mostrarRegras($('#uSenhaRegras'),''); toast('Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
   catch(e){ toast('Erro: '+e.message,5000); }
   finally{ btn.disabled=false; }
 });

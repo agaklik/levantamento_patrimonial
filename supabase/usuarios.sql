@@ -26,3 +26,13 @@ insert into public.usuarios (user_id, perfil)
 select u.id, case when exists (select 1 from public.admins a where a.user_id = u.id) then 'admin' else 'campo' end
   from auth.users u
 on conflict (user_id) do nothing;
+
+-- ---------------------------------------------------------------------
+-- Nome de usuário (opcional), para entrar sem digitar o e-mail.
+-- Só letras minúsculas sem acento, números, ponto e sublinhado; único.
+-- ---------------------------------------------------------------------
+alter table public.usuarios add column if not exists usuario text;
+alter table public.usuarios drop constraint if exists usuarios_usuario_formato;
+alter table public.usuarios add constraint usuarios_usuario_formato
+  check (usuario is null or usuario ~ '^[a-z0-9][a-z0-9._]{2,29}$');
+create unique index if not exists usuarios_usuario_unico on public.usuarios (usuario);

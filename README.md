@@ -88,7 +88,9 @@ Toda a configuração é feita na página de administração (endereço do app s
 
 1. Em **Configuração**, **Importar localizações**, **Importar motivos** e **Importar bens**, nessa ordem.
 2. Cadastrar a **Comissão de avaliação** (código e descrição), na mesma aba.
-3. Cadastrar a equipe na aba **Usuários** (nome, e-mail, senha inicial e perfil: campo ou administrador). Na mesma aba é possível trocar o perfil, bloquear, reativar e definir nova senha.
+3. Cadastrar a equipe na aba **Usuários**: nome completo (nome e sobrenome), nome de usuário opcional, e-mail válido, senha inicial e perfil (campo ou administrador). A senha precisa ter 10 ou mais caracteres, com maiúscula, minúscula, número e símbolo, sem conter o e-mail nem o nome de usuário; o botão **gerar** cria uma senha assim. Na mesma aba é possível editar nome e usuário, trocar o perfil, bloquear, reativar e definir nova senha.
+
+No app de campo e no painel, a pessoa entra com o e-mail ou com o nome de usuário. **Esqueci minha senha** envia um link para o e-mail cadastrado criar uma nova senha.
 4. Escolher, em **Configuração**, se o app de campo envia os dados **online** ou por **exportação de arquivo**.
 
 ### Importação
@@ -305,6 +307,13 @@ O cadastro de usuários pela aba **Usuários** precisa de duas peças no Supabas
 2. Publicar a função [`supabase/functions/usuarios`](supabase/functions/usuarios/index.ts) em Edge Functions (nome `usuarios`). Ela usa a chave de serviço do próprio Supabase, que nunca vai para o navegador, e só atende administradores.
 
 Sem essas peças, os usuários continuam podendo ser criados em Authentication, Users, no painel do Supabase.
+
+Ajustes no painel do Supabase para o login por nome de usuário e a recuperação de senha:
+
+- Em Edge Functions, `usuarios`, **desligar "Verify JWT"** (Enforce JWT Verification). A função confere a sessão por conta própria e só atende administradores, exceto nas ações de entrar e recuperar senha.
+- Em Authentication, URL Configuration, cadastrar o endereço do app em **Redirect URLs** (ex.: `https://agaklik.github.io/levantamento_patrimonial/**`).
+- Em Authentication, configurar um **SMTP próprio** (Gmail, Resend etc.). O envio padrão do Supabase só entrega e-mails para membros da equipe do projeto e tem limite baixo por hora.
+- Opcional: em Authentication, exigir senha mínima de 10 caracteres com letras, números e símbolos, para a regra valer também no servidor.
 
 ### 5. Hospedagem
 

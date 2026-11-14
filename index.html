@@ -201,6 +201,56 @@
   .btn .spin{border-color:rgba(255,255,255,.35);border-top-color:#fff}
   @keyframes rot{to{transform:rotate(360deg)}}
   .center-load{text-align:center;padding:50px 20px;color:var(--muted)}
+  .link-btn{background:none;border:0;color:var(--accent);font-weight:600;min-height:44px;width:100%;margin-top:6px;font-size:15px}
+  .pw-rules{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:4px;font-size:13.5px;color:var(--muted)}
+  .pw-rules li{display:flex;align-items:center;gap:8px}
+  .pw-rules li::before{content:'';width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border);flex:none}
+  .pw-rules li.ok{color:var(--ok)}
+  .pw-rules li.ok::before{background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.5 7.2l2.3 2.3 4.7-4.9' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E") center/100%;border-color:var(--ok)}
+  .ok-msg{color:var(--ok);font-weight:500}
+
+  /* ---------- menus em vidro (camadas translúcidas sobre o conteúdo) ---------- */
+  body{background:
+    radial-gradient(60vmax 40vmax at 110% -10%,rgba(35,71,168,.16),transparent 60%),
+    radial-gradient(50vmax 36vmax at -20% 30%,rgba(245,197,24,.14),transparent 60%),
+    var(--bg);background-attachment:fixed}
+  header{position:sticky;top:max(8px,env(safe-area-inset-top));margin:8px 8px 0;border-radius:24px;padding:10px 10px 12px 16px;
+    background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.76));
+    -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 0 0 1px rgba(255,255,255,.08),0 10px 30px rgba(24,33,43,.28)}
+  header::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:linear-gradient(115deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 32%,rgba(255,255,255,0) 70%,rgba(255,255,255,.08) 100%)}
+  .hdr-icon{border-radius:50%;border:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.14)}
+  .hdr-icon:active{background:rgba(255,255,255,.28)}
+  .modo-band{margin:8px 8px 0;width:calc(100% - 16px);border-radius:16px;border:0;
+    background:linear-gradient(180deg,rgba(255,247,230,.82),rgba(255,239,204,.7));
+    -webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 0 0 1px rgba(232,194,122,.6),0 6px 18px rgba(161,92,0,.12)}
+  .modo-band:not(.hidden){position:sticky;top:calc(max(8px,env(safe-area-inset-top)) + 80px);z-index:45}
+  .seg{position:relative;border:0;border-radius:16px;padding:4px;
+    background:linear-gradient(180deg,rgba(236,239,242,.75),rgba(255,255,255,.55));
+    -webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 2px rgba(24,33,43,.10),inset 0 0 0 1px rgba(24,33,43,.07)}
+  .seg-btn{border-radius:12px;transition:background-color .2s,color .2s,box-shadow .2s}
+  .seg-btn.active{background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,255,255,.78));
+    box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(24,33,43,.06),0 4px 12px rgba(24,33,43,.12),0 1px 2px rgba(24,33,43,.08)}
+  .actions{margin:16px -8px -10px;border-radius:22px;border:0;
+    background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.58));
+    -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 0 1px rgba(24,33,43,.08),0 10px 28px rgba(24,33,43,.16)}
+  .toast{border-radius:18px;background:linear-gradient(180deg,rgba(40,52,66,.82),rgba(24,33,43,.76));
+    -webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 28px rgba(24,33,43,.3)}
+  .login-card{background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+    box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(255,255,255,.4),0 24px 60px rgba(0,0,0,.35)}
+  #loginScreen{background:radial-gradient(70vmax 50vmax at 100% 0%,rgba(35,71,168,.55),transparent 60%),radial-gradient(60vmax 40vmax at 0% 100%,rgba(245,197,24,.25),transparent 60%),var(--txt)}
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+    header{background:var(--txt)} .actions,.seg{background:var(--surface)} .modo-band{background:#FFF7E6} .login-card{background:var(--surface)}
+  }
+  @media (prefers-reduced-transparency:reduce){
+    header{background:var(--txt)} .actions{background:var(--surface)} .login-card{background:var(--surface)}
+  }
 </style>
 
 </head>
@@ -217,15 +267,34 @@
 <div id="loginScreen" class="login-wrap">
   <div class="login-card">
     <div class="plate-box"><div class="plate-label">Patrimônio</div><div class="plate-num">Levantamento patrimonial</div></div>
-    <p class="sub">Entre com o e-mail e a senha que você recebeu para o trabalho de campo.</p>
-    <label for="loginEmail">E-mail</label>
-    <input type="email" id="loginEmail" autocomplete="username" inputmode="email" placeholder="voce@exemplo.com">
-    <label for="loginPass">Senha</label>
-    <div class="pass-wrap">
-      <input type="password" id="loginPass" autocomplete="current-password" placeholder="Sua senha">
-      <button type="button" id="btnTogglePass" aria-label="Mostrar senha">👁️</button>
+    <div id="painelEntrar">
+      <p class="sub">Entre com o e-mail ou o nome de usuário e a senha que você recebeu para o trabalho de campo.</p>
+      <label for="loginEmail">E-mail ou nome de usuário</label>
+      <input type="text" id="loginEmail" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="voce@exemplo.com ou maria.souza">
+      <label for="loginPass">Senha</label>
+      <div class="pass-wrap">
+        <input type="password" id="loginPass" autocomplete="current-password" placeholder="Sua senha">
+        <button type="button" id="btnTogglePass" aria-label="Mostrar senha">👁️</button>
+      </div>
+      <button class="btn btn-block" id="btnLogin">Entrar</button>
+      <button type="button" class="link-btn" id="btnEsqueci">Esqueci minha senha</button>
     </div>
-    <button class="btn btn-block" id="btnLogin">Entrar</button>
+    <div id="painelRecuperar" class="hidden">
+      <p class="sub">Informe o e-mail ou o nome de usuário. Se houver cadastro, enviamos um link para o e-mail cadastrado criar uma nova senha.</p>
+      <label for="recLogin">E-mail ou nome de usuário</label>
+      <input type="text" id="recLogin" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <button class="btn btn-block" id="btnEnviarLink">Enviar link</button>
+      <button type="button" class="link-btn" id="btnVoltarLogin">Voltar para entrar</button>
+    </div>
+    <div id="painelNovaSenha" class="hidden">
+      <p class="sub">Crie uma nova senha para a sua conta.</p>
+      <label for="novaSenha">Nova senha</label>
+      <input type="password" id="novaSenha" autocomplete="new-password">
+      <label for="novaSenha2">Repita a nova senha</label>
+      <input type="password" id="novaSenha2" autocomplete="new-password" style="margin-bottom:10px">
+      <ul class="pw-rules" id="novaSenhaRegras"></ul>
+      <button class="btn btn-block" id="btnSalvarSenha">Salvar nova senha</button>
+    </div>
     <div id="loginMsg" style="margin-top:12px;font-size:14px"></div>
     <div id="appVersion" class="app-version"></div>
   </div>
@@ -426,10 +495,13 @@ License: MIT
 /* ====================== CONFIG SUPABASE ====================== */
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
+// link de recuperação de senha: o Supabase volta para cá com #...type=recovery (ou #error_code=... se venceu)
+const LINK_RECUPERACAO = /type=recovery/.test(location.hash);
+const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-1'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-2'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -461,11 +533,20 @@ const stripZeros=s=>(s||'').toString().trim().replace(/^0+(?=\d)/,'');
 async function initAuth(){
   let session=null;
   try{ ({data:{session}} = await sb.auth.getSession()); }catch(_){}
-  if(session){ enterApp(session); }
+  if(LINK_RECUPERACAO && session){ mostrarPainel('painelNovaSenha'); showLogin(); }
+  else if(session){ enterApp(session); }
   // sem internet e sessão vencida: no modo offline dá para continuar com os dados do celular
   else if(OFFLINE() && !navigator.onLine && await baseLocalPronta()){ SEM_SESSAO=true; try{ USUARIO_EMAIL=localStorage.getItem('lev_email')||''; }catch(_){} enterApp(null); }
-  else showLogin();
-  sb.auth.onAuthStateChange((ev,sess)=>{ if(sess){ SEM_SESSAO=false; enterApp(sess); } else if(ev==='SIGNED_OUT' && !SEM_SESSAO) showLogin(); });
+  else{
+    showLogin();
+    if(LINK_ERRO) $('#loginMsg').innerHTML='<span class="err">'+(/expired/.test(LINK_ERRO)?'O link de recuperação venceu ou já foi usado. Peça um novo em “Esqueci minha senha”.':'Não foi possível abrir o link de recuperação. Peça um novo.')+'</span>';
+  }
+  if(LINK_RECUPERACAO||LINK_ERRO) history.replaceState(null,'',location.pathname+location.search);
+  sb.auth.onAuthStateChange((ev,sess)=>{
+    if(ev==='PASSWORD_RECOVERY'){ mostrarPainel('painelNovaSenha'); showLogin(); return; }
+    if(sess){ if(!$('#painelNovaSenha').classList.contains('hidden')) return; SEM_SESSAO=false; enterApp(sess); }
+    else if(ev==='SIGNED_OUT' && !SEM_SESSAO) showLogin();
+  });
 }
 function showLogin(){ $('#loginScreen').classList.remove('hidden'); $('#appScreen').classList.add('hidden'); }
 let _entrando=false;
@@ -523,14 +604,71 @@ try{
 }catch(_){}
 
 async function doLogin(){
-  const email=norm($('#loginEmail').value), pass=$('#loginPass').value;
-  if(!email||!pass){$('#loginMsg').innerHTML='<span class="err">Informe e-mail e senha.</span>';return;}
+  const login=norm($('#loginEmail').value), pass=$('#loginPass').value;
+  if(!login||!pass){$('#loginMsg').innerHTML='<span class="err">Informe o e-mail ou nome de usuário e a senha.</span>';return;}
   $('#loginMsg').innerHTML='<span class="spin"></span> Entrando...';
-  try{ localStorage.setItem('lev_email', email); }catch(_){}
-  const {error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){$('#loginMsg').innerHTML='<span class="err">'+error.message+'</span>';}
-  else{$('#loginMsg').innerHTML='';}
+  try{ localStorage.setItem('lev_email', login); }catch(_){}
+  let erro='';
+  if(login.includes('@')){
+    const {error}=await sb.auth.signInWithPassword({email:login.toLowerCase(),password:pass});
+    if(error) erro=/invalid login/i.test(error.message)?'E-mail ou senha incorretos.':/banned/i.test(error.message)?'Este usuário está bloqueado. Fale com o administrador.':error.message;
+  }else{
+    // nome de usuário: a função "usuarios" acha o e-mail no servidor e devolve a sessão
+    try{
+      const {data,error}=await sb.functions.invoke('usuarios',{body:{acao:'entrar',usuario:login.toLowerCase(),senha:pass}});
+      if(error){ let m='Usuário ou senha incorretos.'; try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){} erro=m; }
+      else{ const r=await sb.auth.setSession(data.session); if(r.error) erro=r.error.message; }
+    }catch(e){ erro='Sem conexão. Tente de novo.'; }
+  }
+  $('#loginMsg').innerHTML=erro?'<span class="err">'+esc(erro)+'</span>':'';
 }
+
+/* ---------- senha forte e recuperação ---------- */
+const REGRAS_SENHA=[
+  [s=>s.length>=10,'10 ou mais caracteres'],
+  [s=>/[a-z]/.test(s),'uma letra minúscula'],
+  [s=>/[A-Z]/.test(s),'uma letra maiúscula'],
+  [s=>/\d/.test(s),'um número'],
+  [s=>/[^A-Za-z0-9]/.test(s),'um símbolo, como ! @ # -'],
+];
+const senhaForte=s=>REGRAS_SENHA.every(([f])=>f(s));
+function mostrarRegras(el,s,s2){
+  const it=REGRAS_SENHA.map(([f,t])=>`<li class="${f(s)?'ok':''}">${t}</li>`);
+  if(s2!==undefined) it.push(`<li class="${s&&s===s2?'ok':''}">as duas senhas iguais</li>`);
+  el.innerHTML=it.join('');
+}
+function mostrarPainel(id){
+  ['painelEntrar','painelRecuperar','painelNovaSenha'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id));
+  $('#loginMsg').innerHTML='';
+  if(id==='painelNovaSenha') mostrarRegras($('#novaSenhaRegras'),'','');
+}
+$('#btnEsqueci').addEventListener('click',()=>{ $('#recLogin').value=$('#loginEmail').value; mostrarPainel('painelRecuperar'); $('#recLogin').focus(); });
+$('#btnVoltarLogin').addEventListener('click',()=>mostrarPainel('painelEntrar'));
+$('#btnEnviarLink').addEventListener('click',async()=>{
+  const login=norm($('#recLogin').value).toLowerCase();
+  if(!login){ $('#loginMsg').innerHTML='<span class="err">Informe o e-mail ou o nome de usuário.</span>'; return; }
+  const btn=$('#btnEnviarLink'); btn.disabled=true; $('#loginMsg').innerHTML='<span class="spin"></span> Enviando...';
+  const redirect=location.origin+location.pathname;
+  try{
+    let r=await sb.functions.invoke('usuarios',{body:{acao:'recuperar',login,redirect}});
+    if(r.error && login.includes('@')) r=await sb.auth.resetPasswordForEmail(login,{redirectTo:redirect});
+    if(r.error) throw r.error;
+    $('#loginMsg').innerHTML='<span class="ok-msg">Se houver cadastro, o link chega ao e-mail em alguns minutos. Confira também o spam. Se não chegar, peça ao administrador uma nova senha.</span>';
+  }catch(e){ $('#loginMsg').innerHTML='<span class="err">Não foi possível enviar agora. Tente de novo em alguns minutos.</span>'; }
+  finally{ btn.disabled=false; }
+});
+['#novaSenha','#novaSenha2'].forEach(i=>$(i).addEventListener('input',()=>{ $('#loginMsg').innerHTML=''; mostrarRegras($('#novaSenhaRegras'),$('#novaSenha').value,$('#novaSenha2').value); }));
+$('#btnSalvarSenha').addEventListener('click',async()=>{
+  const s=$('#novaSenha').value, s2=$('#novaSenha2').value;
+  if(!senhaForte(s)){ $('#loginMsg').innerHTML='<span class="err">A senha ainda não atende a todas as regras.</span>'; return; }
+  if(s!==s2){ $('#loginMsg').innerHTML='<span class="err">As duas senhas não são iguais.</span>'; return; }
+  const btn=$('#btnSalvarSenha'); btn.disabled=true;
+  const {data,error}=await sb.auth.updateUser({password:s});
+  btn.disabled=false;
+  if(error){ $('#loginMsg').innerHTML='<span class="err">'+esc(/same|different/i.test(error.message)?'A nova senha precisa ser diferente da anterior.':/weak|characters/i.test(error.message)?'Senha fraca: '+error.message:error.message)+'</span>'; return; }
+  $('#novaSenha').value=$('#novaSenha2').value=''; mostrarPainel('painelEntrar'); toast('Senha alterada');
+  const {data:{session}}=await sb.auth.getSession(); if(session) enterApp(session);
+});
 $('#btnLogout').addEventListener('click',async()=>{
   let n=0; try{ n=(await idbAll('fila')).length; }catch(_){}
   if(n && !confirm(`Há ${n} item(ns) guardados neste celular que ainda não foram enviados. Eles continuam guardados. Sair mesmo assim?`)) return;
