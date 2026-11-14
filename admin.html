@@ -1860,10 +1860,42 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
 });
 
 /* ====================== DOCUMENTOS ====================== */
+// Os documentos abrem em outra aba do navegador; o painel continua aberto nesta.
+// Se o navegador bloquear a nova aba, o documento aparece aqui mesmo, por cima do painel.
+const CSS_DOC=`*{box-sizing:border-box}body{margin:0;background:#525659;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+#bar{position:sticky;top:0;background:#2b2a26;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;z-index:2}#bar span{flex:1;font-size:13px}
+#bar button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 15px;cursor:pointer;background:#2347A8;color:#fff}#bar button.f{background:#fff;color:#18212B}
+table{border-collapse:collapse;width:100%}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}th,td{text-align:left;vertical-align:top}
+.page{background:#fff;color:#000;width:210mm;min-height:297mm;margin:16px auto;padding:18mm 16mm;font-family:Georgia,'Times New Roman',serif;font-size:11pt;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.page.land{width:297mm;min-height:210mm}.page h1{font-size:14pt;text-align:center;margin:10pt 0 2pt;text-transform:uppercase}
+.page .org{text-align:center;font-weight:700;font-size:12pt;text-transform:uppercase}.page .org small{display:block;font-weight:400;font-size:10pt;text-transform:none}
+.page .num{text-align:center;font-size:10pt;margin-bottom:12pt}.page h3{font-size:11pt;margin:12pt 0 4pt;border-bottom:1px solid #000;padding-bottom:2pt;text-transform:uppercase}
+.page table{font-size:9.5pt;margin:4pt 0}.page th,.page td{border:1px solid #666;padding:3pt 5pt}.page th{background:#eee;font-size:8.5pt}
+.page table.kv td:nth-child(odd){background:#f3f3f3;font-weight:700;width:22%}.page p{margin:4pt 0;text-align:justify}
+.page .fotos{display:flex;gap:8pt;margin-top:4pt}.page .fotos img{width:48%;max-height:60mm;object-fit:contain;border:1px solid #666}
+.page .sign{display:flex;flex-wrap:wrap;gap:24pt 20pt;justify-content:space-around;margin-top:34pt;page-break-inside:avoid}
+.page .sign div{width:44%;border-top:1px solid #000;text-align:center;padding-top:3pt;font-size:10pt}.page .local{margin-top:16pt;text-align:right}.page tfoot td{font-weight:700;background:#eee}
+@media print{body{background:none}#bar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0;page-break-after:always}.page:last-child{page-break-after:auto}@page{size:A4;margin:16mm 14mm}}`;
+let PV_WIN=null;
 function abrirPreview(html,info){
+  const titulo=((html.match(/<h1>([^<]*)<\/h1>/)||[])[1]||'Documento').trim();
+  let w=PV_WIN&&!PV_WIN.closed?PV_WIN:null;
+  if(!w){ try{ w=window.open('','_blank'); }catch(_){ w=null; } }
+  if(w){
+    PV_WIN=w;
+    try{
+      w.document.open();
+      w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>${CSS_DOC}</style></head><body><div id="bar"><span id="info">${esc(info||'')}</span><button onclick="window.print()">Imprimir / salvar em PDF</button><button class="f" onclick="window.close()">Fechar</button></div><div id="corpo">${html}</div></body></html>`);
+      w.document.close(); w.focus();
+      // cada documento pronto fica na sua aba; o próximo abre outra
+      if(!/Preparando/.test(html)) PV_WIN=null;
+      return;
+    }catch(_){ PV_WIN=null; }
+  }
   $('#previewBody').innerHTML=html; $('#previewInfo').textContent=info||'';
   $('#preview').classList.remove('hidden'); $('#preview').scrollTop=0;
 }
+function infoPreview(t){ try{ if(PV_WIN&&!PV_WIN.closed){ PV_WIN.document.getElementById('info').textContent=t; return; } }catch(_){} $('#previewInfo').textContent=t; }
 function fecharPreview(){ $('#preview').classList.add('hidden'); $('#previewBody').innerHTML=''; }
 $('#btnClosePreview').addEventListener('click',fecharPreview);
 $('#btnPrint').addEventListener('click',()=>window.print());
@@ -1926,7 +1958,7 @@ async function gerarLaudos(lista,comFotos){
   for(let i=0;i<lista.length;i++){
     const fotos=comFotos?await fotosDoBem(lista[i].codigo,2):[];
     partes.push(paginaLaudo(lista[i],fotos));
-    if(comFotos&&i%10===0) $('#previewInfo').textContent=`Preparando ${i+1} de ${lista.length}...`;
+    if(comFotos&&i%10===0) infoPreview(`Preparando ${i+1} de ${lista.length}...`);
   }
   abrirPreview(partes.join(''),`${lista.length} laudo(s)`+(comFotos?'. Aguarde as fotos carregarem antes de imprimir.':''));
 }
@@ -1996,7 +2028,7 @@ $('#btnDocGeral').addEventListener('click',()=>{
     <tbody>${lista.map(b=>{const r=reav(b),a=num(b.valor_atual)||0;return `<tr><td>${esc(placa(b))}</td><td>${esc(b.codigo)}</td><td>${esc(b.descricao||b.descricao_reduzida||'')}</td><td>${esc(locDesc(b))}</td><td>${esc(estDesc(b))}</td><td>${r.metodo==='fator'?'Fator '+(+r.fator).toFixed(2).replace('.',','):(r.metodo==='laudo'?'Laudo':'Mercado')}</td><td class="n">${r.valor_referencia!=null?dec(+r.valor_referencia):''}</td><td class="n">[${nFonte(b).n}]</td><td class="n">${dec(a)}</td><td class="n">${dec(+r.valor_reavaliado)}</td><td class="n">${dec(+r.valor_reavaliado-a)}</td><td class="n">${r.vida_util_remanescente!=null?+r.vida_util_remanescente:''}</td></tr>`;}).join('')}</tbody></table>
     <h3>Fontes dos valores de reavaliação</h3>
     <p>A coluna "Fonte" da relação de bens indica, pelo número, a origem do valor de referência de cada bem.</p>
-    <table><thead><tr><th>Nº</th><th>Fonte</th><th>Bens</th></tr></thead>
+    <table><thead><tr><th style="width:8%">Nº</th><th>Fonte</th><th style="width:10%">Bens</th></tr></thead>
     <tbody>${fontes.map(x=>`<tr><td class="n">[${x.n}]</td><td>${esc(x.f)}${x.precos&&x.precos.itens?`<br><span style="font-size:10px">${x.precos.itens.length} preço(s) de compras públicas considerados, de ${brl(Math.min(...x.precos.itens.map(i=>+i.valor)))} a ${brl(Math.max(...x.precos.itens.map(i=>+i.valor)))}; a relação completa consta no laudo de cada bem.</span>`:''}</td><td class="n">${x.qtd}</td></tr>`).join('')}</tbody></table>
     ${localData()}${assinaturas()}
   </div>`,`${lista.length} bem(ns) reavaliado(s). Na impressão, escolha a orientação paisagem.`+(semFonte?` Atenção: ${semFonte.qtd} bem(ns) sem fonte informada.`:''));
