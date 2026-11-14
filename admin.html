@@ -171,6 +171,29 @@
   dialog.dlg h3{margin:0 0 4px;font-size:18px}
   dialog.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
   dialog.dlg input{margin-bottom:12px}
+  /* pesquisa de preços */
+  dialog.dlg.largo{width:min(1080px,96vw);max-height:92vh;padding:0;display:none;flex-direction:column}
+  dialog.dlg.largo[open]{display:flex}
+  .pz-top{padding:20px 22px 12px;border-bottom:1px solid var(--line)}
+  .pz-body{padding:14px 22px;overflow-y:auto;flex:1}
+  .pz-foot{padding:12px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface2);border-radius:0 0 18px 18px}
+  .pz-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+  .pz-row>div{flex:1;min-width:140px}.pz-row>.fix{flex:none;min-width:0}
+  dialog.dlg .pz-row input,dialog.dlg .pz-row select{margin-bottom:0}
+  .pz-cat{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:240px;overflow-y:auto}
+  .pz-cat button{text-align:left;background:var(--surface);border:1px solid var(--border);font-weight:500;font-size:13.5px;padding:8px 11px}
+  .pz-cat button:hover{border-color:var(--accent);background:#F2F5FB}
+  .pz-cat button b{font-variant-numeric:tabular-nums;margin-right:6px}
+  .pz-sel{display:flex;gap:8px;align-items:center;padding:9px 12px;border-radius:10px;background:#EEF2FB;border:1px solid #C9D4F0;font-size:14px;margin-top:10px}
+  .pz-sel .x{margin-left:auto}
+  #pzTabela{font-size:13px}#pzTabela td,#pzTabela th{padding:7px 9px}
+  #pzTabela tr.off td{color:var(--muted);text-decoration:line-through}
+  #pzTabela td small{display:block;color:var(--muted);font-size:11.5px}
+  .pz-stats{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  .pz-stats b{color:var(--txt);font-variant-numeric:tabular-nums;font-size:14px}
+  .pz-info{font-size:12.5px;color:var(--muted);margin:8px 0}
+  .ref-row{display:flex;gap:8px;align-items:stretch}.ref-row input{flex:1}
+  .ref-row button{white-space:nowrap;padding:9px 12px}
   .olho-wrap{position:relative;display:block}
   .olho-wrap input{padding-right:42px}
   .olho{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:34px;height:32px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center}
@@ -439,7 +462,7 @@
     </div>
     <div id="boxFator" style="margin-top:12px">
       <div class="grid g4">
-        <div style="grid-column:span 2"><label>Valor de referência (bem novo)</label><input id="rRef" inputmode="decimal" placeholder="0,00"></div>
+        <div style="grid-column:span 2"><label>Valor de referência (bem novo)</label><div class="ref-row"><input id="rRef" inputmode="decimal" placeholder="0,00"><button type="button" class="btn-2" id="btnPrecos" title="Pesquisar preços em compras públicas">Pesquisar preços</button></div><div id="rPrecosInfo" style="font-size:12px;color:var(--muted);margin-top:4px"></div></div>
         <div><label>Estado (EC)</label><select id="rEc"></select></div>
         <div><label>Fator</label><input id="rFator" readonly></div>
         <div style="grid-column:span 2"><label>Tempo de uso em anos (PUB)</label><input type="number" id="rPub" min="0" max="10" step="1"></div>
@@ -492,6 +515,37 @@
   <ul class="pw-rules" id="sRegras"></ul>
   <div class="fld-err" id="sErro"></div>
   <div class="acts"><button class="btn-2" id="sCancelar">Cancelar</button><button class="btn" id="sSalvar">Salvar senha</button></div>
+</dialog>
+<dialog class="dlg largo" id="dlgPrecos">
+  <div class="pz-top">
+    <h3>Pesquisar preços de referência</h3>
+    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Preços pagos em compras públicas, da base de dados abertos do Compras.gov.br. Escolha o item do catálogo, a abrangência e o período; depois marque os preços que servem de referência.</p>
+    <div class="pz-row">
+      <div><label for="pzTexto">Descrição do item ou código CATMAT</label><input id="pzTexto" placeholder="Ex.: cadeira giratória"></div>
+      <div class="fix"><button class="btn-2" id="pzBuscarCat">Buscar no catálogo</button></div>
+    </div>
+    <div class="pz-cat hidden" id="pzCat"></div>
+    <div class="pz-sel hidden" id="pzSel"></div>
+    <div class="pz-row" style="margin-top:12px">
+      <div class="fix" style="min-width:170px"><label for="pzAbr">Abrangência</label><select id="pzAbr"><option value="estado">Estado</option><option value="regiao">Região</option><option value="brasil">Brasil inteiro</option></select></div>
+      <div class="fix" style="min-width:190px" id="pzOndeBox"><label for="pzOnde">&nbsp;</label><select id="pzOnde"></select></div>
+      <div class="fix" style="min-width:150px"><label for="pzMeses">Período</label><select id="pzMeses"><option value="6">Últimos 6 meses</option><option value="12" selected>Últimos 12 meses</option><option value="24">Últimos 24 meses</option></select></div>
+      <div class="fix"><button class="btn" id="pzBuscar" disabled>Buscar preços</button></div>
+    </div>
+  </div>
+  <div class="pz-body">
+    <div class="pz-info" id="pzInfo">Escolha um item do catálogo para buscar os preços.</div>
+    <div class="tblwrap hidden" id="pzTblBox"><table id="pzTabela"><thead><tr><th><input type="checkbox" id="pzTodos" checked title="Marcar todos"></th><th>Data</th><th>Órgão comprador</th><th>Local</th><th>Descrição / fornecedor</th><th>Unid.</th><th class="n">Qtd.</th><th class="n">Valor unitário</th></tr></thead><tbody id="pzCorpo"></tbody></table></div>
+  </div>
+  <div class="pz-foot">
+    <div class="pz-stats" id="pzStats"></div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-2" id="pzFechar">Fechar</button>
+      <button class="btn-2" id="pzUsarMenor" disabled>Usar menor</button>
+      <button class="btn-2" id="pzUsarMedia" disabled>Usar média</button>
+      <button class="btn" id="pzUsarMediana" disabled>Usar mediana</button>
+    </div>
+  </div>
 </dialog>
 <script src="vendor/supabase.js"></script>
 <script>
@@ -855,6 +909,7 @@ function preencherForm(b){
   $('#rResidual').value=r.valor_residual!=null?dec(+r.valor_residual):'';
   $('#rResidual').dataset.auto=r.valor_residual!=null?'':'1';
   $('#rFonte').value=r.fonte||''; $('#rObs').value=r.observacao||'';
+  PRECOS_SEL=r.precos||null; PRECOS_MUDOU=false; infoPrecos();
   $('#rConcluido').checked=r.concluido!=null?!!r.concluido:true;
   $('#rAtual').textContent=brl(num(b.valor_atual));
   $('#btnExcluir').classList.toggle('hidden',!reav(b));
@@ -886,6 +941,133 @@ function recalc(){
 ['#rMetodo','#rRef','#rEc','#rPub','#rPvu','#rValorDireto'].forEach(s=>$(s).addEventListener('input',recalc));
 $('#rResidual').addEventListener('input',()=>{ $('#rResidual').dataset.auto=''; });
 
+/* ====================== PESQUISA DE PREÇOS (Compras.gov.br) ====================== */
+const REGIOES={'Sul':['PR','RS','SC'],'Sudeste':['ES','MG','RJ','SP'],'Centro-Oeste':['DF','GO','MS','MT'],'Nordeste':['AL','BA','CE','MA','PB','PE','PI','RN','SE'],'Norte':['AC','AM','AP','PA','RO','RR','TO']};
+const UF_LISTA=Object.values(REGIOES).flat().sort();
+const ufOrgao=()=>{ const m=String(CFG.municipio||'').match(/[\/\-–,]\s*([A-Za-z]{2})\s*$/); const u=m?m[1].toUpperCase():''; return UF_LISTA.includes(u)?u:'RS'; };
+const regiaoDe=uf=>Object.keys(REGIOES).find(r=>REGIOES[r].includes(uf))||'Sul';
+let PRECOS_SEL=null, PRECOS_MUDOU=false;
+const PZ={item:null,itens:[],off:new Set(),busca:null};
+
+async function chamarPrecos(body){
+  const {data,error}=await sb.functions.invoke('precos',{body});
+  if(error){
+    let m=error.message||String(error);
+    try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){}
+    if(/not found|404|failed to send|FunctionsFetchError|FunctionsRelayError/i.test((error.name||'')+' '+m)) m='A função "precos" ainda não foi instalada no Supabase.';
+    throw new Error(m);
+  }
+  if(data&&data.erro) throw new Error(data.erro);
+  return data;
+}
+function infoPrecos(){
+  const p=PRECOS_SEL;
+  $('#rPrecosInfo').textContent=p&&p.itens&&p.itens.length?`${p.itens.length} preço(s) do Compras.gov.br · ${p.criterio} ${brl(p.valor)} · ${p.abrangencia}`:'';
+}
+function pzOnde(){
+  const a=$('#pzAbr').value, uf=ufOrgao();
+  $('#pzOndeBox').classList.toggle('hidden',a==='brasil');
+  if(a==='estado'){ $('#pzOndeBox label').textContent='Estado'; $('#pzOnde').innerHTML=UF_LISTA.map(u=>`<option${u===uf?' selected':''}>${u}</option>`).join(''); }
+  if(a==='regiao'){ $('#pzOndeBox label').textContent='Região'; const r=regiaoDe(uf); $('#pzOnde').innerHTML=Object.keys(REGIOES).map(k=>`<option${k===r?' selected':''}>${k}</option>`).join(''); }
+}
+function pzAbrangencia(){
+  const a=$('#pzAbr').value, v=$('#pzOnde').value;
+  if(a==='brasil') return {ufs:[],rotulo:'Brasil inteiro',texto:'no Brasil inteiro'};
+  if(a==='regiao') return {ufs:REGIOES[v]||[],rotulo:'Região '+v,texto:'na região '+v};
+  return {ufs:[v],rotulo:'Estado '+v,texto:'no estado '+v};
+}
+function pzEscolherItem(it){
+  PZ.item=it; $('#pzCat').classList.add('hidden');
+  $('#pzSel').innerHTML=`<span>Item <b>CATMAT ${esc(it.codigo)}</b> · ${esc(it.descricao)}</span><button class="btn-2 x" id="pzTrocar" style="padding:5px 10px;font-size:12.5px">Trocar</button>`;
+  $('#pzSel').classList.remove('hidden'); $('#pzBuscar').disabled=false;
+  $('#pzTrocar').onclick=()=>{ PZ.item=null; $('#pzSel').classList.add('hidden'); $('#pzBuscar').disabled=true; $('#pzTexto').focus(); };
+  $('#pzInfo').textContent='Escolha a abrangência e o período e clique em "Buscar preços".';
+}
+function abrirPrecos(){
+  if(!atual) return;
+  PZ.itens=[]; PZ.off=new Set(); PZ.item=null;
+  const p=PRECOS_SEL;
+  $('#pzTexto').value=p&&p.catmat?p.catmat:((atual.descricao_reduzida||atual.descricao||'').split(/[,;(]/)[0].trim().split(/\s+/).slice(0,3).join(' '));
+  $('#pzCat').classList.add('hidden'); $('#pzSel').classList.add('hidden'); $('#pzBuscar').disabled=true;
+  $('#pzAbr').value='estado'; pzOnde(); $('#pzMeses').value='12';
+  $('#pzTblBox').classList.add('hidden'); $('#pzCorpo').innerHTML=''; pzStats();
+  $('#pzInfo').textContent='Busque o item no catálogo de materiais do governo (CATMAT). Se já souber o código, digite o número.';
+  if(p&&p.catmat) pzEscolherItem({codigo:p.catmat,descricao:p.descricao_catmat||''});
+  $('#dlgPrecos').showModal(); $('#pzTexto').focus();
+}
+async function pzBuscarCatalogo(){
+  const t=$('#pzTexto').value.trim();
+  if(t.length<3){ toast('Digite ao menos 3 letras.'); return; }
+  const btn=$('#pzBuscarCat'); btn.disabled=true; btn.textContent='Buscando...';
+  $('#pzInfo').textContent='Consultando o catálogo do Compras.gov.br...';
+  try{
+    const d=await chamarPrecos({acao:'catalogo',texto:t});
+    const it=d.itens||[];
+    if(!it.length){ $('#pzCat').classList.add('hidden'); $('#pzInfo').textContent='Nenhum item encontrado no catálogo. Tente outra palavra (ex.: só "cadeira") ou digite o código CATMAT.'; return; }
+    if(/^\d+$/.test(t)&&it.length===1){ pzEscolherItem(it[0]); return; }
+    $('#pzCat').innerHTML=it.slice(0,80).map((x,i)=>`<button data-i="${i}"><b>${esc(x.codigo)}</b>${esc(x.descricao)}${x.pdm?` <span style="color:var(--muted)">· ${esc(x.pdm)}</span>`:''}</button>`).join('');
+    $('#pzCat').querySelectorAll('button').forEach(b=>b.onclick=()=>pzEscolherItem(it[+b.dataset.i]));
+    $('#pzCat').classList.remove('hidden');
+    $('#pzInfo').textContent=`${it.length>80?'Mostrando 80 de '+it.length:it.length} item(ns) do catálogo. Clique no que mais se parece com o bem.`;
+  }catch(e){ $('#pzInfo').textContent='Erro: '+e.message; }
+  finally{ btn.disabled=false; btn.textContent='Buscar no catálogo'; }
+}
+async function pzBuscarPrecos(){
+  if(!PZ.item) return;
+  const ab=pzAbrangencia(), meses=+$('#pzMeses').value;
+  const btn=$('#pzBuscar'); btn.disabled=true; btn.textContent='Buscando...';
+  $('#pzInfo').textContent=`Consultando preços ${ab.texto}... pode levar alguns segundos.`;
+  try{
+    const d=await chamarPrecos({acao:'precos',codigo:PZ.item.codigo,ufs:ab.ufs,meses});
+    PZ.itens=d.itens||[]; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
+    pzTabela();
+    $('#pzInfo').textContent=PZ.itens.length
+      ? `${d.encontrados} preço(s) ${ab.texto}, nos últimos ${meses} meses${d.encontrados>PZ.itens.length?` (mostrando os ${PZ.itens.length} mais recentes)`:''}. Desmarque os que não servem (outro modelo, valor fora da realidade).`
+      : `Nenhum preço ${ab.texto} nos últimos ${meses} meses${d.fora_do_periodo?` (${d.fora_do_periodo} mais antigos)`:''}. Tente ampliar a abrangência ou o período.`;
+  }catch(e){ $('#pzInfo').textContent='Erro: '+e.message; }
+  finally{ btn.disabled=false; btn.textContent='Buscar preços'; }
+}
+function pzTabela(){
+  $('#pzTblBox').classList.toggle('hidden',!PZ.itens.length);
+  $('#pzCorpo').innerHTML=PZ.itens.map((x,i)=>`<tr data-i="${i}"${PZ.off.has(i)?' class="off"':''}><td><input type="checkbox"${PZ.off.has(i)?'':' checked'}></td><td>${dataBR(x.data)||'—'}</td><td>${esc(x.orgao||'—')}${x.uasg&&x.uasg!==x.orgao?`<small>${esc(x.uasg)}</small>`:''}</td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/')||'—')}</td><td>${esc(x.descricao||'').slice(0,140)}<small>${esc([x.fornecedor,x.marca&&('marca '+x.marca)].filter(Boolean).join(' · '))}</small></td><td>${esc(x.unidade||'')}</td><td class="n">${x.quantidade!=null?x.quantidade.toLocaleString('pt-BR'):''}</td><td class="n"><b>${brl(x.valor)}</b></td></tr>`).join('');
+  $('#pzCorpo').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ const i=+c.closest('tr').dataset.i; c.checked?PZ.off.delete(i):PZ.off.add(i); c.closest('tr').classList.toggle('off',!c.checked); pzStats(); });
+  $('#pzTodos').checked=true; pzStats();
+}
+const pzMarcados=()=>PZ.itens.filter((_,i)=>!PZ.off.has(i));
+function estat(v){
+  if(!v.length) return null;
+  const o=[...v].sort((a,b)=>a-b), m=o.length>>1;
+  return {n:o.length,media:r2(o.reduce((s,x)=>s+x,0)/o.length),mediana:r2(o.length%2?o[m]:(o[m-1]+o[m])/2),menor:o[0],maior:o[o.length-1]};
+}
+function pzStats(){
+  const e=estat(pzMarcados().map(x=>x.valor));
+  $('#pzStats').innerHTML=e?`<span>Marcados <b>${e.n}</b></span><span>Média <b>${brl(e.media)}</b></span><span>Mediana <b>${brl(e.mediana)}</b></span><span>Menor <b>${brl(e.menor)}</b></span><span>Maior <b>${brl(e.maior)}</b></span>`:'';
+  ['#pzUsarMenor','#pzUsarMedia','#pzUsarMediana'].forEach(s=>$(s).disabled=!e);
+}
+function pzUsar(criterio){
+  const sel=pzMarcados(), e=estat(sel.map(x=>x.valor)); if(!e) return;
+  const valor=e[criterio], b=PZ.busca, hoje=new Date(b.consultado_em).toLocaleDateString('pt-BR');
+  const nome={media:'média',mediana:'mediana',menor:'menor preço'}[criterio];
+  PRECOS_SEL={fonte:'Compras.gov.br – Pesquisa de Preços (dados abertos)',catmat:PZ.item.codigo,descricao_catmat:PZ.item.descricao,
+    abrangencia:b.rotulo,abrangencia_texto:b.texto,meses:b.meses,criterio:nome,valor,consultado_em:b.consultado_em,
+    itens:sel.map(x=>({data:x.data,orgao:x.orgao,uasg:x.uasg,codigo_uasg:x.codigo_uasg,municipio:x.municipio,uf:x.uf,id_compra:x.id_compra,item:x.item,descricao:(x.descricao||'').slice(0,200),fornecedor:x.fornecedor,marca:x.marca,unidade:x.unidade,quantidade:x.quantidade,valor:x.valor}))};
+  PRECOS_MUDOU=true;
+  $('#rRef').value=dec(valor);
+  $('#rFonte').value=`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do item CATMAT ${PZ.item.codigo}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
+  infoPrecos(); recalc(); $('#dlgPrecos').close();
+  toast(`Valor de referência: ${brl(valor)} (${nome}). Confira e salve.`,4000);
+}
+$('#btnPrecos').onclick=abrirPrecos;
+$('#pzBuscarCat').onclick=pzBuscarCatalogo;
+$('#pzTexto').addEventListener('keydown',e=>{ if(e.key==='Enter') pzBuscarCatalogo(); });
+$('#pzAbr').onchange=pzOnde;
+$('#pzBuscar').onclick=pzBuscarPrecos;
+$('#pzFechar').onclick=()=>$('#dlgPrecos').close();
+$('#pzTodos').onchange=e=>{ PZ.off=e.target.checked?new Set():new Set(PZ.itens.map((_,i)=>i)); pzTabela(); $('#pzTodos').checked=e.target.checked; pzStats(); };
+$('#pzUsarMenor').onclick=()=>pzUsar('menor');
+$('#pzUsarMedia').onclick=()=>pzUsar('media');
+$('#pzUsarMediana').onclick=()=>pzUsar('mediana');
+
 function linhaReav(b,o,extra){
   return Object.assign({
     codigo:b.codigo, metodo:o.metodo, valor_anterior:num(b.valor_atual),
@@ -904,9 +1086,11 @@ async function salvarItem(proximo){
     fonte:$('#rFonte').value.trim()||null, observacao:$('#rObs').value.trim()||null,
     data_avaliacao:$('#rData').value||null, concluido
   });
+  if(PRECOS_MUDOU) row.precos=PRECOS_SEL;
   const {error}=await sb.from('reavaliacao').upsert(row,{onConflict:'codigo'});
-  if(error){ toast('Erro ao salvar: '+error.message); return false; }
-  REAV[b.codigo]=row; toast('✓ Reavaliação salva');
+  if(error){ toast(/precos/.test(error.message)?'Execute antes o script supabase/precos.sql no Supabase.':'Erro ao salvar: '+error.message,4500); return false; }
+  PRECOS_MUDOU=false;
+  REAV[b.codigo]=Object.assign({},REAV[b.codigo],row); toast('✓ Reavaliação salva');
   renderPainel();
   if(proximo){
     const i=filtrados.findIndex(x=>x.codigo===b.codigo);
@@ -1417,6 +1601,12 @@ function assinaturas(extra){
 const kv=pares=>{ let h='<table class="kv">'; for(let i=0;i<pares.length;i+=2){ const a=pares[i], b=pares[i+1]; h+=`<tr><td>${a[0]}</td><td${b?'':' colspan="3"'}>${esc(a[1]||'—')}</td>${b?`<td>${b[0]}</td><td>${esc(b[1]||'—')}</td>`:''}</tr>`; } return h+'</table>'; };
 const NOME_METODO={fator:'Valor de bem novo multiplicado por fator de reavaliação',mercado:'Valor de mercado de bem equivalente',laudo:'Valor definido em laudo técnico'};
 
+function tabelaPrecosLaudo(p){
+  if(!p||!p.itens||!p.itens.length) return '';
+  const linhas=p.itens.slice(0,15).map(x=>`<tr><td>${dataBR(x.data)}</td><td>${esc(x.orgao||x.uasg||'')}</td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/'))}</td><td>${esc(x.unidade||'')}</td><td class="n">${brl(x.valor)}</td></tr>`).join('');
+  return `<p style="margin-bottom:4px"><b>Preços considerados</b> (${esc(p.fonte)}, item CATMAT ${esc(p.catmat)}${p.descricao_catmat?' – '+esc(p.descricao_catmat):''}; ${esc(p.abrangencia)}, últimos ${p.meses} meses; critério: ${esc(p.criterio)} = ${brl(p.valor)}):</p>
+    <table><tr><th>Data</th><th>Órgão comprador</th><th>Local</th><th>Unid.</th><th>Valor unitário</th></tr>${linhas}</table>${p.itens.length>15?`<p style="font-size:11px">Mais ${p.itens.length-15} preço(s) considerados no cálculo.</p>`:''}`;
+}
 function paginaLaudo(b,fotos){
   const r=reav(b), ano=(r.data_avaliacao||hojeISO()).slice(0,4);
   const ant=r.valor_anterior!=null?+r.valor_anterior:num(b.valor_atual), novo=+r.valor_reavaliado, dif=novo-(ant||0);
@@ -1440,6 +1630,7 @@ function paginaLaudo(b,fotos){
     <h3>3. Metodologia</h3>
     <p>${esc(CFG.fundamento)}</p>${metodo}
     ${r.fonte?`<p><b>Fonte da pesquisa de preços:</b> ${esc(r.fonte)}</p>`:''}
+    ${r.metodo==='fator'?tabelaPrecosLaudo(r.precos):''}
     <h3>4. Resultado</h3>
     ${kv([['Valor contábil anterior',brl(ant)],['Valor reavaliado',brl(novo)],['Variação',(dif>=0?'+':'')+brl(dif)],['Nova vida útil',r.vida_util_remanescente!=null?(+r.vida_util_remanescente)+' ano(s)':''],['Valor residual',r.valor_residual!=null?brl(+r.valor_residual):'']])}
     ${r.observacao?`<h3>5. Observações</h3><p>${esc(r.observacao)}</p>`:''}

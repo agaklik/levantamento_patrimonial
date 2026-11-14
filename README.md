@@ -153,6 +153,16 @@ Fator = (4 × EC + 6 × PVU − 3 × PUB) ÷ 100
 
 PVU e PUB chegam preenchidos com uma sugestão e podem ser alterados pelo avaliador. Pesos, notas, fator mínimo e percentual de valor residual são ajustáveis na aba Configuração. **Confira esses parâmetros com a norma adotada pelo órgão antes de emitir os laudos.**
 
+### Pesquisa de preços de referência
+
+Na ficha do bem, ao lado do valor de referência, o botão **Pesquisar preços** consulta os preços pagos em compras públicas, na base de dados abertos do Compras.gov.br (módulo Pesquisa de Preço):
+
+1. Busque o item no catálogo de materiais do governo (CATMAT) pela descrição, ou digite o código CATMAT.
+2. Escolha a abrangência: **estado** (padrão: o estado do órgão, tirado de "Município / UF" na Configuração), **região** (Sul, Sudeste, Centro-Oeste, Nordeste, Norte) ou **Brasil inteiro**; e o período (6, 12 ou 24 meses; padrão 12).
+3. Desmarque os preços que não servem (outro modelo, valor fora da realidade) e clique em **Usar mediana**, **Usar média** ou **Usar menor**.
+
+O valor vai para o campo de referência, a fonte é preenchida sozinha e os preços marcados ficam guardados com a reavaliação e aparecem no laudo. As consultas ficam em cache por 24 horas. Próximas fontes previstas: PNCP e LicitaCon (TCE-RS).
+
 ### Reavaliar em lote
 
 1. Na aba Reavaliação, filtre os bens e clique em **Planilha de pesquisa de preços**. O arquivo traz código, placa, descrição, marca, modelo, estado e valor atual.
@@ -314,6 +324,11 @@ Ajustes no painel do Supabase para o login por nome de usuário e a recuperaçã
 - Em Authentication, URL Configuration, cadastrar o endereço do app em **Redirect URLs** (ex.: `https://agaklik.github.io/levantamento_patrimonial/**`).
 - Em Authentication, configurar um **SMTP próprio** (Gmail, Resend etc.). O envio padrão do Supabase só entrega e-mails para membros da equipe do projeto e tem limite baixo por hora.
 - Opcional: em Authentication, exigir senha mínima de 10 caracteres com letras, números e símbolos, para a regra valer também no servidor.
+
+Para a **pesquisa de preços** na reavaliação:
+
+1. Rodar [`supabase/precos.sql`](supabase/precos.sql) no SQL Editor (depois do `reavaliacao.sql`).
+2. Publicar a função [`supabase/functions/precos`](supabase/functions/precos/index.ts) em Edge Functions (nome `precos`) e **desligar "Verify JWT"**. Ela confere a sessão e só atende administradores.
 
 ### 5. Hospedagem
 
