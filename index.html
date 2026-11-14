@@ -525,7 +525,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-9'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-10'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1470,8 +1470,7 @@ async function escolherLocal(l){
   try{
     const sit=await situacaoDoLocal(l.cod); if(!LC_SEL||LC_SEL.loc!==l) return; LC_SEL.sit=sit;
     $('#lcQtd').textContent=String(sit.encontrados); $('#lcQtdTxt').textContent=(sit.encontrados===1?'bem encontrado em ':'bens encontrados em ')+(l.desc||l.cod);
-    if(!feita) $('#lcStatus').textContent=sit.faltam.length?`No cadastro há outros ${sit.faltam.length} bem(ns) nesta localização ainda não levantados. Se não estão no local, pode concluir.`:(sit.encontrados?'Confira se todos os bens da sala já foram lidos antes de concluir.':'Nenhum bem foi levantado nesta localização ainda.');
-    if(sit.faltam.length){ $('#lcFaltam').innerHTML=sit.faltam.slice(0,60).map(b=>`<div><span>${esc(b.placa||'sem placa')} · ${esc((b.descricao||'').slice(0,34))}</span><small>falta</small></div>`).join(''); $('#lcFaltam').classList.remove('hidden'); }
+    if(!feita) $('#lcStatus').textContent=sit.encontrados?'Confira se todos os bens da sala já foram lidos antes de concluir.':'Nenhum bem foi levantado nesta localização ainda.';
     $('#btnConcluirLoc').disabled=false;
   }catch(e){ $('#lcQtd').textContent='—'; $('#lcStatus').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. A conclusão da localização precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
 }
@@ -1483,7 +1482,7 @@ $('#btnFecharLocTopo').addEventListener('click',()=>$('#btnFecharLoc').click());
 $('#btnConcluirLoc').addEventListener('click',async()=>{
   if(!LC_SEL||!LC_SEL.sit) return; const {loc,sit}=LC_SEL;
   try{ const fila=await idbAll('fila'); if(fila.length){ toast('Envie antes os '+fila.length+' item(ns) guardados no celular.',3600); return; } }catch(_){}
-  if(!confirm(`Concluir o levantamento de "${loc.desc||loc.cod}"?\n\n${sit.encontrados} bem(ns) encontrados.`+(sit.faltam.length?`\n${sit.faltam.length} bem(ns) do cadastro desta localização não foram levantados.`:''))) return;
+  if(!confirm(`Concluir o levantamento de "${loc.desc||loc.cod}"?\n\n${sit.encontrados} bem(ns) encontrados.`)) return;
   const btn=$('#btnConcluirLoc'); btn.disabled=true;
   try{
     const {data,error}=await sb.from('localizacoes_concluidas').insert({cod:loc.cod,descricao:loc.desc||null,total:sit.total,encontrados:sit.encontrados}).select().single();
