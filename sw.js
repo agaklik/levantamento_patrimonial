@@ -1,6 +1,6 @@
 // Service Worker - Levantamento Patrimonial
 // Cache simples para permitir instalação como app e abertura offline da casca.
-const CACHE = 'levpat-v6';
+const CACHE = 'levpat-v7';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './vendor/archivo.woff2'];
 
 self.addEventListener('install', (e) => {
@@ -20,7 +20,8 @@ self.addEventListener('fetch', (e) => {
   // só GET; chamadas ao Supabase sempre vão à rede
   if (req.method !== 'GET' || req.url.includes('supabase')) return;
   e.respondWith(
-    fetch(req).then(res => {
+    // arquivos do próprio app: pede sempre a versão nova ao servidor (ignora o cache de 10 min do GitHub Pages)
+    (new URL(req.url).origin === self.location.origin ? fetch(req.url, {cache: 'no-cache', credentials: 'same-origin'}) : fetch(req)).then(res => {
       // atualiza o cache da casca em segundo plano
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
