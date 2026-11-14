@@ -525,7 +525,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-5'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-6'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1412,19 +1412,34 @@ async function abrirEnvio(){
   $('#baseInfo').textContent = OFFLINE() ? (quando?'Bens guardados no celular em '+dataHoraBR(quando)+'.':'Os bens ainda não foram baixados para este celular.') : '';
 }
 /* ====== conclusão de localização ====== */
-let LC_SEL=null, LC_FEITAS={};
+let LC_SEL=null, LC_FEITAS={}, LC_CONT=null;
 async function abrirLocais(){
   stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#syncCard').classList.add('hidden'); $('#locCard').classList.remove('hidden');
   LC_SEL=null; $('#lcBusca').value=''; $('#lcBusca').classList.remove('hidden'); $('#lcDetalhe').classList.add('hidden'); $('#lcMsg').innerHTML='';
   try{ const {data,error}=await sb.from('localizacoes_concluidas').select('cod,concluido_nome,concluido_em'); if(error) throw error; LC_FEITAS={}; (data||[]).forEach(r=>LC_FEITAS[r.cod]=r); }
   catch(e){ if(!ehErroDeRede(e)) $('#lcMsg').innerHTML='<span class="err">A conclusão de localizações ainda não foi instalada no banco (supabase/conclusao.sql).</span>'; }
   listarLocais();
+  contarLocais().then(()=>{ if(!LC_SEL&&!$('#locCard').classList.contains('hidden')) listarLocais(); }).catch(()=>{});
+}
+// bens levantados e total de cada localização (considera os bens movidos no levantamento)
+async function contarLocais(){
+  const ler=async(t,cols)=>{ const out=[]; for(let i=0;;i+=1000){ const {data,error}=await sb.from(t).select(cols).order('codigo').range(i,i+999); if(error) throw error; out.push(...data); if(data.length<1000) break; } return out; };
+  const [bens,levs]=await Promise.all([ler('bens','codigo,cod_localizacao'),ler('levantamento','codigo,cod_localizacao,concluido')]);
+  const L={}; levs.forEach(l=>L[l.codigo]=l);
+  const c={};
+  bens.forEach(b=>{ const l=L[b.codigo], cod=(l&&l.cod_localizacao)||b.cod_localizacao||''; const x=c[cod]||(c[cod]={total:0,enc:0}); x.total++; if(l&&l.concluido) x.enc++; });
+  LC_CONT=c;
 }
 function listarLocais(){
   const q=semAcento($('#lcBusca').value.trim());
-  const lista=(q?LOCS.filter(l=>semAcento(l.cod+' '+l.desc).includes(q)):LOCS).slice(0,40);
+  const ct=l=>(LC_CONT&&LC_CONT[l.cod])||{total:0,enc:0};
+  // primeiro as que têm bens levantados e ainda não foram concluídas, depois as concluídas, depois as demais
+  const peso=l=>LC_FEITAS[l.cod]?1:(ct(l).enc?0:(ct(l).total?2:3));
+  let base=q?LOCS.filter(l=>semAcento(l.cod+' '+l.desc).includes(q)):LOCS.slice();
+  if(LC_CONT) base.sort((a,b)=>peso(a)-peso(b)||ct(b).enc-ct(a).enc||ct(b).total-ct(a).total);
+  const lista=base.slice(0,60);
   $('#lcLista').classList.remove('hidden');
-  $('#lcLista').innerHTML=lista.length?lista.map(l=>`<button type="button" data-cod="${esc(l.cod)}"><span><b>${esc(l.desc||'(sem descrição)')}</b><small>Código ${esc(l.cod)}${LC_FEITAS[l.cod]?' · concluída em '+dataHoraBR(LC_FEITAS[l.cod].concluido_em):''}</small></span>${LC_FEITAS[l.cod]?'<span class="pl" style="color:var(--ok)">✓</span>':''}</button>`).join(''):'<p class="hint">Nenhuma localização encontrada.</p>';
+  $('#lcLista').innerHTML=lista.length?lista.map(l=>`<button type="button" data-cod="${esc(l.cod)}"><span><b>${esc(l.desc||'(sem descrição)')}</b><small>Código ${esc(l.cod)}${LC_CONT?' · '+(ct(l).total?ct(l).enc+' de '+ct(l).total+' bens encontrados':'sem bens'):''}${LC_FEITAS[l.cod]?' · concluída em '+dataHoraBR(LC_FEITAS[l.cod].concluido_em):''}</small></span>${LC_FEITAS[l.cod]?'<span class="pl" style="color:var(--ok)">✓</span>':(LC_CONT&&ct(l).total?`<span class="pl"${ct(l).enc?'':' style="color:var(--muted)"'}>${ct(l).enc}/${ct(l).total}</span>`:'')}</button>`).join(''):'<p class="hint">Nenhuma localização encontrada.</p>';
   $('#lcLista').querySelectorAll('button').forEach(b=>b.onclick=()=>escolherLocal(LOCS.find(l=>l.cod===b.dataset.cod)));
 }
 // bens da localização: os cadastrados nela que não foram movidos, mais os movidos para ela no levantamento
