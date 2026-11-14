@@ -352,7 +352,7 @@
 
   <!-- CONCLUSÃO DE LOCALIZAÇÃO -->
   <div class="card hidden" id="locCard">
-    <h3>Concluir localização</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h3 style="margin:0">Concluir localização</h3><button class="btn-ghost" id="btnFecharLocTopo" style="flex:none">‹ Voltar</button></div>
     <p class="hint" style="margin:0 0 12px">Ao terminar de levantar todos os bens de uma sala ou setor, marque a localização como concluída. Ela fica liberada para a reavaliação no painel.</p>
     <input type="search" id="lcBusca" placeholder="Nome ou código da localização" aria-label="Localização" style="margin:0">
     <div class="results" id="lcLista"></div>
@@ -525,7 +525,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-8'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-9'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1479,6 +1479,7 @@ $('#btnLocais').addEventListener('click',abrirLocais);
 $('#lcBusca').addEventListener('input',listarLocais);
 $('#btnOutraLoc').addEventListener('click',()=>{ LC_SEL=null; $('#lcDetalhe').classList.add('hidden'); $('#lcBusca').classList.remove('hidden'); $('#lcMsg').innerHTML=''; listarLocais(); });
 $('#btnFecharLoc').addEventListener('click',()=>{ $('#locCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
+$('#btnFecharLocTopo').addEventListener('click',()=>$('#btnFecharLoc').click());
 $('#btnConcluirLoc').addEventListener('click',async()=>{
   if(!LC_SEL||!LC_SEL.sit) return; const {loc,sit}=LC_SEL;
   try{ const fila=await idbAll('fila'); if(fila.length){ toast('Envie antes os '+fila.length+' item(ns) guardados no celular.',3600); return; } }catch(_){}
