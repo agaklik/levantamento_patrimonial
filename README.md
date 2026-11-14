@@ -157,9 +157,9 @@ PVU e PUB chegam preenchidos com uma sugestão e podem ser alterados pelo avalia
 
 Na ficha do bem, ao lado do valor de referência, o botão **Pesquisar preços** consulta os preços pagos em compras públicas, na base de dados abertos do Compras.gov.br (módulo Pesquisa de Preço):
 
-1. Busque o item no catálogo de materiais do governo (CATMAT) pela descrição, ou digite o código CATMAT.
+1. Digite o nome do bem (ex.: cadeira escritório) e escolha o **tipo de material** do catálogo do governo (PDM do CATMAT), ou digite o código CATMAT do item. Na primeira busca o painel copia a lista de tipos de material para o Supabase (a API do governo não tem busca por palavra); leva cerca de um minuto.
 2. Escolha a abrangência: **estado** (padrão: o estado do órgão, tirado de "Município / UF" na Configuração), **região** (Sul, Sudeste, Centro-Oeste, Nordeste, Norte) ou **Brasil inteiro**; e o período (6, 12 ou 24 meses; padrão 12).
-3. Desmarque os preços que não servem (outro modelo, valor fora da realidade) e clique em **Usar mediana**, **Usar média** ou **Usar menor**.
+3. Use **Filtrar pela descrição** para ficar só com bens iguais ao avaliado (ex.: giratória, espaldar médio), desmarque os preços que não servem (outro modelo, valor fora da realidade) e clique em **Usar mediana**, **Usar média** ou **Usar menor**.
 
 O valor vai para o campo de referência, a fonte é preenchida sozinha e os preços marcados ficam guardados com a reavaliação e aparecem no laudo. As consultas ficam em cache por 24 horas. Próximas fontes previstas: PNCP e LicitaCon (TCE-RS).
 

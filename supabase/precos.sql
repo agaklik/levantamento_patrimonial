@@ -19,3 +19,17 @@ create table if not exists public.precos_cache (
 alter table public.precos_cache enable row level security;
 -- sem políticas: só a função (chave de serviço) lê e grava
 revoke all on public.precos_cache from anon, authenticated;
+
+-- tipos de material do catálogo do governo (PDM), copiados da API do Compras.gov.br
+-- pela função "precos" na primeira pesquisa, porque a API não tem busca por palavra
+create table if not exists public.catmat_pdm (
+  codigo        int primary key,
+  nome          text not null,
+  codigo_classe int,
+  classe        text,
+  grupo         text,
+  ativo         boolean not null default true,
+  busca         text not null default ''
+);
+alter table public.catmat_pdm enable row level security;
+revoke all on public.catmat_pdm from anon, authenticated;
