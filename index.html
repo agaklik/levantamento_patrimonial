@@ -525,7 +525,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-7'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-8'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1437,13 +1437,13 @@ function listarLocais(){
   const q=semAcento($('#lcBusca').value.trim());
   const ct=l=>(LC_CONT&&LC_CONT[l.cod])||{total:0,enc:0};
   // primeiro as que têm bens levantados e ainda não foram concluídas, depois as concluídas, depois as demais
-  const peso=l=>LC_FEITAS[l.cod]?1:(ct(l).enc?0:(ct(l).total?2:3));
+  const peso=l=>LC_FEITAS[l.cod]?1:(ct(l).enc?0:2);
   let base=(q?LOCS.filter(l=>semAcento(l.cod+' '+l.desc).includes(q)):LOCS.slice()).filter(l=>l.cod!==LOCAL_TEMP);
   const tmp=LOCAL_TEMP&&LC_CONT&&LC_CONT[LOCAL_TEMP], tmpLoc=LOCS.find(l=>l.cod===LOCAL_TEMP);
-  if(LC_CONT) base.sort((a,b)=>peso(a)-peso(b)||ct(b).enc-ct(a).enc||ct(b).total-ct(a).total);
+  if(LC_CONT) base.sort((a,b)=>peso(a)-peso(b)||ct(b).enc-ct(a).enc);
   const lista=base.slice(0,60);
   $('#lcLista').classList.remove('hidden');
-  $('#lcLista').innerHTML=lista.length?lista.map(l=>`<button type="button" data-cod="${esc(l.cod)}"><span><b>${esc(l.desc||'(sem descrição)')}</b><small>Código ${esc(l.cod)}${LC_CONT?' · '+(ct(l).total?(ct(l).enc===ct(l).total?ct(l).enc+(ct(l).enc===1?' bem encontrado':' bens encontrados'):ct(l).enc+' de '+ct(l).total+' bens encontrados'):'nenhum bem encontrado'):''}${LC_FEITAS[l.cod]?' · concluída em '+dataHoraBR(LC_FEITAS[l.cod].concluido_em):''}</small></span>${LC_FEITAS[l.cod]?'<span class="pl" style="color:var(--ok)">✓</span>':(LC_CONT&&ct(l).total?`<span class="pl"${ct(l).enc?'':' style="color:var(--muted)"'}>${ct(l).enc===ct(l).total?ct(l).enc:ct(l).enc+'/'+ct(l).total}</span>`:'')}</button>`).join(''):'<p class="hint">Nenhuma localização encontrada.</p>';
+  $('#lcLista').innerHTML=lista.length?lista.map(l=>`<button type="button" data-cod="${esc(l.cod)}"><span><b>${esc(l.desc||'(sem descrição)')}</b><small>Código ${esc(l.cod)}${LC_CONT?' · '+(ct(l).enc?ct(l).enc+(ct(l).enc===1?' bem encontrado':' bens encontrados'):'nenhum bem encontrado'):''}${LC_FEITAS[l.cod]?' · concluída em '+dataHoraBR(LC_FEITAS[l.cod].concluido_em):''}</small></span>${LC_FEITAS[l.cod]?'<span class="pl" style="color:var(--ok)">✓</span>':(LC_CONT&&ct(l).enc?`<span class="pl">${ct(l).enc}</span>`:'')}</button>`).join(''):'<p class="hint">Nenhuma localização encontrada.</p>';
   if(tmp&&!q) $('#lcLista').insertAdjacentHTML('afterbegin',`<p class="hint" style="margin:0 0 4px"><b>${tmp.total-tmp.enc}</b> bem(ns) ainda na localização de origem${tmpLoc?' ('+esc(tmpLoc.desc)+')':''}, aguardando ser encontrados.</p>`);
   $('#lcLista').querySelectorAll('button').forEach(b=>b.onclick=()=>escolherLocal(LOCS.find(l=>l.cod===b.dataset.cod)));
 }
@@ -1469,8 +1469,8 @@ async function escolherLocal(l){
   $('#lcStatus').innerHTML=feita?`<b style="color:var(--ok)">✓ Concluída</b> por ${esc(feita.concluido_nome||'—')} em ${dataHoraBR(feita.concluido_em)}. Para reabrir, peça ao administrador no painel.`:'Conferindo os bens desta localização...';
   try{
     const sit=await situacaoDoLocal(l.cod); if(!LC_SEL||LC_SEL.loc!==l) return; LC_SEL.sit=sit;
-    $('#lcQtd').textContent=sit.faltam.length?`${sit.encontrados} de ${sit.total}`:String(sit.encontrados); $('#lcQtdTxt').textContent=(sit.encontrados===1&&!sit.faltam.length?'bem encontrado em ':'bens encontrados em ')+(l.desc||l.cod);
-    if(!feita) $('#lcStatus').textContent=sit.faltam.length?`Faltam ${sit.faltam.length} bem(ns) do cadastro desta localização. Se não estão no local, pode concluir.`:(sit.total?'Confira se todos os bens da sala já foram lidos antes de concluir.':'Nenhum bem foi levantado nesta localização ainda.');
+    $('#lcQtd').textContent=String(sit.encontrados); $('#lcQtdTxt').textContent=(sit.encontrados===1?'bem encontrado em ':'bens encontrados em ')+(l.desc||l.cod);
+    if(!feita) $('#lcStatus').textContent=sit.faltam.length?`No cadastro há outros ${sit.faltam.length} bem(ns) nesta localização ainda não levantados. Se não estão no local, pode concluir.`:(sit.encontrados?'Confira se todos os bens da sala já foram lidos antes de concluir.':'Nenhum bem foi levantado nesta localização ainda.');
     if(sit.faltam.length){ $('#lcFaltam').innerHTML=sit.faltam.slice(0,60).map(b=>`<div><span>${esc(b.placa||'sem placa')} · ${esc((b.descricao||'').slice(0,34))}</span><small>falta</small></div>`).join(''); $('#lcFaltam').classList.remove('hidden'); }
     $('#btnConcluirLoc').disabled=false;
   }catch(e){ $('#lcQtd').textContent='—'; $('#lcStatus').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. A conclusão da localização precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
@@ -1482,7 +1482,7 @@ $('#btnFecharLoc').addEventListener('click',()=>{ $('#locCard').classList.add('h
 $('#btnConcluirLoc').addEventListener('click',async()=>{
   if(!LC_SEL||!LC_SEL.sit) return; const {loc,sit}=LC_SEL;
   try{ const fila=await idbAll('fila'); if(fila.length){ toast('Envie antes os '+fila.length+' item(ns) guardados no celular.',3600); return; } }catch(_){}
-  if(!confirm(`Concluir o levantamento de "${loc.desc||loc.cod}"?\n\n${sit.faltam.length?sit.encontrados+' de '+sit.total:sit.encontrados} bem(ns) encontrados.`+(sit.faltam.length?`\n${sit.faltam.length} bem(ns) do cadastro desta localização não foram levantados.`:''))) return;
+  if(!confirm(`Concluir o levantamento de "${loc.desc||loc.cod}"?\n\n${sit.encontrados} bem(ns) encontrados.`+(sit.faltam.length?`\n${sit.faltam.length} bem(ns) do cadastro desta localização não foram levantados.`:''))) return;
   const btn=$('#btnConcluirLoc'); btn.disabled=true;
   try{
     const {data,error}=await sb.from('localizacoes_concluidas').insert({cod:loc.cod,descricao:loc.desc||null,total:sit.total,encontrados:sit.encontrados}).select().single();
