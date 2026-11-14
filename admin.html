@@ -171,6 +171,11 @@
   dialog.dlg h3{margin:0 0 4px;font-size:18px}
   dialog.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
   dialog.dlg input{margin-bottom:12px}
+  .olho-wrap{position:relative;display:block}
+  .olho-wrap input{padding-right:42px}
+  .olho{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:34px;height:32px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center}
+  .olho:hover{background:var(--surface2);color:var(--txt)}
+  .olho svg{width:19px;height:19px}
 </style>
 </head>
 <body>
@@ -319,7 +324,7 @@
           <div><label for="uNome">Nome completo</label><input id="uNome" placeholder="Ex.: Maria Souza da Silva" autocomplete="off"></div>
           <div><label for="uUsuario">Nome de usuário <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input id="uUsuario" placeholder="Ex.: maria.souza" autocapitalize="none" spellcheck="false" autocomplete="off"></div>
           <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com" autocomplete="off"></div>
-          <div><label for="uSenha">Senha inicial <button type="button" class="link-btn" id="btnGerarSenha" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="uSenha" autocomplete="new-password" spellcheck="false"></div>
+          <div><label for="uSenha">Senha inicial <button type="button" class="link-btn" id="btnGerarSenha" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="uSenha" type="password" autocomplete="new-password" spellcheck="false"></div>
           <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option></select></div>
           <div class="full" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><ul class="pw-rules" id="uSenhaRegras"></ul><button class="btn" id="btnCriarUsu">Cadastrar usuário</button></div>
         </div>
@@ -483,7 +488,7 @@
 </dialog>
 <dialog class="dlg" id="dlgSenha">
   <h3>Nova senha</h3><p class="sub" id="dlgSenhaEmail" style="margin:0 0 14px;color:var(--muted)"></p>
-  <label for="sNova">Nova senha <button type="button" class="link-btn" id="sGerar" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="sNova" spellcheck="false" autocomplete="new-password">
+  <label for="sNova">Nova senha <button type="button" class="link-btn" id="sGerar" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="sNova" type="password" spellcheck="false" autocomplete="new-password">
   <ul class="pw-rules" id="sRegras"></ul>
   <div class="fld-err" id="sErro"></div>
   <div class="acts"><button class="btn-2" id="sCancelar">Cancelar</button><button class="btn" id="sSalvar">Salvar senha</button></div>
@@ -497,6 +502,25 @@ const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* olho para mostrar/ocultar a senha, em todos os campos de senha */
+const OLHO='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+const OLHO_X='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.9 9.9 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg>';
+function verSenha(inp,ver){
+  inp.type=ver?'text':'password';
+  const b=inp.parentNode.querySelector('.olho'); if(!b) return;
+  b.innerHTML=ver?OLHO_X:OLHO; b.setAttribute('aria-label',ver?'Ocultar senha':'Mostrar senha'); b.title=b.getAttribute('aria-label'); b.setAttribute('aria-pressed',ver?'true':'false');
+}
+function ligarOlhos(){
+  document.querySelectorAll('input[type=password]:not([data-olho])').forEach(inp=>{
+    inp.dataset.olho='1';
+    const w=document.createElement('span'); w.className='olho-wrap'; inp.parentNode.insertBefore(w,inp); w.appendChild(inp);
+    const b=document.createElement('button'); b.type='button'; b.className='olho'; w.appendChild(b);
+    b.addEventListener('click',()=>{ verSenha(inp,inp.type==='password'); inp.focus(); });
+    verSenha(inp,false);
+  });
+}
+ligarOlhos();
+
 
 const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo'};
 const UNIDADES_GESTORAS = {'0':'Prefeitura Municipal','1':'Câmara Municipal de Vereadores'};
@@ -1097,11 +1121,11 @@ $('#eSalvar').onclick=async()=>{
   finally{ $('#eSalvar').disabled=false; }
 };
 function abrirSenha(u){
-  USU_ED=u; $('#dlgSenhaEmail').textContent=u.email; $('#sNova').value=''; $('#sErro').textContent=''; mostrarRegras($('#sRegras'),'');
+  USU_ED=u; $('#dlgSenhaEmail').textContent=u.email; $('#sNova').value=''; verSenha($('#sNova'),false); $('#sErro').textContent=''; mostrarRegras($('#sRegras'),'');
   $('#dlgSenha').showModal(); $('#sNova').focus();
 }
 $('#sNova').oninput=()=>{ $('#sErro').textContent=''; mostrarRegras($('#sRegras'),$('#sNova').value); };
-$('#sGerar').onclick=()=>{ $('#sNova').value=gerarSenha(); $('#sNova').oninput(); };
+$('#sGerar').onclick=()=>{ $('#sNova').value=gerarSenha(); verSenha($('#sNova'),true); $('#sNova').oninput(); };
 $('#sCancelar').onclick=()=>$('#dlgSenha').close();
 $('#sSalvar').onclick=async()=>{
   const senha=$('#sNova').value, err=erroSenha(senha,USU_ED.email,USU_ED.usuario);
@@ -1112,7 +1136,7 @@ $('#sSalvar').onclick=async()=>{
   finally{ $('#sSalvar').disabled=false; }
 };
 $('#uSenha').addEventListener('input',()=>mostrarRegras($('#uSenhaRegras'),$('#uSenha').value));
-$('#btnGerarSenha').addEventListener('click',()=>{ $('#uSenha').value=gerarSenha(); mostrarRegras($('#uSenhaRegras'),$('#uSenha').value); });
+$('#btnGerarSenha').addEventListener('click',()=>{ $('#uSenha').value=gerarSenha(); verSenha($('#uSenha'),true); mostrarRegras($('#uSenhaRegras'),$('#uSenha').value); });
 mostrarRegras($('#uSenhaRegras'),'');
 $('#btnCriarUsu').addEventListener('click',async()=>{
   const nome=limparNome($('#uNome').value), usuario=$('#uUsuario').value.trim().toLowerCase(), email=$('#uEmail').value.trim().toLowerCase(), senha=$('#uSenha').value, perfil=$('#uPerfil').value;
@@ -1120,7 +1144,7 @@ $('#btnCriarUsu').addEventListener('click',async()=>{
     ||(!RX_EMAIL.test(email)?'Informe um e-mail válido.':'')||erroSenha(senha,email,usuario);
   if(err){ toast(err,4500); return; }
   const btn=$('#btnCriarUsu'); btn.disabled=true;
-  try{ await chamarUsuarios({acao:'criar',nome,usuario,email,senha,perfil}); ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); mostrarRegras($('#uSenhaRegras'),''); toast('Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
+  try{ await chamarUsuarios({acao:'criar',nome,usuario,email,senha,perfil}); ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); verSenha($('#uSenha'),false); mostrarRegras($('#uSenhaRegras'),''); toast('Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
   catch(e){ toast('Erro: '+e.message,5000); }
   finally{ btn.disabled=false; }
 });
