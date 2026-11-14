@@ -38,6 +38,8 @@
   #progText{text-align:left!important;color:rgba(255,255,255,.78)!important;font-size:12.5px!important;margin-top:5px!important;font-variant-numeric:tabular-nums}
   .hdr-icon{flex:none;width:42px;height:42px;padding:0;border-radius:10px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center}
   .hdr-icon svg{width:20px;height:20px}
+  a.hdr-icon{text-decoration:none}
+  #btnPainel.hidden{display:none!important}
   .hdr-icon:active{background:rgba(255,255,255,.12)}
   .hdr-icon.hidden{display:flex;visibility:hidden}
 
@@ -265,6 +267,7 @@
   <symbol id="i-camera" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 8.5A1.5 1.5 0 0 1 4.5 7h3l1.5-2.5h6L16.5 7h3A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-cloud" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.7 4.7 0 0 0 7 18.5zM12 16v-6m-2.5 2.5L12 10l2.5 2.5"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-painel" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5zM8 21h8M12 17v4M7 13V10m4 3V8m4 5v-2"/></symbol>
   <symbol id="i-exit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 8l-4 4 4 4M6 12h10"/></symbol>
 </svg>
 
@@ -315,6 +318,7 @@
       <div id="progText"></div>
     </div>
   </div>
+  <a id="btnPainel" class="hdr-icon hidden" href="admin.html" title="Painel administrativo" aria-label="Painel administrativo"><svg><use href="#i-painel"/></svg></a>
   <button id="btnEnvio" class="hdr-icon" title="Envio dos dados" aria-label="Envio dos dados"><svg><use href="#i-cloud"/></svg><span class="badge hidden" id="filaBadge">0</span></button>
   <button id="btnLogout" class="hdr-icon" title="Sair" aria-label="Sair"><svg><use href="#i-exit"/></svg></button>
 </header>
@@ -503,7 +507,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-3'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.14-4'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -584,6 +588,7 @@ async function carregarPerfil(){
     }else{ admin = data===true; }
   }catch(_){ /* sem rede: fica sem acesso de administrador */ }
   IS_ADMIN=admin; SEGURANCA_CONFIGURADA=configurada;
+  $('#btnPainel').classList.toggle('hidden',!(admin&&configurada));
 }
 function exigirAdmin(){
   if(IS_ADMIN) return true;
