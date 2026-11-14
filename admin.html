@@ -484,6 +484,10 @@
     <div id="boxDireto" class="hidden" style="margin-top:12px">
       <label>Valor reavaliado</label><input id="rValorDireto" inputmode="decimal" placeholder="0,00">
     </div>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button type="button" class="btn-2" id="btnLaudoTec" style="padding:7px 12px;font-size:13px">+ Laudo técnico de engenheiro</button>
+      <span id="rLaudoInfo" style="font-size:12.5px;color:var(--muted);flex:1;min-width:200px"></span>
+    </div>
     <div class="result" style="margin-top:12px">
       <div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Valor reavaliado</div><b id="rValor">—</b></div>
       <div style="text-align:right;font-size:13px"><div>Valor atual: <b id="rAtual" style="font-size:13px;color:var(--txt)"></b></div><div id="rVar"></div></div>
@@ -526,6 +530,24 @@
   <ul class="pw-rules" id="sRegras"></ul>
   <div class="fld-err" id="sErro"></div>
   <div class="acts"><button class="btn-2" id="sCancelar">Cancelar</button><button class="btn" id="sSalvar">Salvar senha</button></div>
+</dialog>
+<dialog class="dlg" id="dlgLaudoTec" style="width:min(640px,94vw)">
+  <h3>Laudo técnico</h3>
+  <p class="sub" style="margin:0 0 14px;color:var(--muted);font-size:13.5px">Para bens que exigem avaliação de profissional habilitado, como imóveis, veículos e máquinas. O valor do laudo passa a ser o valor reavaliado do bem.</p>
+  <div class="grid g2">
+    <div><label for="ltNumero">Número do laudo</label><input id="ltNumero" placeholder="Ex.: 012/2026"></div>
+    <div><label for="ltData">Data do laudo</label><input type="date" id="ltData"></div>
+    <div style="grid-column:span 2"><label for="ltResp">Responsável técnico</label><input id="ltResp" placeholder="Nome completo"></div>
+    <div><label for="ltTitulo">Título profissional</label><input id="ltTitulo" placeholder="Ex.: Engenheiro Civil"></div>
+    <div><label for="ltRegistro">Registro profissional</label><input id="ltRegistro" placeholder="Ex.: CREA-RS 123456"></div>
+    <div><label for="ltArt">ART / RRT nº</label><input id="ltArt"></div>
+    <div><label for="ltValorLaudo">Valor avaliado</label><input id="ltValorLaudo" inputmode="decimal" placeholder="0,00"></div>
+    <div style="grid-column:span 2"><label for="ltMetodo">Metodologia ou norma</label><input id="ltMetodo" placeholder="Ex.: Método comparativo direto, NBR 14653-2"></div>
+    <div style="grid-column:span 2"><label for="ltObs">Observações do laudo</label><textarea id="ltObs" style="min-height:56px"></textarea></div>
+    <div style="grid-column:span 2"><label for="ltArquivo">Arquivo do laudo (PDF ou imagem)</label><input type="file" id="ltArquivo" accept="application/pdf,image/*"><div id="ltArqInfo" style="font-size:12.5px;color:var(--muted);margin-top:-6px"></div></div>
+  </div>
+  <div class="fld-err" id="ltErro"></div>
+  <div class="acts"><button class="btn-danger hidden" id="ltRemover" style="margin-right:auto">Remover laudo</button><button class="btn-2" id="ltCancelar">Cancelar</button><button class="btn" id="ltUsar">Usar este laudo</button></div>
 </dialog>
 <dialog class="dlg largo" id="dlgLote">
   <div class="pz-top">
@@ -1008,6 +1030,7 @@ function preencherForm(b){
   $('#rResidual').dataset.auto=r.valor_residual!=null?'':'1';
   $('#rFonte').value=r.fonte||''; $('#rObs').value=r.observacao||'';
   PRECOS_SEL=r.precos||null; PRECOS_MUDOU=false;
+  LAUDO_SEL=r.laudo_tecnico||null; LAUDO_MUDOU=false; infoLaudo();
   const rf=refDe(b);
   if(rf&&r.valor_referencia==null){ $('#rRef').value=dec(+rf.valor); if(!r.fonte) $('#rFonte').value=rf.fonte||''; if(rf.precos){ PRECOS_SEL=rf.precos; PRECOS_MUDOU=true; } }
   infoPrecos(); infoRef();
@@ -1199,6 +1222,53 @@ $('#pzUsarMenor').onclick=()=>pzUsar('menor');
 $('#pzUsarMedia').onclick=()=>pzUsar('media');
 $('#pzUsarMediana').onclick=()=>pzUsar('mediana');
 
+/* ---------- laudo técnico (imóveis, veículos, máquinas) ---------- */
+let LAUDO_SEL=null, LAUDO_MUDOU=false;
+const textoLaudo=l=>l?`Laudo técnico${l.numero?' nº '+l.numero:''}${l.data?', de '+dataBR(l.data):''}${l.responsavel?', '+l.responsavel:''}${[l.titulo,l.registro].filter(Boolean).length?' ('+[l.titulo,l.registro].filter(Boolean).join(', ')+')':''}${l.art?', ART/RRT nº '+l.art:''}`:'';
+function infoLaudo(){
+  const l=LAUDO_SEL; $('#btnLaudoTec').textContent=l?'Editar laudo técnico':'+ Laudo técnico de engenheiro';
+  $('#rLaudoInfo').innerHTML=l?esc(textoLaudo(l))+(l.arquivo?` · <a href="#" id="rLaudoArq">ver arquivo</a>`:''):'Para imóveis, veículos e máquinas avaliados por profissional habilitado.';
+  const a=$('#rLaudoArq'); if(a) a.onclick=e=>{ e.preventDefault(); abrirArquivoLaudo(l.arquivo); };
+}
+async function abrirArquivoLaudo(path){
+  const w=window.open('','_blank');
+  const {data,error}=await sb.storage.from(FOTOS_BUCKET).createSignedUrl(path,3600);
+  if(error||!data){ if(w) w.close(); toast('Não foi possível abrir o arquivo.'); return; }
+  if(w) w.location=data.signedUrl; else location.href=data.signedUrl;
+}
+$('#btnLaudoTec').addEventListener('click',()=>{
+  if(!atual) return; const l=LAUDO_SEL||{};
+  $('#ltNumero').value=l.numero||''; $('#ltData').value=l.data||$('#rData').value||hojeISO();
+  $('#ltResp').value=l.responsavel||CFG.rtNome||''; $('#ltTitulo').value=l.titulo||CFG.rtTitulo||''; $('#ltRegistro').value=l.registro||CFG.rtRegistro||'';
+  $('#ltArt').value=l.art||''; $('#ltMetodo').value=l.metodologia||''; $('#ltObs').value=l.observacao||'';
+  $('#ltValorLaudo').value=l.valor!=null?dec(+l.valor):($('#rMetodo').value==='laudo'?$('#rValorDireto').value:'');
+  $('#ltArquivo').value=''; $('#ltArqInfo').textContent=l.arquivo?'Arquivo já anexado: '+(l.arquivo_nome||'laudo')+'. Escolha outro para substituir.':'';
+  $('#ltErro').textContent=''; $('#ltRemover').classList.toggle('hidden',!LAUDO_SEL);
+  $('#dlgLaudoTec').showModal(); $('#ltNumero').focus();
+});
+$('#ltCancelar').addEventListener('click',()=>$('#dlgLaudoTec').close());
+$('#ltRemover').addEventListener('click',()=>{ LAUDO_SEL=null; LAUDO_MUDOU=true; infoLaudo(); $('#dlgLaudoTec').close(); toast('Laudo removido. Escolha o método e salve.',3500); });
+$('#ltUsar').addEventListener('click',async()=>{
+  const valor=num($('#ltValorLaudo').value), resp=$('#ltResp').value.trim(), reg=$('#ltRegistro').value.trim(), err=$('#ltErro');
+  if(!resp){ err.textContent='Informe o responsável técnico.'; return; }
+  if(!reg){ err.textContent='Informe o registro profissional (CREA, CAU etc.).'; return; }
+  if(valor==null||valor<=0){ err.textContent='Informe o valor avaliado no laudo.'; return; }
+  const l={numero:$('#ltNumero').value.trim(),data:$('#ltData').value||null,responsavel:resp,titulo:$('#ltTitulo').value.trim(),registro:reg,art:$('#ltArt').value.trim(),
+    metodologia:$('#ltMetodo').value.trim(),observacao:$('#ltObs').value.trim(),valor,arquivo:(LAUDO_SEL&&LAUDO_SEL.arquivo)||null,arquivo_nome:(LAUDO_SEL&&LAUDO_SEL.arquivo_nome)||null};
+  const f=$('#ltArquivo').files[0], btn=$('#ltUsar');
+  if(f){
+    if(f.size>15*1024*1024){ err.textContent='O arquivo passa de 15 MB.'; return; }
+    btn.disabled=true; btn.textContent='Enviando arquivo...';
+    const ext=(f.name.match(/\.[A-Za-z0-9]{1,5}$/)||['.pdf'])[0].toLowerCase(), path=`laudos/${atual.codigo}/${Date.now()}${ext}`;
+    const {error}=await sb.storage.from(FOTOS_BUCKET).upload(path,f,{contentType:f.type||'application/pdf'});
+    btn.disabled=false; btn.textContent='Usar este laudo';
+    if(error){ err.textContent='Erro ao enviar o arquivo: '+error.message; return; }
+    l.arquivo=path; l.arquivo_nome=f.name;
+  }
+  LAUDO_SEL=l; LAUDO_MUDOU=true;
+  $('#rMetodo').value='laudo'; $('#rValorDireto').value=dec(valor); $('#rFonte').value=textoLaudo(l); if(l.data) $('#rData').value=l.data;
+  infoLaudo(); recalc(); $('#dlgLaudoTec').close(); toast('Laudo incluído. Confira e salve a reavaliação.',3500);
+});
 function infoRef(){
   if(!atual){ return; } const rf=refDe(atual), n=BENS.filter(x=>chaveRef(x)===chaveRef(atual)).length, v=num($('#rRef').value);
   const el=$('#rRefInfo');
@@ -1265,6 +1335,8 @@ async function salvarItem(proximo){
     data_avaliacao:$('#rData').value||null, concluido
   });
   if(PRECOS_MUDOU) row.precos=PRECOS_SEL;
+  if(LAUDO_MUDOU) row.laudo_tecnico=(o.metodo==='laudo')?LAUDO_SEL:null;
+  if(o.metodo==='laudo'&&concluido&&!LAUDO_SEL&&!confirm('O método é laudo técnico, mas os dados do laudo não foram incluídos.\n\nSalvar mesmo assim?')) return false;
   // um único valor de referência por tipo de bem (mesma descrição)
   const usaRef=concOk&&o.metodo==='fator'&&o.valor_referencia!=null, chave=chaveRef(b), rfAnt=REFS[chave];
   const mudouRef=usaRef&&rfAnt&&Math.abs(+rfAnt.valor-o.valor_referencia)>0.004;
@@ -1273,8 +1345,8 @@ async function salvarItem(proximo){
     if(!confirm(`O valor de referência de "${b.descricao||''}" é ${brl(+rfAnt.valor)}.\n\nAlterar para ${brl(o.valor_referencia)} vale para todos os bens com esta descrição, em qualquer localização.`+(outros?`\n\n${outros} bem(ns) já reavaliados serão recalculados com o novo valor.`:'')+'\n\nOK = alterar para todos · Cancelar = voltar')) return false;
   }
   const {error}=await sb.from('reavaliacao').upsert(row,{onConflict:'codigo'});
-  if(error){ toast(/precos/.test(error.message)?'Execute antes o script supabase/precos.sql no Supabase.':'Erro ao salvar: '+error.message,4500); return false; }
-  PRECOS_MUDOU=false;
+  if(error){ toast(/laudo_tecnico/.test(error.message)?'Execute antes o script supabase/laudo-tecnico.sql no Supabase.':/precos/.test(error.message)?'Execute antes o script supabase/precos.sql no Supabase.':'Erro ao salvar: '+error.message,4500); return false; }
+  PRECOS_MUDOU=false; LAUDO_MUDOU=false;
   REAV[b.codigo]=Object.assign({},REAV[b.codigo],row); toast('✓ Reavaliação salva');
   if(usaRef&&(!rfAnt||mudouRef||PRECOS_SEL&&!rfAnt.precos)){
     try{
@@ -1743,11 +1815,12 @@ function fatorSugerido(b){ const ant=reav(b)||{}, s=sugestao(b); return calcFato
 function abrirLote(){
   if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
   const sel=BENS.filter(b=>selecionados.has(b.codigo));
-  LOTE=sel.filter(b=>encontrado(b)&&liberado(b)).map(b=>({b,fator:fatorSugerido(b)}));
-  const fora=sel.length-LOTE.length, semFator=LOTE.filter(x=>x.fator==null).length;
+  const comLaudo=sel.filter(b=>reav(b)&&reav(b).metodo==='laudo').length;
+  LOTE=sel.filter(b=>encontrado(b)&&liberado(b)&&!(reav(b)&&reav(b).metodo==='laudo')).map(b=>({b,fator:fatorSugerido(b)}));
+  const fora=sel.length-LOTE.length-comLaudo, semFator=LOTE.filter(x=>x.fator==null).length;
   if(!LOTE.length){ toast('Nenhum dos selecionados está liberado para a reavaliação (bem encontrado em localização concluída).',5000); return; }
   $('#ltValor').value=''; $('#ltFonte').value='';
-  $('#ltInfo').textContent=`${LOTE.length} bem(ns).`+(fora?` ${fora} selecionado(s) ficaram de fora por não estarem liberados.`:'')+(semFator?` ${semFator} sem data de ingresso não têm fator sugerido e precisam ser reavaliados um a um.`:'');
+  $('#ltInfo').textContent=`${LOTE.length} bem(ns).`+(fora>0?` ${fora} selecionado(s) ficaram de fora por não estarem liberados.`:'')+(comLaudo?` ${comLaudo} com laudo técnico ficaram de fora.`:'')+(semFator?` ${semFator} sem data de ingresso não têm fator sugerido e precisam ser reavaliados um a um.`:'');
   $('#ltCorpo').innerHTML=LOTE.map((x,i)=>{ const b=x.b, r=reav(b), rf=refDe(b), v=r&&r.valor_referencia!=null?+r.valor_referencia:(rf?+rf.valor:null);
     return `<tr style="cursor:default" data-i="${i}"><td><b>${esc(placa(b))}</b></td><td>${esc(b.descricao||b.descricao_reduzida||'')}<small style="display:block;color:var(--muted);font-size:12px">${esc(locDesc(b))}</small></td><td>${esc(estDesc(b))}</td><td class="n">${dec(num(b.valor_atual))}</td>
       <td class="n"><input class="ltRef" inputmode="decimal" placeholder="0,00" value="${v!=null?dec(v):''}" style="margin:0;text-align:right;padding:6px 8px"${x.fator==null?' disabled':''}></td><td style="white-space:nowrap">${x.fator==null?'':'<button class="btn-2 ltPesq" style="padding:5px 10px;font-size:12.5px">Pesquisar preços</button>'}<small class="ltOrig" style="display:block;color:var(--ok);font-size:11.5px;margin-top:2px"></small></td><td class="n">${x.fator!=null?x.fator.toFixed(2).replace('.',','):'—'}</td><td class="n ltNovo"></td></tr>`; }).join('');
@@ -1929,6 +2002,11 @@ function paginaLaudo(b,fotos){
     <table><tr><th>Valor de referência</th><th>EC</th><th>PVU</th><th>PUB</th><th>Fator</th><th>Valor reavaliado</th></tr>
     <tr><td class="n">${brl(+r.valor_referencia)}</td><td class="n">${+r.ec}</td><td class="n">${+r.pvu}</td><td class="n">${+r.pub}</td><td class="n">${(+r.fator).toFixed(2).replace('.',',')}</td><td class="n">${brl(novo)}</td></tr></table>`;
   }else{
+    if(r.metodo==='laudo'&&r.laudo_tecnico){ const l=r.laudo_tecnico;
+      metodo=`<p>Método: ${NOME_METODO.laudo}. O valor do bem foi definido em laudo técnico de profissional habilitado, identificado a seguir.</p>
+      ${kv([['Laudo nº',l.numero],['Data do laudo',dataBR(l.data)],['Responsável técnico',l.responsavel],['Título profissional',l.titulo],['Registro profissional',l.registro],['ART / RRT nº',l.art],['Metodologia ou norma',l.metodologia],['Valor avaliado',brl(+l.valor)]])}
+      ${l.observacao?`<p>${esc(l.observacao)}</p>`:''}${l.arquivo?'<p style="font-size:10pt">O laudo técnico original está anexado ao registro do bem no sistema.</p>':''}`;
+    }else
     metodo=`<p>Método: ${NOME_METODO[r.metodo]||esc(r.metodo)}. O valor foi atribuído diretamente pelo avaliador, considerando o estado de conservação verificado em vistoria e os preços praticados para bens equivalentes.</p>`;
   }
   return `<div class="page">${cabecalho()}
@@ -1941,7 +2019,7 @@ function paginaLaudo(b,fotos){
     ${fotos&&fotos.length?`<div class="fotos">${fotos.map(u=>`<img src="${esc(u)}" alt="">`).join('')}</div>`:''}
     <h3>3. Metodologia</h3>
     <p>${esc(CFG.fundamento)}</p>${metodo}
-    ${r.fonte?`<p><b>Fonte da pesquisa de preços:</b> ${esc(r.fonte)}</p>`:''}
+    ${r.fonte&&!(r.metodo==='laudo'&&r.laudo_tecnico)?`<p><b>Fonte da pesquisa de preços:</b> ${esc(r.fonte)}</p>`:''}
     ${r.metodo==='fator'?tabelaPrecosLaudo(r.precos):''}
     <h3>4. Resultado</h3>
     ${kv([['Valor contábil anterior',brl(ant)],['Valor reavaliado',brl(novo)],['Variação',(dif>=0?'+':'')+brl(dif)],['Nova vida útil',r.vida_util_remanescente!=null?(+r.vida_util_remanescente)+' ano(s)':''],['Valor residual',r.valor_residual!=null?brl(+r.valor_residual):'']])}

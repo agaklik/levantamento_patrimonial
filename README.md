@@ -416,3 +416,7 @@ supabase/usuarios.sql   Tabela de perfil e situação dos usuários
 supabase/functions/usuarios/  Função que cadastra e controla usuários
 README.md               Este documento
 ```
+
+## Laudo técnico de engenheiro
+
+Para bens que exigem avaliação de profissional habilitado (imóveis, veículos, máquinas), a ficha de reavaliação do painel tem o botão **+ Laudo técnico de engenheiro**. Nele se informam número e data do laudo, responsável técnico, título e registro profissional, ART/RRT, valor avaliado, metodologia, observações e o arquivo do laudo (PDF ou imagem). O valor do laudo passa a ser o valor reavaliado do bem e os dados aparecem no laudo de reavaliação e como fonte no relatório geral. Requer `supabase/laudo-tecnico.sql`.
