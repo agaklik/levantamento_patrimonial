@@ -530,16 +530,16 @@
 <dialog class="dlg largo" id="dlgLote">
   <div class="pz-top">
     <h3>Reavaliar os bens selecionados</h3>
-    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Informe o valor de referência (preço de um bem novo equivalente) de cada bem. O valor reavaliado é calculado pelo fator, com o estado, o tempo de uso e a vida útil sugeridos pelo sistema; depois é possível abrir qualquer bem e ajustar. Bens com a mesma descrição recebem sempre o mesmo valor de referência.</p>
+    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Em cada bem, clique em <b>Pesquisar preços</b> para buscar o valor de referência nos bancos de preços públicos, ou digite o valor. O valor reavaliado é calculado pelo fator, com o estado, o tempo de uso e a vida útil sugeridos pelo sistema; depois é possível abrir qualquer bem e ajustar. Bens com a mesma descrição recebem sempre o mesmo valor de referência.</p>
     <div class="pz-row">
       <div class="fix" style="min-width:200px"><label for="ltValor">Mesmo valor para todos</label><input id="ltValor" inputmode="decimal" placeholder="0,00"></div>
       <div class="fix"><button class="btn-2" id="ltPreencher">Preencher</button></div>
-      <div><label for="ltFonte">Fonte da pesquisa de preços</label><input id="ltFonte" placeholder="Ex.: 3 cotações em lojas online, 14/11/2026"></div>
+      <div><label for="ltFonte">Fonte, para os valores digitados à mão</label><input id="ltFonte" placeholder="Ex.: 3 cotações em lojas online, 14/11/2026"></div>
     </div>
   </div>
   <div class="pz-body">
     <div class="pz-info" id="ltInfo"></div>
-    <div class="tblwrap"><table style="font-size:13.5px"><thead><tr><th>Placa</th><th>Descrição</th><th>Estado</th><th class="n">Valor atual</th><th class="n" style="width:150px">Valor de referência</th><th class="n">Fator</th><th class="n">Valor reavaliado</th></tr></thead><tbody id="ltCorpo"></tbody></table></div>
+    <div class="tblwrap"><table style="font-size:13.5px"><thead><tr><th>Placa</th><th>Descrição</th><th>Estado</th><th class="n">Valor atual</th><th class="n" style="width:150px">Valor de referência</th><th></th><th class="n">Fator</th><th class="n">Valor reavaliado</th></tr></thead><tbody id="ltCorpo"></tbody></table></div>
   </div>
   <div class="pz-foot"><div class="pz-stats" id="ltStats"></div><div style="margin-left:auto;display:flex;gap:8px"><button class="btn-2" id="ltFechar">Cancelar</button><button class="btn" id="ltSalvar" disabled>Reavaliar</button></div></div>
 </dialog>
@@ -1086,11 +1086,14 @@ function pzEscolherItem(it){
   $('#pzTrocar').onclick=()=>{ PZ.item=null; $('#pzSel').classList.add('hidden'); $('#pzBuscar').disabled=true; $('#pzTexto').focus(); };
   $('#pzInfo').textContent='Escolha a abrangência e o período e clique em "Buscar preços".';
 }
-function abrirPrecos(){
-  if(!atual) return;
+// bem = bem pesquisado; aoUsar(valor, fonte, precos) recebe o resultado (padrão: ficha aberta)
+function abrirPrecos(bem,aoUsar,anterior){
+  if(!bem||!bem.codigo){ bem=atual; aoUsar=null; anterior=PRECOS_SEL; }
+  if(!bem) return;
+  PZ.aoUsar=aoUsar||null;
   PZ.itens=[]; PZ.off=new Set(); PZ.item=null; $('#pzFiltro').value='';
-  const p=PRECOS_SEL&&PRECOS_SEL.tipo?PRECOS_SEL:null;
-  $('#pzTexto').value=(atual.descricao_reduzida||atual.descricao||'').split(/[,;(]/)[0].trim().split(/\s+/).slice(0,3).join(' ');
+  const p=anterior&&anterior.tipo?anterior:null;
+  $('#pzTexto').value=(bem.descricao_reduzida||bem.descricao||'').split(/[,;(]/)[0].trim().split(/\s+/).slice(0,3).join(' ');
   $('#pzCat').classList.add('hidden'); $('#pzSel').classList.add('hidden'); $('#pzBuscar').disabled=true;
   $('#pzAbr').value='estado'; pzOnde(); $('#pzMeses').value='12';
   $('#pzTblBox').classList.add('hidden'); $('#pzFiltroBox').classList.add('hidden'); $('#pzCorpo').innerHTML=''; pzStats();
@@ -1174,16 +1177,17 @@ function pzUsar(criterio){
   const sel=pzMarcados(), e=estat(sel.map(x=>x.valor)); if(!e) return;
   const valor=e[criterio], b=PZ.busca, hoje=new Date(b.consultado_em).toLocaleDateString('pt-BR');
   const nome={media:'média',mediana:'mediana',menor:'menor preço'}[criterio];
-  PRECOS_SEL={fonte:'Compras.gov.br – Pesquisa de Preços (dados abertos)',tipo:PZ.item.tipo,catmat:PZ.item.codigo,descricao_catmat:PZ.item.nome,filtro:$('#pzFiltro').value.trim(),
+  const precos={fonte:'Compras.gov.br – Pesquisa de Preços (dados abertos)',tipo:PZ.item.tipo,catmat:PZ.item.codigo,descricao_catmat:PZ.item.nome,filtro:$('#pzFiltro').value.trim(),
     abrangencia:b.rotulo,abrangencia_texto:b.texto,meses:b.meses,criterio:nome,valor,consultado_em:b.consultado_em,
     itens:sel.map(x=>({catmat:x.catmat,esfera:x.esfera,data:x.data,orgao:x.orgao,uasg:x.uasg,codigo_uasg:x.codigo_uasg,municipio:x.municipio,uf:x.uf,id_compra:x.id_compra,item:x.item,descricao:(x.descricao||'').slice(0,200),fornecedor:x.fornecedor,marca:x.marca,unidade:x.unidade,quantidade:x.quantidade,valor:x.valor}))};
-  PRECOS_MUDOU=true;
-  $('#rRef').value=dec(valor);
-  $('#rFonte').value=`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
+  const fonte=`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
+  if(PZ.aoUsar){ const f=PZ.aoUsar; PZ.aoUsar=null; $('#dlgPrecos').close(); f(valor,fonte,precos); return; }
+  PRECOS_SEL=precos; PRECOS_MUDOU=true;
+  $('#rRef').value=dec(valor); $('#rFonte').value=fonte;
   infoPrecos(); recalc(); infoRef(); $('#dlgPrecos').close();
   toast(`Valor de referência: ${brl(valor)} (${nome}). Confira e salve.`,4000);
 }
-$('#btnPrecos').onclick=abrirPrecos;
+$('#btnPrecos').onclick=()=>abrirPrecos();
 $('#pzBuscarCat').onclick=pzBuscarCatalogo;
 $('#pzTexto').addEventListener('keydown',e=>{ if(e.key==='Enter') pzBuscarCatalogo(); });
 $('#pzAbr').onchange=pzOnde;
@@ -1746,11 +1750,17 @@ function abrirLote(){
   $('#ltInfo').textContent=`${LOTE.length} bem(ns).`+(fora?` ${fora} selecionado(s) ficaram de fora por não estarem liberados.`:'')+(semFator?` ${semFator} sem data de ingresso não têm fator sugerido e precisam ser reavaliados um a um.`:'');
   $('#ltCorpo').innerHTML=LOTE.map((x,i)=>{ const b=x.b, r=reav(b), rf=refDe(b), v=r&&r.valor_referencia!=null?+r.valor_referencia:(rf?+rf.valor:null);
     return `<tr style="cursor:default" data-i="${i}"><td><b>${esc(placa(b))}</b></td><td>${esc(b.descricao||b.descricao_reduzida||'')}<small style="display:block;color:var(--muted);font-size:12px">${esc(locDesc(b))}</small></td><td>${esc(estDesc(b))}</td><td class="n">${dec(num(b.valor_atual))}</td>
-      <td class="n"><input class="ltRef" inputmode="decimal" placeholder="0,00" value="${v!=null?dec(v):''}" style="margin:0;text-align:right;padding:6px 8px"${x.fator==null?' disabled':''}></td><td class="n">${x.fator!=null?x.fator.toFixed(2).replace('.',','):'—'}</td><td class="n ltNovo"></td></tr>`; }).join('');
+      <td class="n"><input class="ltRef" inputmode="decimal" placeholder="0,00" value="${v!=null?dec(v):''}" style="margin:0;text-align:right;padding:6px 8px"${x.fator==null?' disabled':''}></td><td style="white-space:nowrap">${x.fator==null?'':'<button class="btn-2 ltPesq" style="padding:5px 10px;font-size:12.5px">Pesquisar preços</button>'}<small class="ltOrig" style="display:block;color:var(--ok);font-size:11.5px;margin-top:2px"></small></td><td class="n">${x.fator!=null?x.fator.toFixed(2).replace('.',','):'—'}</td><td class="n ltNovo"></td></tr>`; }).join('');
+  LOTE.forEach(x=>{ const rf=refDe(x.b), r=reav(x.b); x.precos=(r&&r.precos)||(rf&&rf.precos)||null; x.fonte=null; });
+  const iguais=i=>{ const k=chaveRef(LOTE[i].b); return [...$('#ltCorpo').querySelectorAll('tr')].filter(tr=>chaveRef(LOTE[+tr.dataset.i].b)===k&&!tr.querySelector('.ltRef').disabled); };
+  $('#ltCorpo').querySelectorAll('.ltPesq').forEach(btn=>btn.addEventListener('click',()=>{ const i=+btn.closest('tr').dataset.i;
+    abrirPrecos(LOTE[i].b,(valor,fonte,precos)=>{ iguais(i).forEach(tr=>{ const y=LOTE[+tr.dataset.i]; y.precos=precos; y.fonte=fonte; tr.querySelector('.ltRef').value=dec(valor); tr.querySelector('.ltOrig').textContent=`${precos.criterio} de ${precos.itens.length} preço(s)`; }); loteCalc(); },LOTE[i].precos); }));
   $('#ltCorpo').querySelectorAll('.ltRef').forEach(inp=>inp.addEventListener('input',()=>{
     // mesma descrição = mesmo valor de referência
     const i=+inp.closest('tr').dataset.i, k=chaveRef(LOTE[i].b);
     $('#ltCorpo').querySelectorAll('.ltRef').forEach(o=>{ if(o!==inp&&!o.disabled&&chaveRef(LOTE[+o.closest('tr').dataset.i].b)===k) o.value=inp.value; });
+    // valor digitado à mão deixa de ser o da pesquisa de preços
+    iguais(i).forEach(tr=>{ const y=LOTE[+tr.dataset.i]; y.precos=null; y.fonte=null; tr.querySelector('.ltOrig').textContent=''; });
     loteCalc(); }));
   loteCalc(); $('#dlgLote').showModal();
 }
@@ -1763,20 +1773,20 @@ function loteCalc(){
 }
 $('#btnReavSel').addEventListener('click',abrirLote);
 $('#ltFechar').addEventListener('click',()=>$('#dlgLote').close());
-$('#ltPreencher').addEventListener('click',()=>{ const v=num($('#ltValor').value); if(v==null||v<=0){ toast('Informe o valor.'); return; } $('#ltCorpo').querySelectorAll('.ltRef').forEach(o=>{ if(!o.disabled) o.value=dec(v); }); loteCalc(); });
+$('#ltPreencher').addEventListener('click',()=>{ const v=num($('#ltValor').value); if(v==null||v<=0){ toast('Informe o valor.'); return; } $('#ltCorpo').querySelectorAll('.ltRef').forEach(o=>{ if(!o.disabled) o.value=dec(v); }); LOTE.forEach(y=>{ y.precos=null; y.fonte=null; }); $('#ltCorpo').querySelectorAll('.ltOrig').forEach(o=>o.textContent=''); loteCalc(); });
 $('#ltSalvar').addEventListener('click',async()=>{
   const fonte=$('#ltFonte').value.trim()||null, rows=[], refs={};
   $('#ltCorpo').querySelectorAll('tr').forEach(tr=>{ const x=LOTE[+tr.dataset.i], v=num(tr.querySelector('.ltRef').value); if(v==null||v<=0||x.fator==null) return;
-    const row=linhaAuto(x.b,v,fonte); if(!row) return; rows.push(row); refs[chaveRef(x.b)]={b:x.b,valor:v}; });
+    const row=linhaAuto(x.b,v,x.fonte||fonte,x.precos||null); if(!row) return; rows.push(row); refs[chaveRef(x.b)]={b:x.b,valor:v,fonte:x.fonte||fonte,precos:x.precos||null}; });
   if(!rows.length) return;
   // se o valor de um tipo de bem mudou, os outros bens do mesmo tipo já reavaliados acompanham
   const extras=[];
-  if(concOk) Object.keys(refs).forEach(k=>{ const ja=new Set(rows.map(r=>r.codigo)); BENS.forEach(y=>{ const r=reav(y); if(ja.has(y.codigo)||chaveRef(y)!==k||!r||r.metodo!=='fator'||r.valor_referencia==null||Math.abs(+r.valor_referencia-refs[k].valor)<=0.004) return; const row=linhaAuto(y,refs[k].valor,fonte); if(row) extras.push(row); }); });
+  if(concOk) Object.keys(refs).forEach(k=>{ const ja=new Set(rows.map(r=>r.codigo)); BENS.forEach(y=>{ const r=reav(y); if(ja.has(y.codigo)||chaveRef(y)!==k||!r||r.metodo!=='fator'||r.valor_referencia==null||Math.abs(+r.valor_referencia-refs[k].valor)<=0.004) return; const row=linhaAuto(y,refs[k].valor,refs[k].fonte,refs[k].precos); if(row) extras.push(row); }); });
   if(extras.length&&!confirm(`${extras.length} outro(s) bem(ns) com a mesma descrição já foram reavaliados com outro valor de referência.\n\nEles serão recalculados com o novo valor, para que bens iguais não fiquem com referências diferentes.\n\nOK = continuar · Cancelar = voltar`)) return;
   const btn=$('#ltSalvar'); btn.disabled=true;
   try{
     await gravarReavs(rows.concat(extras));
-    if(concOk) for(const k of Object.keys(refs)) await gravarRef(refs[k].b,refs[k].valor,fonte||(REFS[k]&&REFS[k].fonte)||null,(REFS[k]&&Math.abs(+REFS[k].valor-refs[k].valor)<=0.004)?REFS[k].precos:null);
+    if(concOk) for(const k of Object.keys(refs)) await gravarRef(refs[k].b,refs[k].valor,refs[k].fonte||(REFS[k]&&REFS[k].fonte)||null,refs[k].precos||((REFS[k]&&Math.abs(+REFS[k].valor-refs[k].valor)<=0.004)?REFS[k].precos:null));
     selecionados.clear(); $('#dlgLote').close();
     toast(`✓ ${rows.length} bem(ns) reavaliados`+(extras.length?` e ${extras.length} recalculados`:''),4500); renderPainel(); aplicarFiltro(true);
   }catch(e){ btn.disabled=false; toast('Erro ao salvar: '+(e.message||e),5000); }
