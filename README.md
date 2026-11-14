@@ -54,11 +54,11 @@ O service worker guarda em cache apenas a "casca" do app (a tela). Todas as cons
 | Perfil | O que pode fazer |
 | --- | --- |
 | **Equipe de campo** (usuário logado) | Buscar bens, registrar o levantamento, tirar fotos, informar placa de bem sem placa e exportar o `ATUALIZA.csv` |
-| **Administrador** | Tudo o que a equipe faz, mais a engrenagem ⚙️: importar CSVs, cadastrar a comissão e ver ou baixar as listas de encontrados e não encontrados |
+| **Administrador** | Tudo o que a equipe faz, mais a página de administração (`admin.html`): importar CSVs, cadastrar a comissão, baixar as listas de encontrados e não encontrados, reavaliar e emitir documentos |
 
 Quem é administrador é definido no banco, pela tabela `admins` e pela função `is_admin()`, criadas pelo script [`supabase/seguranca.sql`](supabase/seguranca.sql). As regras de acesso do mesmo script é que de fato impedem um usuário comum de importar ou excluir dados; esconder a engrenagem é só a parte visual.
 
-Enquanto o script não for executado, o app mantém o comportamento antigo (engrenagem liberada para todos) e mostra um aviso dentro dela.
+Enquanto o script não for executado, a página de administração mostra um aviso pedindo para executá-lo.
 
 ## Uso em campo
 
@@ -79,12 +79,12 @@ Enquanto o script não for executado, o app mantém o comportamento antigo (engr
 
 ## Uso pelo administrador
 
-A engrenagem ⚙️ no canto superior esquerdo abre **Tabelas e dados**.
+Toda a configuração é feita na página de administração (endereço do app seguido de `/admin.html`), na aba **Configuração**. O app de campo não tem configurações: serve só para o levantamento.
 
 ### Preparar um levantamento
 
-1. **Importar Localizações**, **Importar Motivos** e **Importar Bens**, nessa ordem.
-2. Cadastrar a **Comissão de Avaliação** (código e descrição).
+1. Em **Configuração**, **Importar localizações**, **Importar motivos** e **Importar bens**, nessa ordem.
+2. Cadastrar a **Comissão de avaliação** (código e descrição), na mesma aba.
 3. Criar os usuários da equipe no painel do Supabase, em Authentication, Users.
 
 ### Importação
@@ -102,8 +102,8 @@ O levantamento usa uma única comissão. Ao salvar uma nova, ela substitui a ant
 
 ### Acompanhamento
 
-- **Ver não encontrados** e **Ver encontrados** listam os bens (até 200 na tela). Toque em um item para abri-lo. Itens já encontrados abrem em modo de visualização.
-- **Baixar (CSV)** gera a lista completa, com código, placa, descrição e localização.
+- Na aba **Reavaliação**, o filtro de situação mostra os bens encontrados ou não localizados.
+- Na aba **Documentos**, **Listas do levantamento** baixa a lista completa de encontrados ou não encontrados (CSV com código, placa, descrição e localização).
 
 ### Exportação
 
@@ -111,7 +111,7 @@ O botão ⬇ no topo gera o `ATUALIZA.csv` com todos os itens levantados. Antes 
 
 ## Página de administração: reavaliação e documentos
 
-O app de campo cuida do levantamento. Depois que ele termina, o trabalho continua em **`admin.html`**, uma página pensada para o computador e restrita a administradores. O acesso é pelo link "Abrir página de administração" na engrenagem do app, ou direto pelo endereço do app seguido de `/admin.html`.
+O app de campo cuida do levantamento. Depois que ele termina, o trabalho continua em **`admin.html`**, uma página pensada para o computador e restrita a administradores. O acesso é pelo endereço do app seguido de `/admin.html`.
 
 Antes do primeiro uso, execute [`supabase/reavaliacao.sql`](supabase/reavaliacao.sql) no SQL Editor do Supabase (depois do `seguranca.sql`).
 

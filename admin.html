@@ -234,6 +234,11 @@
         <p class="sub">Todos os bens reavaliados com valor anterior, valor reavaliado e variação, com totais por classificação.</p>
         <div class="acts"><button class="btn" id="btnDocGeral">Gerar relatório</button><button class="btn-2" id="btnCsvReav">Baixar CSV</button></div>
       </div>
+      <div class="card">
+        <h2>Listas do levantamento</h2>
+        <p class="sub">Planilhas com código, placa, descrição e localização dos bens encontrados ou ainda não encontrados em campo.</p>
+        <div class="acts"><button class="btn-2" id="btnCsvEnc">Baixar encontrados</button><button class="btn-2" id="btnCsvNao">Baixar não encontrados</button></div>
+      </div>
     </div>
   </section>
 
@@ -252,7 +257,28 @@
       </div>
     </div>
     <div class="card">
+      <h2>Importar dados do sistema de patrimônio</h2>
+      <p class="sub">Envie o CSV exportado do sistema. Os registros do arquivo são incluídos ou atualizados, e o levantamento já feito em campo é sempre preservado.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-2" data-import="bens">Importar bens</button>
+        <button class="btn-2" data-import="localizacoes">Importar localizações</button>
+        <button class="btn-2" data-import="motivos">Importar motivos</button>
+      </div>
+      <input type="file" id="importFile" accept=".csv,text/csv" class="hidden">
+      <div id="importProgress" class="hidden" style="margin-top:14px">
+        <div style="font-size:14px;margin-bottom:6px" id="importMsg"></div>
+        <div class="bar" style="height:8px"><div id="importBar" style="width:0;transition:width .2s"></div></div>
+      </div>
+      <div id="importInfo" style="font-size:13px;color:var(--muted);margin-top:12px"></div>
+    </div>
+    <div class="card">
       <h2>Comissão de avaliação</h2>
+      <p class="sub">O código e a descrição identificam a comissão nos itens levantados e no arquivo de exportação. Ao salvar, todos os itens já levantados passam a usar esta comissão.</p>
+      <div class="grid g3" style="align-items:end;margin-bottom:18px">
+        <div><label for="comCod">Código da comissão</label><input id="comCod" inputmode="numeric" placeholder="Ex.: 1"></div>
+        <div><label for="comDesc">Descrição</label><input id="comDesc" placeholder="Ex.: Comissão de Avaliação 2026"></div>
+        <div><button class="btn" id="btnSalvarComissao">Salvar comissão</button></div>
+      </div>
       <div class="grid g2" id="cMembros"></div>
     </div>
     <div class="card">
@@ -370,7 +396,7 @@ const PAGE = 100;
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
-let BENS=[], LEV={}, REAV={}, LOCS={}, CFG=structuredClone(CFG_PADRAO);
+let BENS=[], LEV={}, REAV={}, LOCS={}, COMISSOES=[], NMOTIVOS=0, CFG=structuredClone(CFG_PADRAO);
 let USER=null, schemaOk=true, filtrados=[], pagina=0, selecionados=new Set(), atual=null;
 
 const toast=(m,ms=2600)=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);};
@@ -487,6 +513,11 @@ async function carregar(){
     ]);
     BENS=bens; LEV={}; levs.forEach(l=>LEV[l.codigo]=l);
     LOCS={}; locs.forEach(l=>LOCS[l.cod]={desc:l.desc_,ug:l.unidade_gestora});
+    try{
+      const [com,mot]=await Promise.all([sb.from('comissoes').select('cod,desc_').order('cod'), sb.from('motivos').select('*',{count:'exact',head:true})]);
+      COMISSOES=(com.data||[]).map(r=>({cod:r.cod,desc:r.desc_})); NMOTIVOS=mot.count||0;
+    }catch(_){ COMISSOES=[]; }
+    preencherComissao();
     schemaOk=true; REAV={};
     try{
       (await lerTudo('reavaliacao','*','codigo')).forEach(r=>REAV[r.codigo]=r);
@@ -743,6 +774,152 @@ async function fotosDoBem(codigo,limite){
   }catch(_){ return []; }
 }
 
+/* ====================== COMISSÃO DO LEVANTAMENTO (única) ====================== */
+function preencherComissao(){
+  const c=COMISSOES[0];
+  $('#comCod').value=c?c.cod:''; $('#comDesc').value=c?c.desc:'';
+  $('#importInfo').innerHTML=`No banco: <b>${BENS.length.toLocaleString('pt-BR')}</b> bens, <b>${Object.keys(LOCS).length}</b> localizações, <b>${NMOTIVOS}</b> motivos.`;
+}
+$('#btnSalvarComissao').addEventListener('click',async()=>{
+  const cod=($('#comCod').value||'').trim(), desc=($('#comDesc').value||'').trim();
+  if(!cod){ toast('Informe o código da comissão'); return; }
+  if(!desc){ toast('Informe a descrição da comissão'); return; }
+  const btn=$('#btnSalvarComissao'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
+  try{
+    // comissão é única: limpa a tabela e grava só esta
+    const del=await sb.from('comissoes').delete().neq('cod','__nunca__'); if(del.error) throw del.error;
+    const ins=await sb.from('comissoes').insert([{cod, desc_:desc}]); if(ins.error) throw ins.error;
+    // aplica a todos os itens já levantados
+    btn.textContent='Atualizando itens...';
+    const upd=await sb.from('levantamento').update({cod_comissao:cod}).neq('codigo','__nunca__'); if(upd.error) throw upd.error;
+    COMISSOES=[{cod,desc}]; Object.values(LEV).forEach(l=>l.cod_comissao=cod);
+    toast('Comissão salva e aplicada aos itens');
+  }catch(e){ toast('Erro ao salvar comissão: '+(e.message||e),5000); }
+  finally{ btn.disabled=false; btn.textContent=txt; }
+});
+
+/* ====================== LISTAS DO LEVANTAMENTO ====================== */
+function baixarLista(tipo){
+  const lista=BENS.filter(b=>tipo==='enc'?encontrado(b):!encontrado(b));
+  if(!lista.length){ toast('Nenhum bem nesta lista.'); return; }
+  const linhas=[['Código','Placa','Descrição','Localização']];
+  lista.forEach(b=>linhas.push([b.codigo,b.placa||'',b.descricao||'',b.localizacao||'']));
+  baixar(tipo==='enc'?'itens_encontrados.csv':'itens_nao_encontrados.csv',linhas);
+  toast(`${lista.length} bem(ns) na planilha`);
+}
+$('#btnCsvEnc').addEventListener('click',()=>baixarLista('enc'));
+$('#btnCsvNao').addEventListener('click',()=>baixarLista('nao'));
+
+/* ====================== IMPORTAÇÃO CSV (bens, localizações, motivos) ====================== */
+const stripZeros=s=>(s||'').toString().trim().replace(/^0+(?=\d)/,'');
+const IMPORT_CFG = {
+  bens: {
+    label:'Bens', table:'bens', conflict:'codigo',
+    cols:['placa','codigo','descricao','descricao_reduzida','marca','modelo','cod_localizacao','localizacao','cod_classificacao','classificacao','cod_situacao','situacao','cod_estado','estado','data_ingresso','tipo_ingresso','cod_fornecedor','cod_convenio','valor_atual','contabil','depreciavel','metodo_depreciacao','vida_util','valor_residual','data_inicio_depreciacao'],
+    aliases:{
+      placa:['placa','Placa'], codigo:['codigo','Código','Codigo'],
+      descricao:['descricao','Descrição Completa','Descricao Completa'],
+      descricao_reduzida:['descricao_reduzida','Descrição Reduzida','Descricao Reduzida'],
+      marca:['marca','MARCA'], modelo:['modelo','MODELO'],
+      cod_localizacao:['cod_localizacao','Cód Localização','Cod Localizacao'], localizacao:['localizacao','Localização','Localizacao'],
+      cod_classificacao:['cod_classificacao','Cód. Classificação','Cod. Classificacao'], classificacao:['classificacao','Classificação','Classificacao'],
+      cod_situacao:['cod_situacao','Cód. Situação','Cod. Situacao'], situacao:['situacao','Situação','Situacao'],
+      cod_estado:['cod_estado','Cód. EstadoConservação','Cod. EstadoConservacao'], estado:['estado','Estado de Conservação','Estado de Conservacao'],
+      data_ingresso:['data_ingresso','Data do Ingresso'], tipo_ingresso:['tipo_ingresso','Tipo de Ingresso'],
+      cod_fornecedor:['cod_fornecedor','Cód. Fornecedor','Cod. Fornecedor'], cod_convenio:['cod_convenio','Cód. Convenio','Cod. Convenio'],
+      valor_atual:['valor_atual','Valor Atual'], contabil:['contabil','Contábil','Contabil'], depreciavel:['depreciavel','Depreciável','Depreciavel'],
+      metodo_depreciacao:['metodo_depreciacao','Método de Depreciação','Metodo de Depreciacao'], vida_util:['vida_util','Vida Útil','Vida Util'],
+      valor_residual:['valor_residual','Valor Residual'], data_inicio_depreciacao:['data_inicio_depreciacao','Data Inicio Depreciação','Data Inicio Depreciacao']
+    },
+    map:(row)=>{
+      const al=IMPORT_CFG.bens.aliases;
+      const pick=(names)=>{ for(const n of names){ if(row[n]!=null && row[n]!=='') return row[n]; } return ''; };
+      const r={};
+      IMPORT_CFG.bens.cols.forEach(c=>{ r[c]=pick(al[c]||[c]).toString().trim(); });
+      r.placa=stripZeros(r.placa); r.codigo=stripZeros(r.codigo);
+      return r.codigo ? r : null;    // código é obrigatório (chave); placa é opcional
+    }
+  },
+  localizacoes: {
+    label:'Localizações', table:'localizacoes', conflict:'cod',
+    map:(row)=>{
+      const cod=stripZeros((row.cod ?? row.cdLocalReduzido ?? '').toString().trim());
+      const desc=(row.desc_ ?? row.dsLocalizacao ?? '').toString().trim();
+      const ug=(row.unidade_gestora ?? row.cdUnidadeGestora ?? '').toString().trim();
+      return cod ? {cod, desc_:desc, unidade_gestora:(ug||null)} : null;
+    }
+  },
+  motivos: {
+    label:'Motivos', table:'motivos', conflict:'cod',
+    map:(row)=>{
+      const cod=(row.cod ?? row.cdMotivo ?? '').toString().trim();
+      const desc=(row.desc_ ?? row.dsMotivo ?? '').toString().trim();
+      return cod ? {cod, desc_:desc} : null;
+    }
+  }
+};
+let importTarget=null;
+document.querySelectorAll('[data-import]').forEach(btn=>btn.addEventListener('click',()=>{
+  importTarget=btn.getAttribute('data-import'); const inp=$('#importFile'); inp.value=''; inp.click();
+}));
+$('#importFile').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0]; if(!file||!importTarget) return;
+  const cfg=IMPORT_CFG[importTarget];
+  if(!confirm(`Importar "${file.name}" para ${cfg.label}?\n\nOs registros do arquivo serão incluídos ou atualizados. O levantamento já feito NÃO é apagado.`)) return;
+  importCSV(file,cfg);
+});
+function showImportProgress(pct,msg){
+  $('#importProgress').classList.remove('hidden');
+  $('#importBar').style.width=Math.max(0,Math.min(100,pct))+'%';
+  if(msg!=null) $('#importMsg').textContent=msg;
+}
+async function importCSV(file,cfg){
+  showImportProgress(2,'Lendo arquivo...');
+  let rows;
+  try{ rows=lerCsv(await file.text(),true); }catch(err){ showImportProgress(0,'Erro ao ler o CSV: '+(err.message||err)); return; }
+  let registros=rows.map(cfg.map).filter(Boolean);
+  if(!registros.length){ showImportProgress(0,'Nenhuma linha válida encontrada no arquivo. Verifique os cabeçalhos.'); return; }
+  const vistos=new Set(), unicos=[];
+  for(const r of registros){ const k=r[cfg.conflict]; if(!vistos.has(k)){ vistos.add(k); unicos.push(r); } }
+  const duplicadas=registros.length-unicos.length; registros=unicos;
+  showImportProgress(8,`${registros.length} registros${duplicadas?` (${duplicadas} duplicados ignorados)`:''}. Conferindo a base atual...`);
+  const chave=cfg.conflict; let existentes=[], codsLev=new Set();
+  try{
+    existentes=(await lerTudo(cfg.table,chave,chave)).map(r=>r[chave]);
+    if(cfg.table==='bens'){
+      // placas informadas em campo (itens que estavam sem placa) não podem ser perdidas
+      const levs=await lerTudo('levantamento','codigo,placa_nova','codigo'); const placaCampo={};
+      levs.forEach(l=>{ codsLev.add(l.codigo); if(l.placa_nova) placaCampo[l.codigo]=l.placa_nova; });
+      registros.forEach(r=>{ if(!r.placa && placaCampo[r.codigo]) r.placa=placaCampo[r.codigo]; });
+    }
+  }catch(err){ showImportProgress(0,'Erro ao ler a base atual: '+(err.message||err)); return; }
+  const lote=500, total=registros.length; let feitos=0;
+  try{
+    for(let i=0;i<total;i+=lote){
+      const slice=registros.slice(i,i+lote);
+      const {error}=await sb.from(cfg.table).upsert(slice,{onConflict:chave}); if(error) throw error;
+      feitos+=slice.length; showImportProgress(8+Math.round(feitos/total*85),`Importando ${cfg.label}: ${feitos} de ${total}...`);
+    }
+  }catch(err){ showImportProgress(0,`Erro ao importar (parou em ${feitos} de ${total}; nada foi apagado): `+(err.message||err)); return; }
+  // registros na base que não vieram no arquivo: remover só com confirmação, nunca um bem que já tenha levantamento
+  let removidos=0, mantidos=0;
+  try{
+    const noArquivo=new Set(registros.map(r=>r[chave]));
+    const sobrando=existentes.filter(k=>!noArquivo.has(k)), remover=sobrando.filter(k=>!codsLev.has(k));
+    mantidos=sobrando.length-remover.length;
+    if(remover.length && confirm(`${remover.length} registro(s) de ${cfg.label} estão na base mas não vieram no arquivo.\n\n`+(mantidos?`(Outros ${mantidos} também não vieram, mas já têm levantamento e serão mantidos.)\n\n`:'')+`Deseja removê-los da base?\n\nOK = remover · Cancelar = manter`)){
+      for(let i=0;i<remover.length;i+=200){
+        const slice=remover.slice(i,i+200);
+        const {error}=await sb.from(cfg.table).delete().in(chave,slice); if(error) throw error;
+        removidos+=slice.length; showImportProgress(93+Math.round(removidos/remover.length*6),`Removendo registros antigos: ${removidos} de ${remover.length}...`);
+      }
+    }
+  }catch(err){ showImportProgress(0,`Importação concluída (${feitos}), mas houve erro ao remover registros antigos: `+(err.message||err)); await carregar(); return; }
+  showImportProgress(100,`${feitos} registros importados em ${cfg.label}`+(removidos?`, ${removidos} antigos removidos`:'')+(mantidos?`, ${mantidos} fora do arquivo mantidos por já terem levantamento`:'')+'.');
+  toast(`${cfg.label}: ${feitos} importados`);
+  await carregar();
+}
+
 /* ====================== PLANILHA DE PESQUISA DE PREÇOS ====================== */
 function csvCell(v){ v=(v??'').toString(); return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 function baixar(nome,linhas){
@@ -759,7 +936,7 @@ $('#btnPlanilha').addEventListener('click',()=>{
   toast(`Planilha com ${lista.length} bem(ns). Preencha valor_referencia e fonte e importe de volta.`,4500);
 });
 // leitor simples de CSV (separador ; ou , com aspas)
-function lerCsv(txt){
+function lerCsv(txt,cabecalhoBruto){
   txt=txt.replace(/^﻿/,'');
   const primeira=txt.split(/\r?\n/)[0]||'';
   const sep=(primeira.split(';').length>=primeira.split(',').length)?';':',';
@@ -774,7 +951,7 @@ function lerCsv(txt){
   }
   linha.push(campo); if(linha.some(x=>x.trim()!=='')) linhas.push(linha);
   if(!linhas.length) return [];
-  const cab=linhas[0].map(h=>semAcento(h.trim()).replace(/\s+/g,'_'));
+  const cab=linhas[0].map(h=>cabecalhoBruto?h.trim():semAcento(h.trim()).replace(/\s+/g,'_'));
   return linhas.slice(1).map(l=>{ const o={}; cab.forEach((h,i)=>o[h]=(l[i]||'').trim()); return o; });
 }
 $('#btnImportar').addEventListener('click',()=>{ $('#fileImport').value=''; $('#fileImport').click(); });

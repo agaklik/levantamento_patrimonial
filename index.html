@@ -28,7 +28,7 @@
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
   /* ---------- cabeçalho ---------- */
-  header{position:sticky;top:0;z-index:50;background:var(--txt);color:#fff;padding:10px 12px 12px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+  header{position:sticky;top:0;z-index:50;background:var(--txt);color:#fff;padding:10px 12px 12px 16px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
   .hdr-center{flex:1;min-width:0}
   header h1{font-size:17px;margin:0;font-weight:700;font-stretch:92%;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
   .stats{display:none}
@@ -160,14 +160,6 @@
   .loc-selected small{color:var(--muted);display:block;font-size:12.5px}
   #dUnidadeGestora{font-weight:600}
 
-  /* engrenagem */
-  #toolsCard h3{margin:0 0 4px;font-size:16px;font-weight:700;font-stretch:108%}
-  #toolsCard h3.big{font-size:20px;font-stretch:112%;margin-bottom:6px}
-  #toolsCard hr{border:none;border-top:1px solid var(--border);margin:22px 0}
-  #toolsCard .stack{display:flex;flex-direction:column;gap:8px}
-  #toolsInfo b{color:var(--txt)}
-  .admin-link{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--accent);border:1.5px solid var(--accent);border-radius:var(--r);min-height:48px;font-weight:600}
-  .ne-item{background:var(--surface)!important}
 </style>
 
 <style>
@@ -194,7 +186,6 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-barcode" viewBox="0 0 30 24"><g fill="currentColor"><rect x="0" y="0" width="2.5" height="24"/><rect x="4" y="0" width="1.2" height="24"/><rect x="7" y="0" width="3" height="24"/><rect x="11.5" y="0" width="1.2" height="24"/><rect x="14" y="0" width="2.2" height="24"/><rect x="18" y="0" width="1.2" height="24"/><rect x="20.5" y="0" width="3" height="24"/><rect x="25" y="0" width="1.2" height="24"/><rect x="27.5" y="0" width="2.5" height="24"/></g></symbol>
   <symbol id="i-camera" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 8.5A1.5 1.5 0 0 1 4.5 7h3l1.5-2.5h6L16.5 7h3A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-  <symbol id="i-gear" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-exit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 8l-4 4 4 4M6 12h10"/></symbol>
 </svg>
@@ -220,7 +211,6 @@
 <!-- ====== APP (após login) ====== -->
 <div id="appScreen" class="hidden">
 <header>
-  <button id="btnReopenImport" class="hdr-icon hidden" title="Tabelas e dados" aria-label="Tabelas e dados"><svg><use href="#i-gear"/></svg></button>
   <div class="hdr-center">
     <h1>Levantamento patrimonial</h1>
     <div class="stats" id="stats"></div>
@@ -346,62 +336,6 @@
     </div>
   </div>
 
-  <!-- TABELAS DE APOIO (engrenagem) -->
-  <div class="card hidden" id="toolsCard">
-    <h3 class="big">Tabelas e dados</h3>
-    <div id="toolsInfo" style="font-size:14px;color:var(--muted)"></div>
-    <div id="segAviso" class="note note-warn hidden" style="margin:12px 0 0;font-size:14px;font-weight:600;color:var(--warn)">Regras de acesso não configuradas no banco: qualquer usuário logado vê esta tela. Execute o script supabase/seguranca.sql no painel do Supabase.</div>
-    <button class="btn-2 btn-block" id="btnReloadAux" style="margin-top:12px">Recarregar tabelas de apoio</button>
-
-    <hr>
-    <h3>Importar dados (CSV)</h3>
-    <p class="hint">Atualiza a tabela escolhida com o arquivo enviado. O levantamento já feito é sempre preservado.</p>
-    <div class="stack">
-      <button class="btn-2 btn-block" data-import="bens">Importar bens</button>
-      <button class="btn-2 btn-block" data-import="localizacoes">Importar localizações</button>
-      <button class="btn-2 btn-block" data-import="motivos">Importar motivos</button>
-    </div>
-    <input type="file" id="importFile" accept=".csv,text/csv" style="display:none">
-    <div id="importProgress" class="hidden" style="margin-top:14px">
-      <div style="font-size:14px;margin-bottom:6px" id="importMsg"></div>
-      <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;border:1px solid var(--border)">
-        <div id="importBar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div>
-      </div>
-    </div>
-
-    <hr>
-    <h3>Comissão de avaliação</h3>
-    <p class="hint">Cadastre a comissão do levantamento. Ela é usada nos itens e no arquivo de exportação.</p>
-    <label for="comCod">Código da comissão</label>
-    <input type="text" id="comCod" inputmode="numeric" placeholder="Ex.: 1" style="margin:0 0 12px">
-    <label for="comDesc">Descrição</label>
-    <input type="text" id="comDesc" placeholder="Ex.: Comissão de Avaliação 2026" style="margin:0 0 12px">
-    <button class="btn-ok btn-block" id="btnSalvarComissao">Salvar comissão</button>
-    <div id="comCard" class="note note-info" style="display:none;margin:12px 0 0">
-      <div class="field-label">Comissão cadastrada</div>
-      <div id="comCardTexto" style="font-weight:600">—</div>
-      <button class="btn-2 btn-block" id="btnEditarComissao" style="margin-top:10px">Editar comissão</button>
-    </div>
-    <div id="comInfo" style="font-size:13px;color:var(--muted);margin-top:8px"></div>
-
-    <hr>
-    <h3>Acompanhamento</h3>
-    <p class="hint">Listas de bens por situação. Toque em um item para abrir a ficha.</p>
-    <div class="stack">
-      <button class="btn-2 btn-block" id="btnVerNaoEncontrados">Ver não encontrados</button>
-      <button class="btn-ghost btn-block" id="btnBaixarNaoEncontrados">Baixar não encontrados (CSV)</button>
-      <button class="btn-2 btn-block" id="btnVerEncontrados" style="margin-top:8px">Ver encontrados</button>
-      <button class="btn-ghost btn-block" id="btnBaixarEncontrados">Baixar encontrados (CSV)</button>
-    </div>
-    <div id="naoEncMsg" style="font-size:13px;color:var(--muted);margin-top:10px"></div>
-    <div id="naoEncLista" style="margin-top:10px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
-
-    <hr>
-    <h3>Reavaliação e documentos</h3>
-    <p class="hint">Depois do levantamento, a reavaliação dos bens e a emissão de laudos, termos e relatórios são feitas na página de administração, melhor no computador.</p>
-    <a href="admin.html" class="admin-link">Abrir página de administração</a>
-    <button class="btn-ghost btn-block" id="btnCloseTools" style="margin-top:18px">Fechar</button>
-  </div>
 </main>
 </div>
 
@@ -510,9 +444,6 @@ async function carregarPerfil(){
     }else{ admin = data===true; }
   }catch(_){ /* sem rede: fica sem acesso de administrador */ }
   IS_ADMIN=admin; SEGURANCA_CONFIGURADA=configurada;
-  $('#btnReopenImport').classList.toggle('hidden', !IS_ADMIN);
-  const av=$('#segAviso'); if(av) av.classList.toggle('hidden', SEGURANCA_CONFIGURADA);
-  if(!IS_ADMIN) $('#toolsCard').classList.add('hidden');
 }
 function exigirAdmin(){
   if(IS_ADMIN) return true;
@@ -814,7 +745,7 @@ function openDetail(bem, lev){
   current.placa_nova     = L.placa_nova || '';   // placa informada em campo
   current.fotosExist     = []; // fotos já no storage (carregadas adiante)
 
-  $('#searchCard').classList.add('hidden'); $('#toolsCard').classList.add('hidden');
+  $('#searchCard').classList.add('hidden');
   $('#detailCard').classList.remove('hidden');
   const temPlaca=!!(bem.placa&&bem.placa.trim());
   const placaMostrar = temPlaca ? bem.placa : (current.placa_nova || 'SEM PLACA');
@@ -966,16 +897,9 @@ function updateStatusPill(){
 $('#btnBack').addEventListener('click',()=>{
   stopPhoto();
   $('#detailCard').classList.add('hidden');
-  if(origemDetalhe==='naoEncontrados' || origemDetalhe==='encontrados'){
-    // voltou de um item aberto pela lista → reabre a tela de administração e a lista
-    $('#toolsCard').classList.remove('hidden');
-    const tipo=origemDetalhe;
-    origemDetalhe=null;
-    carregarLista(tipo);
-  }else{
-    $('#searchCard').classList.remove('hidden');
-    $('#plateInput').value='';$('#searchMsg').innerHTML='';$('#plateInput').focus();
-  }
+  origemDetalhe=null;
+  $('#searchCard').classList.remove('hidden');
+  $('#plateInput').value='';$('#searchMsg').innerHTML='';$('#plateInput').focus();
 });
 
 /* ---------- salvar (grava no banco) ---------- */
@@ -1128,348 +1052,8 @@ function dataURLtoBlob(d){
   return new Blob([arr],{type:mime});
 }
 
-/* ====================== FERRAMENTAS (engrenagem) ====================== */
-$('#btnReopenImport').addEventListener('click',()=>{
-  if(!exigirAdmin()) return;
-  $('#searchCard').classList.add('hidden');$('#detailCard').classList.add('hidden');
-  $('#toolsCard').classList.remove('hidden');
-  preencherComissaoForm();
-  $('#toolsInfo').innerHTML=`Localizações: <b>${LOCS.length}</b> · Motivos: <b>${MOTIVOS.length}</b> · Comissões: <b>${COMISSOES.length}</b><br>Bens no banco: <b>${statsCache.total.toLocaleString('pt-BR')}</b>`;
-});
-$('#btnCloseTools').addEventListener('click',()=>{$('#toolsCard').classList.add('hidden');$('#searchCard').classList.remove('hidden');});
-$('#btnReloadAux').addEventListener('click',async()=>{await loadAux();toast('Tabelas recarregadas');$('#btnReopenImport').click();});
-
-/* ====================== CADASTRO DA COMISSÃO (única) ====================== */
-// preenche o formulário com a comissão atual (se já houver uma cadastrada)
-function preencherComissaoForm(){
-  const c=COMISSOES[0];
-  const card=$('#comCard'), texto=$('#comCardTexto'), info=$('#comInfo');
-  if(c){
-    // mostra o cartão da comissão salva; campos ficam vazios (prontos para nova/editar)
-    card.style.display='block';
-    texto.textContent=c.cod+' — '+c.desc;
-    $('#comCod').value=''; $('#comDesc').value='';
-    info.textContent='';
-  } else {
-    card.style.display='none';
-    $('#comCod').value=''; $('#comDesc').value='';
-    info.textContent='Nenhuma comissão cadastrada ainda.';
-  }
-}
-
-// botão Editar: carrega a comissão salva nos campos para alteração
-function ligarBtnEditarComissao(){
-  const btn=$('#btnEditarComissao'); if(!btn) return;
-  btn.onclick=()=>{
-    const c=COMISSOES[0]; if(!c) return;
-    $('#comCod').value=c.cod||''; $('#comDesc').value=c.desc||'';
-    $('#comInfo').textContent='Editando a comissão. Altere e toque em Salvar.';
-    $('#comCod').focus();
-  };
-}
-
-/* ====================== ACOMPANHAMENTO (encontrados / não encontrados) ====================== */
-// retorna os bens conforme o tipo: 'naoEncontrados' (sem levantamento concluído) ou 'encontrados' (com)
-async function obterItens(tipo){
-  // 1) códigos concluídos (paginando)
-  const concluidos=new Set();
-  let from=0; const passo=1000;
-  while(true){
-    const {data,error}=await sb.from('levantamento').select('codigo').eq('concluido',true).range(from,from+passo-1);
-    if(error) throw error;
-    (data||[]).forEach(r=>concluidos.add(r.codigo));
-    if(!data || data.length<passo) break;
-    from+=passo;
-  }
-  // 2) percorre os bens e separa conforme o tipo
-  const lista=[]; from=0;
-  while(true){
-    const {data,error}=await sb.from('bens').select('codigo,placa,descricao,localizacao').order('codigo').range(from,from+passo-1);
-    if(error) throw error;
-    (data||[]).forEach(b=>{
-      const concl=concluidos.has(b.codigo);
-      if(tipo==='encontrados' ? concl : !concl) lista.push(b);
-    });
-    if(!data || data.length<passo) break;
-    from+=passo;
-  }
-  return lista;
-}
-
-// monta a lista na tela (tipo define a origem ao abrir um item)
-async function carregarLista(tipo){
-  const msg=$('#naoEncMsg'), lista=$('#naoEncLista');
-  const rotulo = tipo==='encontrados' ? 'encontrado(s)' : 'não encontrado(s)';
-  msg.textContent='Carregando...'; lista.innerHTML='';
-  try{
-    const itens=await obterItens(tipo);
-    if(!itens.length){
-      msg.innerHTML = tipo==='encontrados'
-        ? '<span style="color:var(--muted)">Nenhum item encontrado ainda.</span>'
-        : '<span style="color:var(--ok)">✓ Todos os itens foram encontrados!</span>';
-      return;
-    }
-    msg.textContent=`${itens.length} item(ns) ${rotulo}:`;
-    const mostrar=itens.slice(0,200);
-    const cor = tipo==='encontrados' ? 'var(--ok)' : 'var(--warn)';
-    lista.innerHTML=mostrar.map(b=>{
-      const placa=(b.placa&&b.placa.trim())?b.placa:'sem placa';
-      return `<div class="ne-item" data-cod="${b.codigo}" style="padding:8px;border:1px solid var(--border);border-left:4px solid ${cor};border-radius:8px;margin-bottom:6px;cursor:pointer;background:var(--surface2)">
-        <div style="font-weight:600">${b.codigo} · ${placa}</div>
-        <div style="font-size:12px;color:var(--muted)">${(b.descricao||'').slice(0,50)}${b.localizacao?(' — '+b.localizacao.slice(0,30)):''}</div>
-      </div>`;
-    }).join('') + (itens.length>200?`<div style="font-size:12px;color:var(--muted);padding:6px">…e mais ${itens.length-200}. Baixe o CSV para a lista completa.</div>`:'');
-    lista.querySelectorAll('.ne-item').forEach(el=>{
-      el.addEventListener('click',()=>{
-        const cod=el.getAttribute('data-cod');
-        origemDetalhe=tipo;                 // lembra a lista de origem para o "voltar"
-        $('#toolsCard').classList.add('hidden');
-        modoBusca='codigo';
-        openByPlate(cod);
-      });
-    });
-  }catch(e){ msg.innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
-}
-
-// baixa o CSV conforme o tipo
-async function baixarLista(tipo){
-  const msg=$('#naoEncMsg');
-  msg.textContent='Gerando arquivo...';
-  try{
-    const itens=await obterItens(tipo);
-    if(!itens.length){ msg.textContent='Nenhum item para exportar.'; return; }
-    const cab=['Código','Placa','Descrição','Localização'];
-    const linhas=[cab.map(csvCell).join(',')];
-    itens.forEach(b=>{ linhas.push([b.codigo,(b.placa||''),(b.descricao||''),(b.localizacao||'')].map(csvCell).join(',')); });
-    const csv='\uFEFF'+linhas.join('\r\n');
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download = tipo==='encontrados' ? 'itens_encontrados.csv' : 'itens_nao_encontrados.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    msg.textContent=`${itens.length} item(ns) exportado(s).`;
-  }catch(e){ msg.innerHTML='<span class="err">Erro: '+(e.message||e)+'</span>'; }
-}
-
-$('#btnVerNaoEncontrados').addEventListener('click',()=>carregarLista('naoEncontrados'));
-$('#btnBaixarNaoEncontrados').addEventListener('click',()=>baixarLista('naoEncontrados'));
-$('#btnVerEncontrados').addEventListener('click',()=>carregarLista('encontrados'));
-$('#btnBaixarEncontrados').addEventListener('click',()=>baixarLista('encontrados'));
-
-$('#btnSalvarComissao').addEventListener('click',async()=>{
-  const cod=($('#comCod').value||'').trim();
-  const desc=($('#comDesc').value||'').trim();
-  if(!exigirAdmin()) return;
-  if(!cod){ toast('Informe o código da comissão'); return; }
-  if(!desc){ toast('Informe a descrição da comissão'); return; }
-  const btn=$('#btnSalvarComissao'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
-  try{
-    // comissão é única: limpa a tabela e grava só esta
-    const del=await sb.from('comissoes').delete().neq('cod','__nunca__');
-    if(del.error) throw del.error;
-    const ins=await sb.from('comissoes').insert([{cod, desc_:desc}]);
-    if(ins.error) throw ins.error;
-    // atualiza TODOS os itens já cadastrados no levantamento com a nova comissão
-    btn.textContent='Atualizando itens...';
-    const upd=await sb.from('levantamento').update({cod_comissao:cod}).neq('codigo','__nunca__');
-    if(upd.error) throw upd.error;
-    await loadAux();
-    preencherComissaoForm();
-    toast('✓ Comissão salva e aplicada aos itens');
-  }catch(e){ toast('Erro ao salvar comissão: '+(e.message||e)); }
-  finally{ btn.disabled=false; btn.textContent=txt; }
-});
-ligarBtnEditarComissao();
-
-/* ====================== IMPORTAÇÃO CSV (admin) ====================== */
-// Configuração de cada tabela: colunas válidas e como normalizar cada linha do CSV
-const IMPORT_CFG = {
-  bens: {
-    label:'Bens',
-    table:'bens',
-    conflict:'codigo',
-    cols:['placa','codigo','descricao','descricao_reduzida','marca','modelo','cod_localizacao','localizacao','cod_classificacao','classificacao','cod_situacao','situacao','cod_estado','estado','data_ingresso','tipo_ingresso','cod_fornecedor','cod_convenio','valor_atual','contabil','depreciavel','metodo_depreciacao','vida_util','valor_residual','data_inicio_depreciacao'],
-    aliases:{
-      placa:['placa','Placa'],
-      codigo:['codigo','Código','Codigo'],
-      descricao:['descricao','Descrição Completa','Descricao Completa'],
-      descricao_reduzida:['descricao_reduzida','Descrição Reduzida','Descricao Reduzida'],
-      marca:['marca','MARCA'],
-      modelo:['modelo','MODELO'],
-      cod_localizacao:['cod_localizacao','Cód Localização','Cod Localizacao'],
-      localizacao:['localizacao','Localização','Localizacao'],
-      cod_classificacao:['cod_classificacao','Cód. Classificação','Cod. Classificacao'],
-      classificacao:['classificacao','Classificação','Classificacao'],
-      cod_situacao:['cod_situacao','Cód. Situação','Cod. Situacao'],
-      situacao:['situacao','Situação','Situacao'],
-      cod_estado:['cod_estado','Cód. EstadoConservação','Cod. EstadoConservacao'],
-      estado:['estado','Estado de Conservação','Estado de Conservacao'],
-      data_ingresso:['data_ingresso','Data do Ingresso'],
-      tipo_ingresso:['tipo_ingresso','Tipo de Ingresso'],
-      cod_fornecedor:['cod_fornecedor','Cód. Fornecedor','Cod. Fornecedor'],
-      cod_convenio:['cod_convenio','Cód. Convenio','Cod. Convenio'],
-      valor_atual:['valor_atual','Valor Atual'],
-      contabil:['contabil','Contábil','Contabil'],
-      depreciavel:['depreciavel','Depreciável','Depreciavel'],
-      metodo_depreciacao:['metodo_depreciacao','Método de Depreciação','Metodo de Depreciacao'],
-      vida_util:['vida_util','Vida Útil','Vida Util'],
-      valor_residual:['valor_residual','Valor Residual'],
-      data_inicio_depreciacao:['data_inicio_depreciacao','Data Inicio Depreciação','Data Inicio Depreciacao']
-    },
-    map:(row)=>{
-      const al=IMPORT_CFG.bens.aliases;
-      const pick=(names)=>{ for(const n of names){ if(row[n]!=null && row[n]!=='') return row[n]; } return ''; };
-      const r={};
-      IMPORT_CFG.bens.cols.forEach(c=>{ r[c]=pick(al[c]||[c]).toString().trim(); });
-      r.placa=stripZeros(r.placa);   // pode ficar vazia
-      r.codigo=stripZeros(r.codigo);
-      return r.codigo ? r : null;    // CÓDIGO é obrigatório (chave); placa é opcional
-    }
-  },
-
-  localizacoes: {
-    label:'Localizações', table:'localizacoes', conflict:'cod',
-    map:(row)=>{
-      // aceita cod/desc_ OU cdLocalReduzido/dsLocalizacao; unidade gestora opcional
-      const cod=stripZeros((row.cod ?? row.cdLocalReduzido ?? '').toString().trim());
-      const desc=(row.desc_ ?? row.dsLocalizacao ?? '').toString().trim();
-      const ug=(row.unidade_gestora ?? row.cdUnidadeGestora ?? '').toString().trim();
-      return cod ? {cod, desc_:desc, unidade_gestora:(ug||null)} : null;
-    }
-  },
-  motivos: {
-    label:'Motivos', table:'motivos', conflict:'cod',
-    map:(row)=>{
-      const cod=(row.cod ?? row.cdMotivo ?? '').toString().trim();
-      const desc=(row.desc_ ?? row.dsMotivo ?? '').toString().trim();
-      return cod ? {cod, desc_:desc} : null;
-    }
-  }
-};
-
-let importTarget=null;
-document.querySelectorAll('[data-import]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    importTarget=btn.getAttribute('data-import');
-    const inp=$('#importFile');
-    inp.value=''; // permite reescolher o mesmo arquivo
-    inp.click();
-  });
-});
-
-$('#importFile').addEventListener('change', (e)=>{
-  const file=e.target.files&&e.target.files[0];
-  if(!file||!importTarget) return;
-  const cfg=IMPORT_CFG[importTarget];
-  if(!exigirAdmin()) return;
-  if(!confirm(`Importar "${file.name}" para ${cfg.label}?\n\nOs registros do arquivo serão incluídos ou atualizados. O levantamento já feito NÃO é apagado.`)) return;
-  importCSV(file, cfg);
-});
-
-function showImportProgress(pct, msg){
-  $('#importProgress').classList.remove('hidden');
-  $('#importBar').style.width=Math.max(0,Math.min(100,pct))+'%';
-  if(msg!=null) $('#importMsg').textContent=msg;
-}
-
-async function importCSV(file, cfg){
-  showImportProgress(2, 'Lendo arquivo...');
-  // 1) parse do CSV (PapaParse) — detecta separador automaticamente (, ou ;)
-  let rows;
-  try{
-    rows=await new Promise((resolve,reject)=>{
-      Papa.parse(file, {
-        header:true, skipEmptyLines:true,
-        transformHeader:h=>h.trim(),
-        complete:res=>resolve(res.data),
-        error:err=>reject(err)
-      });
-    });
-  }catch(err){ showImportProgress(0,'Erro ao ler o CSV: '+(err.message||err)); return; }
-
-  // 2) normaliza linhas conforme a tabela
-  let registros=[];
-  for(const row of rows){
-    const r=cfg.map(row);
-    if(r) registros.push(r);
-  }
-  if(!registros.length){ showImportProgress(0,'Nenhuma linha válida encontrada no arquivo. Verifique os cabeçalhos.'); return; }
-
-  // remove duplicatas pela chave (a tabela tem chave única) — mantém a primeira ocorrência
-  const vistos=new Set(); const unicos=[];
-  for(const r of registros){
-    const k=r[cfg.conflict];
-    if(!vistos.has(k)){ vistos.add(k); unicos.push(r); }
-  }
-  const duplicadas=registros.length-unicos.length;
-  registros=unicos;
-
-  showImportProgress(8, `${registros.length} registros${duplicadas?` (${duplicadas} duplicados ignorados)`:''}. Conferindo a base atual...`);
-
-  // 3) NÃO apaga nada antes: os registros do arquivo são incluídos/atualizados pela chave (upsert).
-  //    Assim o levantamento já feito em campo é preservado mesmo que a importação falhe no meio.
-  const chave=cfg.conflict;
-  let existentes=[], codsLev=new Set();
-  try{
-    existentes=await lerColuna(cfg.table, chave);
-    if(cfg.table==='bens'){
-      // placas informadas em campo (itens que estavam sem placa) não podem ser perdidas
-      const levs=await lerTudo('levantamento','codigo,placa_nova');
-      const placaCampo={};
-      levs.forEach(l=>{ codsLev.add(l.codigo); if(l.placa_nova) placaCampo[l.codigo]=l.placa_nova; });
-      registros.forEach(r=>{ if(!r.placa && placaCampo[r.codigo]) r.placa=placaCampo[r.codigo]; });
-    }
-  }catch(err){ showImportProgress(0,'Erro ao ler a base atual: '+(err.message||err)); return; }
-
-  // 4) grava em lotes de 500 (inclui novos, atualiza existentes)
-  const lote=500, total=registros.length; let feitos=0;
-  try{
-    for(let i=0;i<total;i+=lote){
-      const slice=registros.slice(i,i+lote);
-      const {error}=await sb.from(cfg.table).upsert(slice,{onConflict:chave});
-      if(error) throw error;
-      feitos+=slice.length;
-      const pct=8+Math.round((feitos/total)*85);
-      showImportProgress(pct, `Importando ${cfg.label}: ${feitos} de ${total}...`);
-    }
-  }catch(err){
-    showImportProgress(0, `Erro ao importar (parou em ${feitos} de ${total}; nada foi apagado): `+(err.message||err));
-    return;
-  }
-
-  // 5) registros que estão na base mas não vieram no arquivo: remover só com confirmação,
-  //    e nunca um bem que já tenha levantamento.
-  let removidos=0, mantidos=0;
-  try{
-    const noArquivo=new Set(registros.map(r=>r[chave]));
-    const sobrando=existentes.filter(k=>!noArquivo.has(k));
-    const remover=sobrando.filter(k=>!codsLev.has(k));
-    mantidos=sobrando.length-remover.length;
-    if(remover.length && confirm(
-      `${remover.length} registro(s) de ${cfg.label} estão na base mas não vieram no arquivo.\n\n`+
-      (mantidos?`(Outros ${mantidos} também não vieram, mas já têm levantamento e serão mantidos.)\n\n`:'')+
-      `Deseja removê-los da base?\n\nOK = remover · Cancelar = manter`)){
-      for(let i=0;i<remover.length;i+=200){
-        const slice=remover.slice(i,i+200);
-        const {error}=await sb.from(cfg.table).delete().in(chave,slice);
-        if(error) throw error;
-        removidos+=slice.length;
-        showImportProgress(93+Math.round((removidos/remover.length)*6), `Removendo registros antigos: ${removidos} de ${remover.length}...`);
-      }
-    }
-  }catch(err){
-    showImportProgress(0, `Importação concluída (${feitos}), mas houve erro ao remover registros antigos: `+(err.message||err));
-    await loadAux(); await refreshStats();
-    return;
-  }
-
-  showImportProgress(100, `✓ ${feitos} registros importados em ${cfg.label}`+(removidos?`, ${removidos} antigos removidos`:'')+(mantidos?`, ${mantidos} fora do arquivo mantidos por já terem levantamento`:'')+'.');
-  toast(`✓ ${cfg.label}: ${feitos} importados`);
-  // recarrega tabelas de apoio e estatísticas
-  await loadAux(); await refreshStats();
-  setTimeout(()=>{ $('#importProgress').classList.add('hidden'); }, 6000);
-}
+/* As configurações (importação de CSV, comissão e listas de acompanhamento)
+   ficam na página de administração (admin.html). */
 
 // lê todas as linhas de uma tabela (paginando de 1000 em 1000)
 async function lerTudo(tabela, colunas, ordem){
