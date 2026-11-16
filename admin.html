@@ -604,9 +604,12 @@
 <dialog class="dlg largo" id="dlgPrecos">
   <div class="pz-top">
     <h3>Pesquisar preços de referência</h3>
-    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Preços pagos em compras públicas, da base de dados abertos do Compras.gov.br. Escolha o tipo de material, a abrangência e o período; depois filtre pela descrição e marque os preços que servem de referência.</p>
+    <p class="sub" style="margin:0 0 12px;color:var(--muted);font-size:13.5px">Preços de compras públicas, do Compras.gov.br ou do PNCP. No Compras.gov.br, escolha o tipo de material, a abrangência e o período; depois filtre pela descrição e marque os preços que servem de referência.</p>
+    <div class="pz-row" style="margin-bottom:10px">
+      <div><label for="pzFonte">Onde pesquisar</label><select id="pzFonte"><option value="compras">Compras.gov.br: preços pagos, pelo catálogo de materiais do governo (mais compras federais)</option><option value="pncp">PNCP: licitações de prefeituras, estados e União, pela descrição do bem</option></select></div>
+    </div>
     <div class="pz-row">
-      <div><label for="pzTexto">Nome do bem ou código CATMAT</label><input id="pzTexto" placeholder="Ex.: cadeira giratória"></div>
+      <div><label for="pzTexto" id="pzTextoRot">Nome do bem ou código CATMAT</label><input id="pzTexto" placeholder="Ex.: cadeira giratória"></div>
       <div class="fix"><button class="btn-2" id="pzBuscarCat">Buscar no catálogo</button></div>
     </div>
     <div class="pz-cat hidden" id="pzCat"></div>
@@ -1240,7 +1243,7 @@ async function chamarPrecos(body){
 }
 function infoPrecos(){
   const p=PRECOS_SEL;
-  $('#rPrecosInfo').textContent=p&&p.itens&&p.itens.length?`${p.itens.length} preço(s) do Compras.gov.br · ${p.criterio} ${brl(p.valor)} · ${p.abrangencia}`:'';
+  $('#rPrecosInfo').textContent=p&&p.itens&&p.itens.length?`${p.itens.length} preço(s) do ${p.tipo==='pncp'?'PNCP':'Compras.gov.br'} · ${p.criterio} ${brl(p.valor)} · ${p.abrangencia}`:'';
 }
 function pzOnde(){
   const a=$('#pzAbr').value, uf=ufOrgao();
@@ -1254,7 +1257,7 @@ function pzAbrangencia(){
   if(a==='regiao') return {ufs:REGIOES[v]||[],rotulo:'Região '+v,texto:'na região '+v};
   return {ufs:[v],rotulo:'Estado '+v,texto:'no estado '+v};
 }
-const rotuloItem=it=>it.tipo==='codigoItemCatalogo'?`item CATMAT ${it.codigo}`:`tipo de material ${it.codigo} (PDM)`;
+const rotuloItem=it=>it.tipo==='pncp'?`descrição "${it.nome||it.codigo||''}"`:it.tipo==='codigoItemCatalogo'?`item CATMAT ${it.codigo}`:`tipo de material ${it.codigo} (PDM)`;
 function pzEscolherItem(it){
   PZ.item=it; $('#pzCat').classList.add('hidden');
   $('#pzSel').innerHTML=`<span>${it.tipo==='codigoItemCatalogo'?'Item CATMAT':'Tipo de material'} <b>${esc(it.codigo)}</b> · ${esc(it.nome)}${it.classe?` <span style="color:var(--muted)">· ${esc(it.classe)}</span>`:''}</span><button class="btn-2 x" id="pzTrocar" style="padding:5px 10px;font-size:12.5px">Trocar</button>`;
@@ -1274,8 +1277,20 @@ function abrirPrecos(bem,aoUsar,anterior){
   $('#pzAbr').value='estado'; pzOnde(); $('#pzMeses').value='12';
   $('#pzTblBox').classList.add('hidden'); $('#pzFiltroBox').classList.add('hidden'); $('#pzCorpo').innerHTML=''; pzStats();
   $('#pzInfo').textContent='Digite o nome do bem (ex.: cadeira escritório, notebook, ar condicionado) e busque no catálogo do governo. Se souber o código CATMAT do item, digite o número.';
-  if(p) pzEscolherItem({tipo:p.tipo,codigo:p.catmat,nome:p.descricao_catmat||''});
+  $('#pzFonte').value=p&&p.tipo==='pncp'?'pncp':'compras'; pzFonteMudou();
+  if(p&&p.tipo==='pncp') $('#pzTexto').value=p.descricao_catmat||$('#pzTexto').value;
+  else if(p) pzEscolherItem({tipo:p.tipo,codigo:p.catmat,nome:p.descricao_catmat||''});
   $('#dlgPrecos').showModal(); $('#pzTexto').focus();
+}
+const pzPncp=()=>$('#pzFonte').value==='pncp';
+function pzFonteMudou(){
+  const pn=pzPncp();
+  $('#pzBuscarCat').classList.toggle('hidden',pn); $('#pzCat').classList.add('hidden'); $('#pzSel').classList.add('hidden'); PZ.item=null;
+  $('#pzTextoRot').textContent=pn?'Descrição do bem (as palavras que a descrição da licitação precisa ter)':'Nome do bem ou código CATMAT';
+  $('#pzBuscar').disabled=!pn;
+  PZ.itens=[]; PZ.off=new Set(); $('#pzTblBox').classList.add('hidden'); $('#pzFiltroBox').classList.add('hidden'); $('#pzCorpo').innerHTML=''; pzStats();
+  $('#pzInfo').textContent=pn?'Digite a descrição (ex.: cadeira giratória), escolha a abrangência e o período e clique em "Buscar preços". O PNCP reúne as licitações de prefeituras, câmaras, estados e União.'
+    :'Digite o nome do bem (ex.: cadeira escritório, notebook, ar condicionado) e busque no catálogo do governo. Se souber o código CATMAT do item, digite o número.';
 }
 async function pzPrepararCatalogo(){
   let pag=1, total=1;
@@ -1303,7 +1318,30 @@ async function pzBuscarCatalogo(){
   }catch(e){ $('#pzInfo').textContent='Erro: '+e.message; }
   finally{ btn.disabled=false; btn.textContent='Buscar no catálogo'; }
 }
+async function pzBuscarPncp(){
+  const t=$('#pzTexto').value.trim();
+  if(t.length<3){ toast('Digite ao menos 3 letras.'); return; }
+  const ab=pzAbrangencia(), meses=+$('#pzMeses').value;
+  const btn=$('#pzBuscar'); btn.disabled=true; btn.textContent='Buscando...';
+  $('#pzInfo').textContent=`Consultando licitações no PNCP ${ab.texto}... pode levar até um minuto.`;
+  try{
+    const d=await chamarPrecos({acao:'pncp',texto:t,ufs:ab.ufs,meses});
+    PZ.item={tipo:'pncp',codigo:'',nome:t};
+    PZ.itens=d.itens||[]; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
+    // valor estimado (sem resultado homologado) entra desmarcado
+    PZ.itens.forEach((x,i)=>{ if(x.estimado) PZ.off.add(i); });
+    $('#pzFiltroBox').classList.toggle('hidden',!PZ.itens.length);
+    pzTabela();
+    const est=PZ.itens.filter(x=>x.estimado).length;
+    PZ.msg=PZ.itens.length
+      ? `${PZ.itens.length} preço(s) em ${d.compras_lidas} licitação(ões) lidas ${ab.texto}, nos últimos ${meses} meses${d.compras_na_fonte>d.compras_lidas?` (o PNCP tem ${d.compras_na_fonte} com essas palavras; foram lidas as mais recentes com resultado)`:''}.${est?` ${est} são valores estimados do edital, sem resultado homologado, e vêm desmarcados.`:''}`
+      : `Nenhum preço no PNCP ${ab.texto} nos últimos ${meses} meses para "${t}". Tente menos palavras, ampliar a abrangência ou o período.`;
+    pzInfoFiltro();
+  }catch(e){ $('#pzInfo').textContent='Erro: '+e.message; }
+  finally{ btn.disabled=false; btn.textContent='Buscar preços'; }
+}
 async function pzBuscarPrecos(){
+  if(pzPncp()) return pzBuscarPncp();
   if(!PZ.item) return;
   const ab=pzAbrangencia(), meses=+$('#pzMeses').value;
   const btn=$('#pzBuscar'); btn.disabled=true; btn.textContent='Buscando...';
@@ -1333,10 +1371,10 @@ function pzInfoFiltro(){
 function pzTabela(){
   $('#pzTblBox').classList.toggle('hidden',!PZ.itens.length);
   const linhas=[]; PZ.itens.forEach((x,i)=>{ if(!pzVisivel(x)) return;
-    linhas.push(`<tr data-i="${i}"${PZ.off.has(i)?' class="off"':''}><td><input type="checkbox"${PZ.off.has(i)?'':' checked'}></td><td>${dataBR(x.data)||'—'}</td><td>${esc(x.orgao||'—')}<small>${esc([x.uasg&&x.uasg!==x.orgao?x.uasg:'',x.esfera].filter(Boolean).join(' · '))}</small></td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/')||'—')}</td><td title="${esc(x.descricao||'')}">${esc((x.descricao||'').slice(0,160))}${(x.descricao||'').length>160?'…':''}<small>${esc([x.catmat&&('CATMAT '+x.catmat),x.fornecedor,x.marca&&('marca '+x.marca)].filter(Boolean).join(' · '))}</small></td><td>${esc(x.unidade||'')}</td><td class="n">${x.quantidade!=null?x.quantidade.toLocaleString('pt-BR'):''}</td><td class="n"><b>${brl(x.valor)}</b></td></tr>`); });
+    linhas.push(`<tr data-i="${i}"${PZ.off.has(i)?' class="off"':''}><td><input type="checkbox"${PZ.off.has(i)?'':' checked'}></td><td>${dataBR(x.data)||'—'}</td><td>${esc(x.orgao||'—')}<small>${esc([x.uasg&&x.uasg!==x.orgao?x.uasg:'',x.esfera].filter(Boolean).join(' · '))}</small></td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/')||'—')}</td><td title="${esc(x.descricao||'')}">${esc((x.descricao||'').slice(0,160))}${(x.descricao||'').length>160?'…':''}<small>${esc([x.catmat&&('CATMAT '+x.catmat),x.fornecedor,x.marca&&('marca '+x.marca)].filter(Boolean).join(' · '))}</small></td><td>${esc(x.unidade||'')}</td><td class="n">${x.quantidade!=null?x.quantidade.toLocaleString('pt-BR'):''}</td><td class="n"><b>${brl(x.valor)}</b>${x.estimado?'<small style="display:block;color:var(--muted)">estimado</small>':''}</td></tr>`); });
   $('#pzCorpo').innerHTML=linhas.join('')||'<tr><td colspan="8" style="color:var(--muted)">Nenhum preço com essas palavras.</td></tr>';
   $('#pzCorpo').querySelectorAll('input[type=checkbox]').forEach(c=>c.onchange=()=>{ const i=+c.closest('tr').dataset.i; c.checked?PZ.off.delete(i):PZ.off.add(i); c.closest('tr').classList.toggle('off',!c.checked); pzStats(); });
-  $('#pzTodos').checked=true; pzStats();
+  $('#pzTodos').checked=!PZ.off.size; pzStats();
 }
 const pzMarcados=()=>PZ.itens.filter((x,i)=>!PZ.off.has(i)&&pzVisivel(x));
 function estat(v){
@@ -1353,10 +1391,12 @@ function pzUsar(criterio){
   const sel=pzMarcados(), e=estat(sel.map(x=>x.valor)); if(!e) return;
   const valor=e[criterio], b=PZ.busca, hoje=new Date(b.consultado_em).toLocaleDateString('pt-BR');
   const nome={media:'média',mediana:'mediana',menor:'menor preço'}[criterio];
-  const precos={fonte:'Compras.gov.br – Pesquisa de Preços (dados abertos)',tipo:PZ.item.tipo,catmat:PZ.item.codigo,descricao_catmat:PZ.item.nome,filtro:$('#pzFiltro').value.trim(),
+  const pn=PZ.item.tipo==='pncp';
+  const precos={fonte:pn?'PNCP – Portal Nacional de Contratações Públicas':'Compras.gov.br – Pesquisa de Preços (dados abertos)',tipo:PZ.item.tipo,catmat:PZ.item.codigo,descricao_catmat:PZ.item.nome,filtro:$('#pzFiltro').value.trim(),
     abrangencia:b.rotulo,abrangencia_texto:b.texto,meses:b.meses,criterio:nome,valor,consultado_em:b.consultado_em,
-    itens:sel.map(x=>({catmat:x.catmat,esfera:x.esfera,data:x.data,orgao:x.orgao,uasg:x.uasg,codigo_uasg:x.codigo_uasg,municipio:x.municipio,uf:x.uf,id_compra:x.id_compra,item:x.item,descricao:(x.descricao||'').slice(0,200),fornecedor:x.fornecedor,marca:x.marca,unidade:x.unidade,quantidade:x.quantidade,valor:x.valor}))};
-  const fonte=`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
+    itens:sel.map(x=>({catmat:x.catmat,esfera:x.esfera,data:x.data,orgao:x.orgao,uasg:x.uasg,codigo_uasg:x.codigo_uasg,municipio:x.municipio,uf:x.uf,id_compra:x.id_compra,item:x.item,descricao:(x.descricao||'').slice(0,200),fornecedor:x.fornecedor,marca:x.marca,unidade:x.unidade,quantidade:x.quantidade,valor:x.valor,estimado:x.estimado||undefined}))};
+  const fonte=pn?`PNCP (Portal Nacional de Contratações Públicas): ${nome} de ${e.n} preço(s) de licitações com a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`
+    :`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
   if(PZ.aoUsar){ const f=PZ.aoUsar; PZ.aoUsar=null; $('#dlgPrecos').close(); f(valor,fonte,precos); return; }
   PRECOS_SEL=precos; PRECOS_MUDOU=true;
   $('#rRef').value=dec(valor); $('#rFonte').value=fonte;
@@ -1365,7 +1405,8 @@ function pzUsar(criterio){
 }
 $('#btnPrecos').onclick=()=>abrirPrecos();
 $('#pzBuscarCat').onclick=pzBuscarCatalogo;
-$('#pzTexto').addEventListener('keydown',e=>{ if(e.key==='Enter') pzBuscarCatalogo(); });
+$('#pzFonte').onchange=pzFonteMudou;
+$('#pzTexto').addEventListener('keydown',e=>{ if(e.key==='Enter'){ pzPncp()?pzBuscarPncp():pzBuscarCatalogo(); } });
 $('#pzAbr').onchange=pzOnde;
 let pzT=null; $('#pzFiltro').addEventListener('input',()=>{ clearTimeout(pzT); pzT=setTimeout(()=>{ pzTabela(); pzInfoFiltro(); },250); });
 $('#pzBuscar').onclick=pzBuscarPrecos;
@@ -2147,7 +2188,7 @@ const NOME_METODO={fator:'Valor de bem novo multiplicado por fator de reavaliaç
 function tabelaPrecosLaudo(p){
   if(!p||!p.itens||!p.itens.length) return '';
   const linhas=p.itens.slice(0,15).map(x=>`<tr><td>${dataBR(x.data)}</td><td>${esc(x.orgao||x.uasg||'')}</td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/'))}</td><td>${esc(x.unidade||'')}</td><td class="n">${brl(x.valor)}</td></tr>`).join('');
-  return `<p style="margin-bottom:4px"><b>Preços considerados</b> (${esc(p.fonte)}, ${esc(p.tipo?rotuloItem({tipo:p.tipo,codigo:p.catmat}):'item CATMAT '+p.catmat)}${p.descricao_catmat?' – '+esc(p.descricao_catmat):''}; ${esc(p.abrangencia)}, últimos ${p.meses} meses; critério: ${esc(p.criterio)} = ${brl(p.valor)}):</p>
+  return `<p style="margin-bottom:4px"><b>Preços considerados</b> (${esc(p.fonte)}, ${esc(p.tipo?rotuloItem({tipo:p.tipo,codigo:p.catmat,nome:p.descricao_catmat}):'item CATMAT '+p.catmat)}${p.descricao_catmat&&p.tipo!=='pncp'?' – '+esc(p.descricao_catmat):''}; ${esc(p.abrangencia)}, últimos ${p.meses} meses; critério: ${esc(p.criterio)} = ${brl(p.valor)}):</p>
     <table><tr><th>Data</th><th>Órgão comprador</th><th>Local</th><th>Unid.</th><th>Valor unitário</th></tr>${linhas}</table>${p.itens.length>15?`<p style="font-size:11px">Mais ${p.itens.length-15} preço(s) considerados no cálculo.</p>`:''}`;
 }
 function paginaLaudo(b,fotos){

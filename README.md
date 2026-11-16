@@ -175,7 +175,9 @@ Na ficha do bem, ao lado do valor de referência, o botão **Pesquisar preços**
 2. Escolha a abrangência: **estado** (padrão: o estado do órgão, tirado de "Município / UF" na Configuração), **região** (Sul, Sudeste, Centro-Oeste, Nordeste, Norte) ou **Brasil inteiro**; e o período (6, 12 ou 24 meses; padrão 12).
 3. Use **Filtrar pela descrição** para ficar só com bens iguais ao avaliado (ex.: giratória, espaldar médio), desmarque os preços que não servem (outro modelo, valor fora da realidade) e clique em **Usar mediana**, **Usar média** ou **Usar menor**.
 
-O valor vai para o campo de referência, a fonte é preenchida sozinha e os preços marcados ficam guardados com a reavaliação e aparecem no laudo. As consultas ficam em cache por 24 horas. Próximas fontes previstas: PNCP e LicitaCon (TCE-RS).
+O valor vai para o campo de referência, a fonte é preenchida sozinha e os preços marcados ficam guardados com a reavaliação e aparecem no laudo. As consultas ficam em cache por 24 horas.
+
+**PNCP.** Em "Onde pesquisar", a opção **PNCP** busca pela descrição do bem nas licitações publicadas no Portal Nacional de Contratações Públicas (prefeituras, câmaras, estados e União). O painel localiza as licitações encerradas com resultado que tenham as palavras digitadas, lê os itens e traz o valor unitário homologado. Quando o item ainda não tem resultado, vem o valor estimado do edital, marcado como "estimado" e desmarcado. São lidas até 15 licitações por pesquisa, as mais recentes. A localização usa a busca do próprio portal do PNCP, que não faz parte da API documentada e pode mudar. Próxima fonte prevista: LicitaCon (TCE-RS).
 
 ### Reavaliar em lote
 

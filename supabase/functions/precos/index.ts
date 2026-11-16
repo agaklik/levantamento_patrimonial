@@ -116,6 +116,87 @@ async function emParalelo<T, R>(lista: T[], n: number, f: (x: T) => Promise<R>) 
   return out;
 }
 
+// ---------- PNCP (Portal Nacional de Contratações Públicas): prefeituras, estados e União ----------
+// O PNCP não tem pesquisa de preços por catálogo. O caminho é: a busca por texto do portal acha as
+// contratações com resultado; de cada uma leem-se os itens; dos itens cuja descrição tem as palavras
+// pesquisadas lê-se o valor unitário homologado (ou, se não houver, o estimado, marcado como tal).
+const PNCP = 'https://pncp.gov.br';
+const PNCP_COMPRAS = 15;      // contratações lidas por pesquisa
+const PNCP_RESULTADOS = 40;   // itens em que se busca o valor homologado
+async function pncpJson(caminho: string, params: Record<string, string | number> = {}) {
+  const u = new URL(PNCP + caminho);
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, String(v));
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch(u, { headers: { accept: 'application/json' }, signal: ctl.signal });
+    if (r.status === 204 || r.status === 404) return null;
+    const corpo = await r.text();
+    if (!r.ok) throw new Error(`O PNCP respondeu ${r.status}: ${corpo.slice(0, 160)}`);
+    return corpo ? JSON.parse(corpo) : null;
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw new Error('O PNCP demorou demais para responder. Tente de novo.');
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+type ItemPncp = ReturnType<typeof limparPreco> & { estimado: boolean; link: string; fonte: string };
+async function precosPncp(adm: ReturnType<typeof createClient>, texto: string, ufs: string[], meses: number) {
+  const palavras = [...new Set(semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !PALAVRAS_VAZIAS.has(w)).map(raiz))];
+  if (!palavras.length) throw new Error('Digite ao menos uma palavra com 3 letras.');
+  const chave = `pncp:${palavras.join('+')}:${ufs.join('|') || 'BR'}:${meses}:${new Date().toISOString().slice(0, 10)}`;
+  const { data: c } = await adm.from('precos_cache').select('resposta').eq('chave', chave).maybeSingle();
+  if (c) return c.resposta as { itens: ItemPncp[]; compras: number; achadas: number };
+
+  const desde = new Date(); desde.setMonth(desde.getMonth() - meses);
+  const filtros: Record<string, string | number> = { q: semAcento(texto), tipos_documento: 'edital', ordenacao: '-data', pagina: 1, tam_pagina: 50, status: 'encerradas' };
+  if (ufs.length) filtros.ufs = ufs.join('|');
+  const busca = await pncpJson('/api/search/', filtros);
+  const achadas: Bruto[] = (busca?.items ?? []) as Bruto[];
+  const compras = achadas.filter((h) => h.tem_resultado === true && h.cancelado !== true && txt(h.orgao_cnpj) && txt(h.ano) && txt(h.numero_sequencial)
+    && (data(h.data_publicacao_pncp) ?? '9999') >= desde.toISOString().slice(0, 10)).slice(0, PNCP_COMPRAS);
+
+  const candidatos: { h: Bruto; it: Bruto }[] = [];
+  let amostra: Bruto[] = [];
+  await emParalelo(compras, 5, async (h) => {
+    try {
+      const itens = await pncpJson(`/api/pncp/v1/orgaos/${txt(h.orgao_cnpj)}/compras/${txt(h.ano)}/${txt(h.numero_sequencial)}/itens`, { pagina: 1, tamanhoPagina: 100 });
+      for (const it of (Array.isArray(itens) ? itens : []) as Bruto[]) {
+        const d = semAcento(txt(it.descricao));
+        if (palavras.every((w) => d.includes(w))) candidatos.push({ h, it });
+      }
+      if (!amostra.length && Array.isArray(itens) && itens.length) amostra = [h, itens[0] as Bruto];
+    } catch (_) { /* uma contratação que falha não derruba a pesquisa */ }
+  });
+
+  let comResultado = 0;
+  const itens = (await emParalelo(candidatos, 6, async ({ h, it }): Promise<ItemPncp | null> => {
+    let valor = numero(it.valorUnitarioEstimado), qtd = numero(it.quantidade), fornecedor = '', quando = data(h.data_publicacao_pncp), estimado = true;
+    if (it.temResultado === true && comResultado < PNCP_RESULTADOS) {
+      comResultado++;
+      try {
+        const rs = await pncpJson(`/api/pncp/v1/orgaos/${txt(h.orgao_cnpj)}/compras/${txt(h.ano)}/${txt(h.numero_sequencial)}/itens/${txt(it.numeroItem)}/resultados`);
+        const r = ((Array.isArray(rs) ? rs : []) as Bruto[]).filter((x) => !x.dataCancelamento && numero(x.valorUnitarioHomologado))
+          .sort((a, b2) => (Number(a.ordemClassificacaoSrp) || 1) - (Number(b2.ordemClassificacaoSrp) || 1))[0];
+        if (r) { valor = numero(r.valorUnitarioHomologado); qtd = numero(r.quantidadeHomologada) ?? qtd; fornecedor = txt(r.nomeRazaoSocialFornecedor); quando = data(r.dataResultado) || quando; estimado = false; }
+      } catch (_) { /* fica o valor estimado */ }
+    }
+    if (valor == null || valor <= 0) return null;
+    return {
+      id_compra: txt(h.numero_controle_pncp), item: txt(it.numeroItem), catmat: txt(it.catalogoCodigoItem),
+      descricao: txt(it.descricao).slice(0, 400), valor, quantidade: qtd, unidade: txt(it.unidadeMedida), data: quando,
+      orgao: txt(h.orgao_nome), uasg: txt(h.unidade_nome), codigo_uasg: txt(h.unidade_codigo), municipio: txt(h.municipio_nome), uf: txt(h.uf).toUpperCase(),
+      esfera: txt(h.esfera_nome), fornecedor, marca: '', objeto: txt(h.description).slice(0, 200),
+      estimado, fonte: 'PNCP', link: `${PNCP}/app/editais/${txt(h.orgao_cnpj)}/${txt(h.ano)}/${txt(h.numero_sequencial)}`,
+    };
+  })).filter((x): x is ItemPncp => !!x).sort((a, c2) => (c2.data || '').localeCompare(a.data || ''));
+
+  const resposta = { itens, compras: compras.length, achadas: Number(busca?.total ?? achadas.length) || 0 };
+  await adm.from('precos_cache').upsert({ chave, resposta, amostra, criado_em: new Date().toISOString() });
+  return resposta;
+}
+
 const PALAVRAS_VAZIAS = new Set(['de', 'da', 'do', 'das', 'dos', 'com', 'sem', 'para', 'por', 'em', 'e', 'ou', 'tipo', 'uso']);
 const raiz = (w: string) => (w.length > 4 ? w.replace(/(oes|aes|ais|eis|es|s)$/, '') : w);
 
@@ -196,6 +277,15 @@ Deno.serve(async (req) => {
         .sort((a, c) => (c.data || '').localeCompare(a.data || ''));
       const total = partes.reduce((s, p) => s + (p.total || 0), 0);
       return json({ itens: itens.slice(0, 1500), encontrados: itens.length, total_na_fonte: total, desde: inicio, consultado_em: new Date().toISOString() });
+    }
+
+    // ---------- preços no PNCP, por texto ----------
+    if (b.acao === 'pncp') {
+      const texto = txt(b.texto).slice(0, 120);
+      const ufs: string[] = Array.isArray(b.ufs) ? [...new Set((b.ufs as unknown[]).map((u) => txt(u).toUpperCase()).filter((u) => UFS.includes(u)))] : [];
+      const meses = Math.min(60, Math.max(1, Number(b.meses) || 12));
+      const r = await precosPncp(adm, texto, ufs, meses);
+      return json({ itens: r.itens, encontrados: r.itens.length, compras_lidas: r.compras, compras_na_fonte: r.achadas, consultado_em: new Date().toISOString() });
     }
 
     return json({ erro: 'Ação desconhecida.' }, 400);
