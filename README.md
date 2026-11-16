@@ -430,3 +430,7 @@ Para bens que exigem avaliação de profissional habilitado (imóveis, veículos
 - O painel encerra a sessão depois de 30 minutos sem uso, e as páginas só carregam conteúdo do próprio site e do Supabase do projeto (Content-Security-Policy).
 
 Instalação: rodar `supabase/seguranca-acesso.sql` no SQL Editor e atualizar o código da função `usuarios`. No painel do Supabase, desligar "Allow new users to sign up" em Authentication.
+
+## Autor e histórico de alterações
+
+O banco grava sozinho quem levantou cada bem e quem fez cada reavaliação (o nome vem da sessão, não do navegador) e guarda na tabela `historico` tudo o que foi incluído, alterado ou excluído no levantamento, na reavaliação, nos valores por tipo de bem, na conclusão das localizações e na placa dos bens, com o valor de antes e de depois. Só administradores leem e ninguém altera. No painel: "Levantado por" e "Ver histórico de alterações" na ficha do bem, e o relatório "Histórico de alterações" em Documentos. No app de campo, a ficha mostra o último registro. Requer `supabase/historico.sql`.

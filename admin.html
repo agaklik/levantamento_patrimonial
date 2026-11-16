@@ -333,6 +333,12 @@
         <div class="acts"><button class="btn" id="btnDocNao">Gerar relatório</button></div>
       </div>
       <div class="card">
+        <h2>Histórico de alterações</h2>
+        <p class="sub">Quem incluiu, alterou ou excluiu cada registro do levantamento e da reavaliação, com data, hora e o valor de antes e de depois.</p>
+        <div class="grid g2"><div><label>De</label><input type="date" id="dHistDe"></div><div><label>Até</label><input type="date" id="dHistAte"></div></div>
+        <div class="acts"><button class="btn" id="btnDocHist">Gerar relatório</button></div>
+      </div>
+      <div class="card">
         <h2>Relatório geral da reavaliação</h2>
         <p class="sub">Todos os bens reavaliados com valor anterior, valor reavaliado e variação, com totais por classificação.</p>
         <div class="acts"><button class="btn" id="btnDocGeral">Gerar relatório</button><button class="btn-2" id="btnCsvReav">Baixar CSV</button></div>
@@ -464,6 +470,8 @@
   <div class="card">
     <div class="dl" id="iDados"></div>
     <div class="thumbs" id="iFotos"></div>
+    <div style="margin-top:10px"><button type="button" class="btn-2" id="btnHist" style="padding:6px 12px;font-size:13px">Ver histórico de alterações</button></div>
+    <div id="iHist" class="hidden" style="margin-top:10px;font-size:13px;border:1px solid var(--border);border-radius:10px;max-height:300px;overflow:auto"></div>
   </div>
   <div class="card" id="iForm">
     <div class="grid g2">
@@ -1015,6 +1023,58 @@ $('#tbody').addEventListener('click',e=>{
   if(e.target.closest('.btn-lt')&&atual) $('#btnLaudoTec').click();
 });
 
+/* ====================== HISTÓRICO DE ALTERAÇÕES ====================== */
+const HIST_TABELA={levantamento:'Levantamento',reavaliacao:'Reavaliação',bens:'Cadastro do bem',referencias:'Valor por tipo de bem',localizacoes_concluidas:'Conclusão da localização'};
+const HIST_CAMPO={placa:'placa',placa_nova:'placa nova',localizacao:'localização',situacao:'situação',estado:'estado de conservação',cod_motivo:'motivo',cod_comissao:'comissão',data_movimento:'data do movimento',
+  concluido:'concluído',metodo:'método',valor_anterior:'valor anterior',valor_referencia:'valor de referência',ec:'estado (EC)',pvu:'vida útil futura (PVU)',pub:'tempo de uso (PUB)',fator:'fator',
+  valor_reavaliado:'valor reavaliado',vida_util_remanescente:'vida útil remanescente',valor_residual:'valor residual',fonte:'fonte',observacao:'observação',data_avaliacao:'data da avaliação',
+  precos:'preços pesquisados',laudo_tecnico:'laudo técnico',valor:'valor',descricao:'descrição',valor_atual:'valor atual'};
+// códigos que repetem a descrição (a descrição já aparece ao lado)
+const HIST_OCULTO=['cod_localizacao','cod_situacao','cod_estado','codigo','cod','chave'];
+function histValor(k,v){
+  if(v==null||v==='') return '(vazio)';
+  if(k==='precos') return (v.itens?v.itens.length:0)+' preço(s)';
+  if(k==='laudo_tecnico') return 'nº '+(v.numero||'—')+', '+(v.responsavel||'');
+  if(typeof v==='boolean') return v?'sim':'não';
+  if(typeof v==='number'&&/valor/.test(k)) return brl(v);
+  if(/^\d{4}-\d{2}-\d{2}T/.test(String(v))) return new Date(v).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return dataBR(v);
+  if(typeof v==='object') return JSON.stringify(v).slice(0,80);
+  return String(v).length>90?String(v).slice(0,90)+'…':String(v);
+}
+function histTexto(h){
+  const a=h.antes||{}, d=h.depois||{};
+  if(h.acao==='alterou'){
+    const cs=(h.campos||Object.keys(d)).filter(k=>!HIST_OCULTO.includes(k)||!(h.campos||[]).some(x=>x===k.replace(/^cod_/,'')));
+    return cs.map(k=>`${esc(HIST_CAMPO[k]||k)}: ${esc(histValor(k,a[k]))} → <b>${esc(histValor(k,d[k]))}</b>`).join('; ')||'sem detalhe';
+  }
+  const o=h.acao==='incluiu'?d:a;
+  const cs=Object.keys(o).filter(k=>HIST_CAMPO[k]&&!['concluido','cod_motivo','cod_comissao','valor_anterior'].includes(k));
+  return cs.map(k=>`${esc(HIST_CAMPO[k])}: ${esc(histValor(k,o[k]))}`).join('; ');
+}
+function histHtml(lista, comCodigo){
+  if(!lista.length) return '<div style="padding:12px;color:var(--muted)">Nenhuma alteração registrada.</div>';
+  const fmt=s=>new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return lista.map(h=>`<div style="padding:9px 12px;border-bottom:1px solid var(--border)">
+    <div style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(h.quando)} · <b style="color:var(--txt)">${esc(h.usuario_nome||'—')}</b> ${esc(h.acao)} · ${esc(HIST_TABELA[h.tabela]||h.tabela)}${comCodigo&&h.codigo?' · '+esc(comCodigo(h)):''}</div>
+    <div style="margin-top:2px">${histTexto(h)}</div></div>`).join('');
+}
+async function lerHistorico(filtro, limite){
+  let q=sb.from('historico').select('*').order('quando',{ascending:false}).limit(limite||100);
+  if(filtro) q=filtro(q);
+  const {data,error}=await q;
+  if(error){ if(tabelaAusente(error)) throw new Error('O histórico ainda não foi instalado no banco (supabase/historico.sql).'); throw error; }
+  return data||[];
+}
+$('#btnHist').addEventListener('click',async()=>{
+  const box=$('#iHist'); if(!atual) return;
+  if(!box.classList.contains('hidden')){ box.classList.add('hidden'); $('#btnHist').textContent='Ver histórico de alterações'; return; }
+  box.classList.remove('hidden'); box.innerHTML='<div style="padding:12px;color:var(--muted)">Carregando...</div>'; $('#btnHist').textContent='Ocultar histórico';
+  const c=atual.codigo;
+  try{ const l=await lerHistorico(q=>q.eq('codigo',c).in('tabela',['levantamento','reavaliacao','bens']),100); if(atual&&atual.codigo===c) box.innerHTML=histHtml(l); }
+  catch(e){ box.innerHTML='<div style="padding:12px;color:var(--danger)">'+esc(e.message||e)+'</div>'; }
+});
+
 /* ====================== ITEM (painel lateral) ====================== */
 const bemPorCodigo=c=>BENS.find(b=>b.codigo===c);
 function abrirItem(codigo){
@@ -1027,7 +1087,9 @@ function abrirItem(codigo){
   $('#iDados').innerHTML=d('Classificação',b.classificacao)+d('Marca / modelo',[b.marca,b.modelo].filter(Boolean).join(' / '))+
     d('Localização',locDesc(b))+d('Unidade gestora',ugDesc(b))+d('Estado de conservação',estDesc(b))+d('Situação',sitDesc(b))+
     d('Data de ingresso',dataBR(b.data_ingresso)+(a!=null?` (${a.toFixed(1).replace('.',',')} anos)`:''))+d('Valor atual',brl(num(b.valor_atual)))+
-    d('Vida útil no cadastro',b.vida_util)+d('Levantado em',lev(b)&&lev(b).atualizado_em?new Date(lev(b).atualizado_em).toLocaleDateString('pt-BR'):'');
+    d('Vida útil no cadastro',b.vida_util)+d('Levantado por',lev(b)&&lev(b).atualizado_em?((lev(b).usuario_nome?lev(b).usuario_nome+', ':'')+new Date(lev(b).atualizado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})):'')+
+    (reav(b)&&reav(b).atualizado_por_nome?d('Reavaliado por',reav(b).atualizado_por_nome+(reav(b).atualizado_em?', '+new Date(reav(b).atualizado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'')):'');
+  $('#iHist').classList.add('hidden'); $('#iHist').innerHTML=''; $('#btnHist').textContent='Ver histórico de alterações';
   $('#iFotos').innerHTML='';
   fotosDoBem(b.codigo,6).then(urls=>{ if(atual===b) $('#iFotos').innerHTML=urls.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Foto do bem"></a>`).join(''); });
   const enc=encontrado(b);
@@ -1443,6 +1505,8 @@ $('#fileCampo').addEventListener('change',async e=>{
   let arq; try{ arq=JSON.parse(await f.text()); }catch(_){ msg.innerHTML='<span class="neg">O arquivo não é um levantamento exportado pelo app.</span>'; return; }
   if(!arq||arq.tipo!=='levantamento-patrimonial-campo'||!Array.isArray(arq.registros)){ msg.innerHTML='<span class="neg">O arquivo não é um levantamento exportado pelo app.</span>'; return; }
   const regs=arq.registros;
+  // o autor informado no arquivo só é gravado se o banco já tiver a coluna (supabase/historico.sql)
+  const comAutor=!(await sb.from('levantamento').select('usuario_nome').limit(1)).error;
   if(!confirm(`Importar ${regs.length} item(ns) levantados${arq.usuario?' por '+arq.usuario:''} em ${new Date(arq.gerado_em).toLocaleString('pt-BR')}?`)) return;
   let ok=0, mantidos=0, fotos=0, erros=[];
   for(const reg of regs){
@@ -1455,7 +1519,8 @@ $('#fileCampo').addEventListener('change',async e=>{
       }
       const atual=LEV[reg.codigo];
       if(atual && atual.atualizado_em && reg.row.atualizado_em && atual.atualizado_em>reg.row.atualizado_em){ mantidos++; continue; }
-      const {error}=await sb.from('levantamento').upsert(reg.row,{onConflict:'codigo'}); if(error) throw error;
+      const linha=comAutor&&(reg.usuario||arq.usuario)?Object.assign({},reg.row,{usuario_nome:reg.usuario||arq.usuario}):reg.row;
+      const {error}=await sb.from('levantamento').upsert(linha,{onConflict:'codigo'}); if(error) throw error;
       if(reg.placa_nova){ const {error:eb}=await sb.from('bens').update({placa:reg.placa_nova}).eq('codigo',reg.codigo); if(eb) throw eb; }
       ok++;
     }catch(err){ erros.push(reg.codigo+': '+(err.message||err)); }
@@ -2094,6 +2159,24 @@ $('#btnDocTermos').addEventListener('click',()=>{
       ${localData()}<div class="sign"><div>Responsável pela localização<br><small>Nome e matrícula</small></div><div>Setor de Patrimônio</div></div>
     </div>`;
   }).join(''),`${grupos.length} termo(s), ${lista.length} bem(ns)`);
+});
+
+$('#btnDocHist').addEventListener('click',async()=>{
+  const de=$('#dHistDe').value, ate=$('#dHistAte').value, LIM=3000, btn=$('#btnDocHist');
+  btn.disabled=true;
+  try{
+    const l=await lerHistorico(q=>{ if(de) q=q.gte('quando',new Date(de+'T00:00:00').toISOString()); if(ate) q=q.lte('quando',new Date(ate+'T23:59:59').toISOString()); return q; },LIM);
+    if(!l.length){ toast('Nenhuma alteração registrada no período.'); return; }
+    const fmt=s=>new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const item=h=>{ if(h.tabela==='localizacoes_concluidas') return (LOCS[h.codigo]&&LOCS[h.codigo].desc)||h.codigo||''; if(h.tabela==='referencias') return h.codigo||''; const b=bemPorCodigo(h.codigo); return b?'Placa '+placa(b)+' · '+(b.descricao||b.descricao_reduzida||''):'Código '+(h.codigo||''); };
+    abrirPreview(`<div class="page">${cabecalho()}
+      <h1>Histórico de Alterações</h1>
+      <div class="num">${de||ate?'Período: '+(de?dataBR(de):'início')+' a '+(ate?dataBR(ate):'hoje'):'Todo o período'} · ${l.length} registro(s)${l.length>=LIM?' (os '+LIM+' mais recentes)':''}</div>
+      <table><thead><tr><th style="width:13%">Data e hora</th><th style="width:15%">Usuário</th><th style="width:14%">Registro</th><th style="width:22%">Item</th><th>O que mudou</th></tr></thead>
+      <tbody>${l.map(h=>`<tr><td>${fmt(h.quando)}</td><td>${esc(h.usuario_nome||'—')}</td><td>${esc(HIST_TABELA[h.tabela]||h.tabela)}<br>${esc(h.acao)}</td><td>${esc(item(h))}</td><td>${histTexto(h)}</td></tr>`).join('')}</tbody></table>
+      ${localData()}</div>`,`${l.length} registro(s) no histórico`);
+  }catch(e){ toast(e.message||String(e),6000); }
+  finally{ btn.disabled=false; }
 });
 
 $('#btnDocNao').addEventListener('click',()=>{
