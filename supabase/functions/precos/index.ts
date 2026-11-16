@@ -17,7 +17,14 @@
 //   { acao: 'indexar', pagina }                    -> copia uma página (500) de tipos de material
 //   { acao: 'precos', tipo, codigo, ufs, meses }   -> preços (tipo 'codigoPdm' | 'codigoItemCatalogo';
 //                                                     ufs vazio = Brasil inteiro)
+//   { acao: 'pncp', texto, ufs, meses }            -> preços no PNCP pela descrição
+//   { acao: 'lc_orgaos' }                          -> órgãos do LicitaCon já carregados
+//   { acao: 'lc_procurar', texto }                 -> órgãos do RS pelo nome ou município
+//   { acao: 'lc_carregar', cd_orgao }              -> baixa o ZIP do órgão no TCE-RS e guarda os itens
+//   { acao: 'lc_remover', cd_orgao }               -> tira o órgão da lista de referência
+//   { acao: 'licitacon', texto, orgaos, meses }    -> preços nos órgãos carregados pela descrição
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { Unzip, UnzipInflate } from 'npm:fflate@0.8.2';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -197,6 +204,221 @@ async function precosPncp(adm: ReturnType<typeof createClient>, texto: string, u
   return resposta;
 }
 
+
+// ---------- LicitaCon (TCE-RS): licitações dos órgãos gaúchos ----------
+// O TCE-RS publica um ZIP por órgão com todas as licitações (CSV), sem busca por palavra.
+// A função baixa o ZIP dos órgãos escolhidos (lendo direto do download, sem guardar o arquivo),
+// fica com os itens de valor unitário homologado dos últimos 3 anos e grava em licitacon_itens.
+const TCE = 'https://dados.tce.rs.gov.br/dados';
+const LC_ANOS = 3;
+const MODALIDADE: Record<string, string> = {
+  PRD: 'Dispensa', PRI: 'Inexigibilidade', PRP: 'Pregão presencial', PRE: 'Pregão eletrônico',
+  TMP: 'Tomada de preços', CNV: 'Convite', CNC: 'Concorrência', LEI: 'Leilão', RPO: 'Adesão a ata de registro de preços',
+};
+
+// leitor de CSV que recebe o texto em pedaços (aspas, vírgulas e quebras de linha dentro de campos).
+// filtro(linha) opcional descarta a linha bruta antes de separar os campos, para gastar menos CPU.
+function camposCsv(l: string): string[] {
+  if (l.indexOf('"') < 0) return l.split(',');
+  const out: string[] = [];
+  let i = 0;
+  while (i <= l.length) {
+    if (l.charCodeAt(i) === 34) {
+      let v = '', j = i + 1;
+      for (;;) {
+        const q = l.indexOf('"', j);
+        if (q < 0) { v += l.slice(j); i = l.length + 1; break; }
+        v += l.slice(j, q);
+        if (l.charCodeAt(q + 1) === 34) { v += '"'; j = q + 2; continue; }
+        const k = l.indexOf(',', q + 1);
+        i = k < 0 ? l.length + 1 : k + 1; break;
+      }
+      out.push(v);
+    } else {
+      const k = l.indexOf(',', i);
+      if (k < 0) { out.push(l.slice(i)); break; }
+      out.push(l.slice(i, k)); i = k + 1;
+    }
+  }
+  return out;
+}
+function leitorCsv(aoLer: (campos: string[]) => void, filtro?: (linha: string) => boolean) {
+  let resto = '', primeira = true;
+  const linha = (l: string) => {
+    if (l.endsWith('\r')) l = l.slice(0, -1);
+    if (primeira) { primeira = false; aoLer(camposCsv(l.replace(/^\uFEFF/, ''))); return; }
+    if (!l || (filtro && !filtro(l))) return;
+    aoLer(camposCsv(l));
+  };
+  return (pedaco: string, fim = false) => {
+    let txt = resto + pedaco, ini = 0, aspas = 0;
+    for (;;) {
+      const n = txt.indexOf('\n', ini);
+      if (n < 0) break;
+      // conta as aspas desde o começo da linha: número ímpar = a quebra está dentro de um campo
+      for (let q = txt.indexOf('"', ini); q >= 0 && q < n; q = txt.indexOf('"', q + 1)) aspas++;
+      if (aspas % 2) { ini = n + 1; continue; }
+      linha(txt.slice(0, n)); txt = txt.slice(n + 1); ini = 0; aspas = 0;
+    }
+    resto = txt;
+    if (fim && resto) { linha(resto); resto = ''; }
+  };
+}
+
+// baixa o ZIP e entrega as linhas dos CSV pedidos (primeira linha = cabeçalho, sem BOM)
+type LeitorArquivo = { linha: (campos: string[]) => void; filtro?: (linha: string) => boolean };
+async function lerZipTce(url: string, arquivos: Record<string, LeitorArquivo>) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 120000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (r.status === 404) throw new Error('O TCE-RS não tem arquivo do LicitaCon para este órgão.');
+    if (!r.ok || !r.body) throw new Error(`O site do TCE-RS respondeu ${r.status}.`);
+    const tam = Number(r.headers.get('content-length') || 0);
+    if (tam > 20e6) throw new Error('O arquivo deste órgão é grande demais para carregar aqui (mais de 20 MB, como o de Porto Alegre). Escolha órgãos menores, como prefeituras vizinhas.');
+    const erros: Error[] = [];
+    const uz = new Unzip();
+    uz.register(UnzipInflate);
+    uz.onfile = (f) => {
+      const nome = f.name.toLowerCase().split('/').pop() || '';
+      const destino = arquivos[nome];
+      if (!destino) return;
+      const dec = new TextDecoder('utf-8');
+      const csv = leitorCsv(destino.linha, destino.filtro);
+      f.ondata = (err, dados, final) => {
+        if (err) { erros.push(err); return; }
+        try { csv(dec.decode(dados, { stream: !final }), final); } catch (e) { erros.push(e as Error); }
+      };
+      f.start();
+    };
+    for await (const pedaco of r.body) uz.push(pedaco);
+    uz.push(new Uint8Array(0), true);
+    if (erros.length) throw erros[0];
+    return r.headers.get('last-modified') || '';
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw new Error('O site do TCE-RS demorou demais para responder. Tente de novo.');
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function listaOrgaosTce(adm: ReturnType<typeof createClient>) {
+  const chave = 'licitacon:orgaos';
+  const { data: c } = await adm.from('precos_cache').select('resposta,criado_em').eq('chave', chave).maybeSingle();
+  if (c && Date.now() - new Date(c.criado_em as string).getTime() < 30 * 24 * 3600e3) return c.resposta as { cd: number; nome: string; municipio: string; ativo: boolean; tipo: string }[];
+  const r = await fetch(`${TCE}/auxiliar/orgaos_auditados_rs.csv`);
+  if (!r.ok) throw new Error(`O site do TCE-RS respondeu ${r.status} ao pedir a lista de órgãos.`);
+  const linhas: string[][] = [];
+  leitorCsv((c) => linhas.push(c))(await r.text(), true);
+  const cab = linhas.shift()!.map((h) => h.replace(/^\uFEFF/, ''));
+  const i = (n: string) => cab.indexOf(n);
+  const lista = linhas.filter((c) => c.length > 3).map((c) => ({
+    cd: Number(c[i('CD_ORGAO')]), nome: txt(c[i('NOME_ORGAO')]), municipio: txt(c[i('NOME_MUNICIPIO')]),
+    ativo: txt(c[i('SITUACAO_ORGAO')]).startsWith('1'), tipo: txt(c[i('SETOR_GOVERNAMENTAL')]),
+  })).filter((x) => x.cd);
+  await adm.from('precos_cache').upsert({ chave, resposta: lista, amostra: null, criado_em: new Date().toISOString() });
+  return lista;
+}
+
+async function carregarOrgaoLc(adm: ReturnType<typeof createClient>, cd: number) {
+  const org = (await listaOrgaosTce(adm)).find((o) => o.cd === cd);
+  if (!org) throw new Error('Órgão não encontrado na lista do TCE-RS.');
+  const anoMin = new Date().getFullYear() - LC_ANOS;
+  const desde = new Date(); desde.setFullYear(desde.getFullYear() - LC_ANOS);
+  const desdeTxt = desde.toISOString().slice(0, 10);
+
+  type Lic = { data: string | null; objeto: string; link: string; nome: string };
+  const lics = new Map<string, Lic>();
+  const pessoas = new Map<string, string>();
+  const itens: string[][] = [];
+  let cabItem: string[] = [], cabLic: string[] = [], cabPes: string[] = [];
+
+  // o ano da licitação é o 3º campo das duas tabelas: descarta os anos antigos antes de separar os campos
+  const anoRecente = (l: string) => {
+    const a = l.indexOf(','), b2 = l.indexOf(',', a + 1), c = l.indexOf(',', b2 + 1);
+    return Number(l.slice(b2 + 1, c)) >= anoMin - 1;
+  };
+  const quando = await lerZipTce(`${TCE}/licitacon/licitacao/orgao/${cd}.csv.zip`, {
+    'licitacao.csv': {
+      filtro: (l) => { const a = l.indexOf(','), b2 = l.indexOf(',', a + 1), c = l.indexOf(',', b2 + 1), d = l.indexOf(',', c + 1); return l.slice(0, d).includes('"') || Number(l.slice(c + 1, d)) >= anoMin - 1; },
+      linha: (c) => {
+        if (!cabLic.length) { cabLic = c; return; }
+        const g = (n: string) => txt(c[cabLic.indexOf(n)]);
+        lics.set(`${g('NR_LICITACAO')}|${g('ANO_LICITACAO')}|${g('CD_TIPO_MODALIDADE')}`, {
+          data: data(g('DT_HOMOLOGACAO')) || data(g('DT_ADJUDICACAO')) || data(g('DT_ABERTURA')),
+          objeto: g('DS_OBJETO').slice(0, 200), link: g('LINK_LICITACON_CIDADAO'), nome: g('NM_ORGAO'),
+        });
+      },
+    },
+    'item.csv': {
+      filtro: anoRecente,
+      linha: (c) => {
+        if (!cabItem.length) { cabItem = c; return; }
+        if (!(numero(c[cabItem.indexOf('VL_UNITARIO_HOMOLOGADO')])! > 0)) return;
+        itens.push(c);
+      },
+    },
+    'pessoas.csv': {
+      linha: (c) => {
+        if (!cabPes.length) { cabPes = c; return; }
+        pessoas.set(txt(c[cabPes.indexOf('NR_DOCUMENTO')]), txt(c[cabPes.indexOf('NM_PESSOA')]));
+      },
+    },
+  });
+  if (!cabItem.length) throw new Error('O arquivo do TCE-RS veio sem a lista de itens (item.csv).');
+
+  const col = (n: string) => cabItem.indexOf(n);
+  const docs = cabItem.map((h, k) => (h === 'NR_DOCUMENTO' ? k : -1)).filter((k) => k >= 0);
+  const linhas = itens.map((c) => {
+    const nr = txt(c[col('NR_LICITACAO')]), ano = txt(c[col('ANO_LICITACAO')]), mod = txt(c[col('CD_TIPO_MODALIDADE')]);
+    const lic = lics.get(`${nr}|${ano}|${mod}`);
+    const quandoItem = lic?.data || data(c[col('DT_REF_VALOR_ESTIMADO')]);
+    if (!quandoItem || quandoItem < desdeTxt) return null;
+    const doc = docs.map((k) => txt(c[k])).find(Boolean) || '';
+    const descricao = txt(c[col('DS_ITEM')]).replace(/\s+/g, ' ');
+    if (!descricao) return null;
+    return {
+      cd_orgao: cd, orgao: lic?.nome || org.nome, municipio: org.municipio,
+      licitacao: `${mod} ${nr}/${ano}`, modalidade: MODALIDADE[mod] || mod,
+      nr_lote: txt(c[col('NR_LOTE')]), nr_item: txt(c[col('NR_ITEM')]),
+      descricao: descricao.slice(0, 600), busca: semAcento(descricao),
+      unidade: txt(c[col('SG_UNIDADE_MEDIDA')]), quantidade: numero(c[col('QT_ITENS')]),
+      valor: numero(c[col('VL_UNITARIO_HOMOLOGADO')]), valor_estimado: numero(c[col('VL_UNITARIO_ESTIMADO')]),
+      data: quandoItem, fornecedor: pessoas.get(doc) || doc, objeto: lic?.objeto || '', link: lic?.link || '',
+    };
+  }).filter((x): x is NonNullable<typeof x> => !!x);
+
+  const { error: e1 } = await adm.from('licitacon_orgaos').upsert({ cd_orgao: cd, nome: org.nome, municipio: org.municipio, itens: linhas.length, arquivo_de: quando, carregado_em: new Date().toISOString() });
+  if (e1) throw new Error('Erro ao gravar o órgão: ' + e1.message + ' (o script licitacon.sql foi executado?)');
+  const { error: e2 } = await adm.from('licitacon_itens').delete().eq('cd_orgao', cd);
+  if (e2) throw new Error(e2.message);
+  for (let i = 0; i < linhas.length; i += 1000) {
+    const { error } = await adm.from('licitacon_itens').insert(linhas.slice(i, i + 1000));
+    if (error) throw new Error('Erro ao gravar os itens: ' + error.message);
+  }
+  return { cd_orgao: cd, nome: org.nome, municipio: org.municipio, itens: linhas.length, arquivo_de: quando };
+}
+
+async function precosLicitacon(adm: ReturnType<typeof createClient>, texto: string, orgaos: number[], meses: number) {
+  const palavras = [...new Set(semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !PALAVRAS_VAZIAS.has(w)).map(raiz))];
+  if (!palavras.length) throw new Error('Digite ao menos uma palavra com 3 letras.');
+  const desde = new Date(); desde.setMonth(desde.getMonth() - meses);
+  let q = adm.from('licitacon_itens').select('*').gte('data', desde.toISOString().slice(0, 10));
+  if (orgaos.length) q = q.in('cd_orgao', orgaos);
+  // cada palavra no começo de uma palavra da descrição ("cadeira" não pega "abraçadeira")
+  for (const w of palavras) q = q.filter('busca', 'match', `(^|[^a-z0-9])${w}`);
+  const { data: linhas, error } = await q.order('data', { ascending: false }).limit(1500);
+  if (error) throw new Error(error.message + ' (o script licitacon.sql foi executado?)');
+  return (linhas || []).map((x) => ({
+    id_compra: x.licitacao, item: [x.nr_lote && x.nr_lote !== '1' ? 'lote ' + x.nr_lote : '', x.nr_item].filter(Boolean).join(' item '),
+    catmat: '', descricao: x.descricao, valor: Number(x.valor), quantidade: x.quantidade == null ? null : Number(x.quantidade),
+    unidade: x.unidade || '', data: x.data, orgao: x.orgao, uasg: x.modalidade ? `${x.modalidade} ${x.licitacao.split(' ')[1] || ''}` : '', codigo_uasg: '',
+    municipio: x.municipio || '', uf: 'RS', esfera: '', fornecedor: x.fornecedor || '', marca: '', objeto: x.objeto || '',
+    estimado: false, fonte: 'LicitaCon', link: x.link || '',
+  }));
+}
+
 const PALAVRAS_VAZIAS = new Set(['de', 'da', 'do', 'das', 'dos', 'com', 'sem', 'para', 'por', 'em', 'e', 'ou', 'tipo', 'uso']);
 const raiz = (w: string) => (w.length > 4 ? w.replace(/(oes|aes|ais|eis|es|s)$/, '') : w);
 
@@ -286,6 +508,38 @@ Deno.serve(async (req) => {
       const meses = Math.min(60, Math.max(1, Number(b.meses) || 12));
       const r = await precosPncp(adm, texto, ufs, meses);
       return json({ itens: r.itens, encontrados: r.itens.length, compras_lidas: r.compras, compras_na_fonte: r.achadas, consultado_em: new Date().toISOString() });
+    }
+
+    // ---------- LicitaCon (TCE-RS) ----------
+    if (b.acao === 'lc_orgaos') {
+      const { data: l, error } = await adm.from('licitacon_orgaos').select('*').order('nome');
+      if (error) return json({ erro: 'Rode antes o script licitacon.sql no Supabase. (' + error.message + ')' }, 500);
+      return json({ orgaos: l || [] });
+    }
+    if (b.acao === 'lc_procurar') {
+      const t = semAcento(txt(b.texto)).trim();
+      if (t.length < 3) return json({ erro: 'Digite ao menos 3 letras do município ou do órgão.' }, 400);
+      const lista = (await listaOrgaosTce(adm)).filter((o) => o.ativo && (semAcento(o.municipio).includes(t) || semAcento(o.nome).includes(t)));
+      const ordem = (o: { nome: string; tipo: string }) => (/^PM /.test(o.nome) ? 0 : o.tipo === 'EXECUTIVO' ? 1 : 2);
+      return json({ orgaos: lista.sort((a, c) => ordem(a) - ordem(c) || a.nome.localeCompare(c.nome)).slice(0, 40) });
+    }
+    if (b.acao === 'lc_carregar') {
+      const cd = Number(b.cd_orgao);
+      if (!Number.isInteger(cd) || cd <= 0) return json({ erro: 'Órgão inválido.' }, 400);
+      return json(await carregarOrgaoLc(adm, cd));
+    }
+    if (b.acao === 'lc_remover') {
+      const cd = Number(b.cd_orgao);
+      const { error } = await adm.from('licitacon_orgaos').delete().eq('cd_orgao', cd);
+      if (error) throw new Error(error.message);
+      return json({ ok: true });
+    }
+    if (b.acao === 'licitacon') {
+      const texto = txt(b.texto).slice(0, 120);
+      const orgaos: number[] = Array.isArray(b.orgaos) ? (b.orgaos as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
+      const meses = Math.min(36, Math.max(1, Number(b.meses) || 12));
+      const itens = await precosLicitacon(adm, texto, orgaos, meses);
+      return json({ itens, encontrados: itens.length, consultado_em: new Date().toISOString() });
     }
 
     return json({ erro: 'Ação desconhecida.' }, 400);
