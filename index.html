@@ -350,6 +350,7 @@
     <div id="searchMsg" style="font-size:14px"></div>
     <div id="searchResults" class="results hidden"></div>
     <button class="btn-ghost btn-block" id="btnLocais" style="margin-top:14px">Concluir uma localização</button>
+    <button class="btn-ghost btn-block" id="btnSobra" style="margin-top:8px">Registrar bem sem cadastro</button>
   </div>
 
   <!-- CONCLUSÃO DE LOCALIZAÇÃO -->
@@ -367,6 +368,32 @@
     </div>
     <div id="lcMsg" style="font-size:14px;margin-top:10px"></div>
     <button class="btn-ghost btn-block" id="btnFecharLoc" style="margin-top:16px">Voltar à busca</button>
+  </div>
+
+  <!-- BEM SEM CADASTRO (SOBRA) -->
+  <div class="card hidden" id="sobraCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h3 style="margin:0">Bem sem cadastro</h3><button class="btn-ghost" id="btnFecharSobra" style="flex:none">‹ Voltar</button></div>
+    <p class="hint">Use quando o bem está no local, mas não é encontrado pela placa, pelo código nem pelo nome. Ele vai para a lista de sobras do painel.</p>
+    <label for="sbDesc">Descrição do bem</label>
+    <input type="text" id="sbDesc" maxlength="200" placeholder="Ex.: Cadeira giratória preta com braços">
+    <div class="row">
+      <div style="flex:1"><label for="sbPlaca">Placa, se houver</label><input type="text" id="sbPlaca" maxlength="30" inputmode="numeric" placeholder="Número"></div>
+      <div style="flex:1"><label for="sbEstado">Estado</label><select id="sbEstado"></select></div>
+    </div>
+    <div class="row">
+      <div style="flex:1"><label for="sbMarca">Marca</label><input type="text" id="sbMarca" maxlength="60"></div>
+      <div style="flex:1"><label for="sbModelo">Modelo</label><input type="text" id="sbModelo" maxlength="60"></div>
+    </div>
+    <label for="sbLocal">Localização onde está</label>
+    <select id="sbLocal"></select>
+    <label for="sbObs">Observação</label>
+    <input type="text" id="sbObs" maxlength="300" placeholder="Ex.: sem identificação, parece ser de terceiros">
+    <label for="sbFotos">Fotos (até 4)</label>
+    <input type="file" id="sbFotos" accept="image/*" capture="environment" multiple>
+    <div class="thumbs" id="sbThumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+    <div id="sbMsg" style="font-size:14px;margin:10px 0"></div>
+    <button class="btn btn-block" id="btnSalvarSobra">Registrar</button>
+    <div id="sbLista" style="margin-top:16px"></div>
   </div>
 
   <!-- ENVIO DOS DADOS -->
@@ -528,7 +555,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.15-2'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.15-3'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1489,6 +1516,60 @@ async function escolherLocal(l){
   }catch(e){ $('#lcQtd').textContent='—'; $('#lcStatus').innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. A conclusão da localização precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
 }
 $('#btnLocais').addEventListener('click',abrirLocais);
+
+/* ====================== BEM SEM CADASTRO (SOBRA) ====================== */
+let SB_FOTOS=[];
+function abrirSobra(){
+  stopScan(); ['searchCard','detailCard','syncCard','locCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#sobraCard').classList.remove('hidden');
+  const ultimo=$('#sbLocal').value;
+  fillSelect('#sbLocal',LOCS.filter(l=>l.cod!==LOCAL_TEMP).slice().sort((a,b)=>String(a.desc).localeCompare(String(b.desc),'pt-BR')),'— selecione —');
+  if(ultimo) $('#sbLocal').value=ultimo;   // quem registra vários bens da mesma sala não escolhe de novo
+  if(!$('#sbEstado').options.length) fillSelect('#sbEstado',ESTADOS_FIXOS,'— estado —');
+  $('#sbMsg').innerHTML=''; listarSobras();
+}
+function limparSobra(){ ['sbDesc','sbPlaca','sbMarca','sbModelo','sbObs'].forEach(x=>$('#'+x).value=''); $('#sbEstado').value=''; $('#sbFotos').value=''; SB_FOTOS=[]; $('#sbThumbs').innerHTML=''; }
+// reduz a foto para no máximo 1600 px e JPEG, como as fotos do levantamento
+function reduzirFoto(file){ return new Promise((ok,erro)=>{ const img=new Image(), u=URL.createObjectURL(file);
+  img.onload=()=>{ const m=1600, k=Math.min(1,m/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg',0.7)); };
+  img.onerror=()=>{ URL.revokeObjectURL(u); erro(new Error('Não foi possível ler a foto.')); }; img.src=u; }); }
+function desenharFotosSobra(){
+  $('#sbThumbs').innerHTML=SB_FOTOS.map((d,i)=>`<div class="thumb"><img src="${d}"><button class="x" data-i="${i}">×</button></div>`).join('');
+  $('#sbThumbs').querySelectorAll('.x').forEach(b=>b.addEventListener('click',()=>{ SB_FOTOS.splice(+b.dataset.i,1); desenharFotosSobra(); }));
+}
+$('#sbFotos').addEventListener('change',async e=>{
+  for(const f of [...e.target.files]){ if(SB_FOTOS.length>=4){ toast('No máximo 4 fotos'); break; } try{ SB_FOTOS.push(await reduzirFoto(f)); }catch(er){ toast(er.message); } }
+  e.target.value=''; desenharFotosSobra();
+});
+async function listarSobras(){
+  const box=$('#sbLista'); box.innerHTML='';
+  try{
+    const {data,error}=await sb.from('sobras').select('id,descricao,placa,localizacao,situacao,criado_em,usuario_nome').order('criado_em',{ascending:false}).limit(15); if(error) throw error;
+    if(!data.length) return;
+    box.innerHTML='<div class="section-title">Últimos registrados</div><div class="sync-list">'+data.map(r=>`<div><span>${esc(r.descricao)}${r.placa?' · placa '+esc(r.placa):''}<br><small>${esc(r.localizacao||'sem localização')} · ${esc(r.usuario_nome||'')} · ${dataHoraBR(r.criado_em)} · ${r.situacao==='resolvido'?'resolvido':'pendente'}</small></span></div>`).join('')+'</div>';
+  }catch(e){ if(!ehErroDeRede(e)) $('#sbMsg').innerHTML='<span class="err">O registro de bens sem cadastro ainda não foi instalado no banco (supabase/sobras.sql).</span>'; }
+}
+$('#btnSobra').addEventListener('click',abrirSobra);
+['sbDesc','sbLocal'].forEach(x=>$('#'+x).addEventListener('input',()=>{ $('#sbMsg').innerHTML=''; }));
+$('#btnFecharSobra').addEventListener('click',()=>{ $('#sobraCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
+$('#btnSalvarSobra').addEventListener('click',async()=>{
+  const desc=$('#sbDesc').value.trim(), cod=$('#sbLocal').value, msg=$('#sbMsg'), btn=$('#btnSalvarSobra');
+  if(desc.length<3){ msg.innerHTML='<span class="err">Informe a descrição do bem.</span>'; return; }
+  if(!cod){ msg.innerHTML='<span class="err">Escolha a localização onde o bem está.</span>'; return; }
+  const loc=LOCS.find(l=>l.cod===cod)||{}, est=ESTADOS_FIXOS.find(x=>x.cod===$('#sbEstado').value);
+  btn.disabled=true; msg.innerHTML='<span class="spin"></span> Registrando...';
+  try{
+    const {data,error}=await sb.from('sobras').insert({descricao:desc,placa:$('#sbPlaca').value.trim()||null,marca:$('#sbMarca').value.trim()||null,modelo:$('#sbModelo').value.trim()||null,
+      cod_localizacao:cod,localizacao:loc.desc||null,cod_estado:est?est.cod:null,estado:est?est.desc:null,observacao:$('#sbObs').value.trim()||null}).select('id').single();
+    if(error) throw error;
+    let enviadas=0;
+    for(let i=0;i<SB_FOTOS.length;i++){ const r=await sb.storage.from(FOTOS_BUCKET).upload(`sobras/${data.id}/${i+1}.jpg`,dataURLtoBlob(SB_FOTOS[i]),{contentType:'image/jpeg',upsert:false}); if(!r.error) enviadas++; }
+    if(enviadas) await sb.from('sobras').update({fotos:enviadas}).eq('id',data.id);
+    const faltou=SB_FOTOS.length-enviadas;
+    limparSobra(); msg.innerHTML=faltou?'<span class="err">Bem registrado, mas '+faltou+' foto(s) não foram enviadas.</span>':''; toast('✓ Bem sem cadastro registrado'); listarSobras();
+  }catch(e){ msg.innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. O registro de bem sem cadastro precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
+  finally{ btn.disabled=false; }
+});
 $('#lcBusca').addEventListener('input',listarLocais);
 $('#btnOutraLoc').addEventListener('click',()=>{ LC_SEL=null; $('#lcDetalhe').classList.add('hidden'); $('#lcBusca').classList.remove('hidden'); $('#lcMsg').innerHTML=''; listarLocais(); });
 $('#btnFecharLoc').addEventListener('click',()=>{ $('#locCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });

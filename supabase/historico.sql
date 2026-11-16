@@ -106,7 +106,7 @@ declare
 begin
   if tg_op <> 'INSERT' then j_old := to_jsonb(old) - ign; end if;
   if tg_op <> 'DELETE' then j_new := to_jsonb(new) - ign; end if;
-  lin := coalesce(j_new, j_old);
+  lin := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
   if tg_op = 'UPDATE' then
     select array_agg(n.key order by n.key) into chg
       from jsonb_each(j_new) n where n.value is distinct from (j_old -> n.key);
@@ -115,7 +115,7 @@ begin
     j_new := (select jsonb_object_agg(k, j_new -> k) from unnest(chg) k);
   end if;
   insert into public.historico (tabela, codigo, acao, campos, antes, depois, usuario, usuario_nome)
-  values (tg_table_name, coalesce(lin ->> 'codigo', lin ->> 'cod', lin ->> 'chave'),
+  values (tg_table_name, coalesce(lin ->> 'codigo', lin ->> 'cod', lin ->> 'chave', lin ->> 'id'),
           case tg_op when 'INSERT' then 'incluiu' when 'UPDATE' then 'alterou' else 'excluiu' end,
           chg, jsonb_strip_nulls(j_old), jsonb_strip_nulls(j_new),
           auth.uid(), case when auth.uid() is null then 'servidor' else public.nome_do_usuario() end);

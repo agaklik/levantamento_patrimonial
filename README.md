@@ -434,3 +434,7 @@ Instalação: rodar `supabase/seguranca-acesso.sql` no SQL Editor e atualizar o 
 ## Autor e histórico de alterações
 
 O banco grava sozinho quem levantou cada bem e quem fez cada reavaliação (o nome vem da sessão, não do navegador) e guarda na tabela `historico` tudo o que foi incluído, alterado ou excluído no levantamento, na reavaliação, nos valores por tipo de bem, na conclusão das localizações e na placa dos bens, com o valor de antes e de depois. Só administradores leem e ninguém altera. No painel: "Levantado por" e "Ver histórico de alterações" na ficha do bem, e o relatório "Histórico de alterações" em Documentos. No app de campo, a ficha mostra o último registro. Requer `supabase/historico.sql`.
+
+## Bens sem cadastro (sobras)
+
+Quando o bem está no local mas não consta no cadastro, a equipe usa **Registrar bem sem cadastro** no app de campo: descrição, placa se houver, marca, modelo, localização, estado, observação e até 4 fotos (precisa de internet). No painel, o card **Bens sem cadastro (sobras)** lista os registros, mostra as fotos e recebe a destinação de cada um; em Documentos há o relatório por localização. Os bens não localizados continuam sendo os que sobram na localização de origem ao final do levantamento. Requer `supabase/sobras.sql`.
