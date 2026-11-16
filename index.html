@@ -555,7 +555,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.15-3'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.16-1'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -834,6 +834,8 @@ async function openByPlate(termo, origem){
   $('#searchMsg').innerHTML='<span class="spin"></span> Buscando '+esc(texto)+'...';
   $('#searchResults').classList.add('hidden');
   if(modoBusca==='nome' && origem!=='etiqueta' && origem!=='lista'){ return buscarPorNome(texto); }
+  // só letras, sem nenhum número (ex.: "cadeira"): não é placa nem código, pesquisa pelo nome
+  if(origem!=='etiqueta' && origem!=='lista' && !/\d/.test(texto)){ return buscarPorNome(texto); }
   if(OFFLINE() || SEM_SESSAO){ return abrirLocal(texto, origem); }
   try{
     const placaNum=stripZeros(onlyDigits(texto));
@@ -846,7 +848,8 @@ async function openByPlate(termo, origem){
 
     // no modo placa (ou scan), tenta por placa
     if(buscarPlaca){
-      let r=await sb.from('bens').select('*').or(`placa.eq.${texto},placa.eq.${placaNum}`).limit(1).maybeSingle(); if(r.error) throw new Error(r.error.message||'erro');
+      // placa vazia nunca casa (há bens sem placa no cadastro)
+      let r=await sb.from('bens').select('*').or(placaNum?`placa.eq.${texto},placa.eq.${placaNum}`:`placa.eq.${texto}`).neq('placa','').limit(1).maybeSingle(); if(r.error) throw new Error(r.error.message||'erro');
       if(r.data) bem=r.data;
     }
     // no modo código (ou scan, se ainda não achou), tenta por código
@@ -906,7 +909,7 @@ async function abrirLocal(texto, origem){
     const placaNum=stripZeros(onlyDigits(texto)), codNum=stripZeros(texto);
     const porPlaca = origem==='etiqueta' || modoBusca==='placa';
     let bem=null;
-    if(porPlaca) bem=todos.find(b=>b.placa===texto||stripZeros(b.placa)===placaNum);
+    if(porPlaca) bem=todos.find(b=>b.placa&&(b.placa===texto||(placaNum&&stripZeros(b.placa)===placaNum)));
     if(!bem && !porPlaca) bem=todos.find(b=>b.codigo===texto||b.codigo===codNum);
     if(!bem){ $('#searchMsg').innerHTML='<span class="err">Nada encontrado para "'+esc(texto)+'" ('+(porPlaca?'placa':'código')+').</span>'; return; }
     const naFila=await filaGet(bem.codigo);
