@@ -358,6 +358,7 @@
       <div class="card">
         <h2>Arquivo para o sistema de patrimônio</h2>
         <p class="sub">Gera o ATUALIZA.csv com todos os itens levantados, no layout de importação do sistema. Antes de gerar, confere se há placas repetidas.</p>
+        <label style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:13px;font-weight:400;color:var(--txt)"><input type="checkbox" id="dAtualizaReav"> Usar o valor reavaliado como Valor Atual (e o valor residual da reavaliação) nos bens já reavaliados</label>
         <div class="acts"><button class="btn" id="btnAtualiza">Gerar ATUALIZA.csv</button></div>
       </div>
       <div class="card">
@@ -1607,17 +1608,18 @@ $('#btnAtualiza').addEventListener('click',()=>{
     'Data Início Depreciação','Código Motivo Movimentação','Código Comissão Avaliação'];
   const lines=[headers.map(csvVirg).join(',')];
   const d=new Date(), hoje=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  const placasSaida=[];
+  const placasSaida=[]; const comReav=$('#dAtualizaReav').checked; let nReav=0;
   for(const lev of levs){
     const b=bensMap[lev.codigo]; if(!b) continue;
+    const r=comReav&&reavOk(b)?reav(b):null; if(r) nReav++;
     const locMudou=(lev.cod_localizacao!=null && lev.cod_localizacao!==b.cod_localizacao);
     const codLocal=lev.cod_localizacao||b.cod_localizacao, codEstado=lev.cod_estado||b.cod_estado, codSit=lev.cod_situacao||b.cod_situacao;
     const dataMov=locMudou?(dataTxtBR(lev.data_movimento)||hoje):hoje;
     const placaSaida=(b.placa&&String(b.placa).trim())?b.placa:(lev.placa_nova||'');
     if(placaSaida&&String(placaSaida).trim()) placasSaida.push({placa:String(placaSaida).trim().replace(/^0+(?=\d)/,''),codigo:b.codigo});
     lines.push([dataMov,placaSaida,b.descricao,b.descricao_reduzida,b.marca,b.modelo,codLocal,b.cod_classificacao,codSit,codEstado,
-      dataTxtBR(b.data_ingresso),b.tipo_ingresso,b.cod_fornecedor,b.cod_convenio,valorBR(b.valor_atual),b.contabil,b.depreciavel,b.metodo_depreciacao,
-      b.vida_util,valorBR(b.valor_residual),dataTxtBR(b.data_inicio_depreciacao),(lev.cod_motivo||'22'),(lev.cod_comissao||'')].map(csvVirg).join(','));
+      dataTxtBR(b.data_ingresso),b.tipo_ingresso,b.cod_fornecedor,b.cod_convenio,r?valorBR(String(+r.valor_reavaliado)):valorBR(b.valor_atual),b.contabil,b.depreciavel,b.metodo_depreciacao,
+      b.vida_util,r&&r.valor_residual!=null?valorBR(String(+r.valor_residual)):valorBR(b.valor_residual),dataTxtBR(b.data_inicio_depreciacao),(lev.cod_motivo||'22'),(lev.cod_comissao||'')].map(csvVirg).join(','));
   }
   const porPlaca={}; placasSaida.forEach(x=>{(porPlaca[x.placa]=porPlaca[x.placa]||[]).push(x.codigo);});
   const dups=Object.keys(porPlaca).filter(p=>porPlaca[p].length>1);
@@ -1627,7 +1629,7 @@ $('#btnAtualiza').addEventListener('click',()=>{
   }
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ATUALIZA.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  toast(`ATUALIZA.csv gerado com ${lines.length-1} itens`);
+  toast(`ATUALIZA.csv gerado com ${lines.length-1} itens`+(comReav?`, ${nReav} com valor reavaliado`:''),comReav?5000:undefined);
 });
 
 /* ====================== USUÁRIOS (função "usuarios" no Supabase) ====================== */

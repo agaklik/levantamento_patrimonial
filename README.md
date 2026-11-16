@@ -438,3 +438,7 @@ O banco grava sozinho quem levantou cada bem e quem fez cada reavaliação (o no
 ## Bens sem cadastro (sobras)
 
 Quando o bem está no local mas não consta no cadastro, a equipe usa **Registrar bem sem cadastro** no app de campo: descrição, placa se houver, marca, modelo, localização, estado, observação e até 4 fotos (precisa de internet). No painel, o card **Bens sem cadastro (sobras)** lista os registros, mostra as fotos e recebe a destinação de cada um; em Documentos há o relatório por localização. Os bens não localizados continuam sendo os que sobram na localização de origem ao final do levantamento. Requer `supabase/sobras.sql`.
+
+## Valores reavaliados no ATUALIZA.csv
+
+Em Documentos, a opção "Usar o valor reavaliado como Valor Atual" faz o ATUALIZA.csv sair com o valor reavaliado e o valor residual da reavaliação nos bens já reavaliados. Desmarcada (padrão), o arquivo sai como antes, com os valores do cadastro.
