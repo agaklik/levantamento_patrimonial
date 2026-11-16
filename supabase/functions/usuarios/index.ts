@@ -8,12 +8,14 @@
 // e só atendem administradores (função is_admin() do seguranca.sql).
 //
 // Ações (corpo JSON):
-//   { acao: 'entrar', usuario, senha }                 (sem login)
+//   { acao: 'entrar', login, senha }                   (sem login; login = e-mail ou nome de usuário;
+//                                                       3 senhas erradas seguidas bloqueiam por 15 minutos)
 //   { acao: 'recuperar', login, redirect }             (sem login; login = e-mail ou nome de usuário)
 //   { acao: 'listar' }                                 (administrador)
 //   { acao: 'criar', nome, usuario?, email, senha, perfil: 'campo'|'admin' }
 //   { acao: 'atualizar', id, nome?, usuario?, perfil?, ativo? }
 //   { acao: 'senha', id, senha }
+//   { acao: 'desbloquear', id }                        (libera quem errou a senha 3 vezes)
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -72,12 +74,32 @@ Deno.serve(async (req) => {
 
     // ---------- antes do login ----------
     if (b.acao === 'entrar') {
-      const falha = json({ erro: 'Usuário ou senha incorretos.' }, 400);
-      const email = await emailDoUsuario(String(b.usuario ?? ''));
-      if (!email) return falha;
-      const { data, error } = await publico().auth.signInWithPassword({ email, password: String(b.senha ?? '') });
-      if (error || !data.session) return falha;
-      return json({ session: { access_token: data.session.access_token, refresh_token: data.session.refresh_token } });
+      // "v" avisa as telas de que esta versão já conta as senhas erradas
+      const V = 3, MAX = 3;
+      const digitado = String(b.login ?? b.usuario ?? '').trim().toLowerCase().slice(0, 200);
+      const senha = String(b.senha ?? '');
+      if (!digitado || !senha) return json({ v: V, erro: 'Informe o e-mail ou nome de usuário e a senha.' }, 400);
+      const email = digitado.includes('@') ? (EMAIL.test(digitado) ? digitado : null) : await emailDoUsuario(digitado);
+      // a contagem vale também para quem não tem cadastro, para não revelar quem tem
+      const chave = email ?? digitado;
+      const bloqueado = (ate: string) => json({ v: V, bloqueado_ate: ate, erro: 'Acesso bloqueado por 15 minutos depois de 3 senhas erradas.' }, 429);
+      const { data: reg } = await adm.from('acessos_falhos').select('bloqueado_ate').eq('chave', chave).maybeSingle();
+      if (reg?.bloqueado_ate && new Date(reg.bloqueado_ate) > new Date()) return bloqueado(reg.bloqueado_ate);
+      if (email) {
+        const { data, error } = await publico().auth.signInWithPassword({ email, password: senha });
+        if (!error && data.session) {
+          await adm.from('acessos_falhos').delete().eq('chave', chave);
+          return json({ v: V, session: { access_token: data.session.access_token, refresh_token: data.session.refresh_token } });
+        }
+        if (error && /banned/i.test(error.message)) return json({ v: V, erro: 'Este usuário está bloqueado. Fale com o administrador.' }, 403);
+        // erro que não é de senha (serviço fora do ar, limite de pedidos): não conta como tentativa
+        if (error && (error.status ?? 400) >= 429) return json({ v: V, erro: 'Não foi possível entrar agora. Tente de novo em instantes.' }, 503);
+      }
+      const { data: f, error: ef } = await adm.rpc('registrar_falha_acesso', { p_chave: chave });
+      const linha = Array.isArray(f) ? f[0] : f;
+      if (ef || !linha) return json({ v: V, erro: 'E-mail, usuário ou senha incorretos.' }, 400); // contagem ainda não instalada
+      if (linha.ate) return bloqueado(linha.ate);
+      return json({ v: V, restantes: Math.max(0, MAX - linha.n), erro: 'E-mail, usuário ou senha incorretos.' }, 400);
     }
     if (b.acao === 'recuperar') {
       const login = String(b.login ?? '').trim().toLowerCase();
@@ -115,6 +137,8 @@ Deno.serve(async (req) => {
       if (error) throw error;
       const { data: admins } = await adm.from('admins').select('user_id');
       const { data: perfis } = await adm.from('usuarios').select('*');
+      const { data: falhas } = await adm.from('acessos_falhos').select('chave,bloqueado_ate').gt('bloqueado_ate', new Date().toISOString());
+      const travado = new Map((falhas ?? []).map((x) => [x.chave, x.bloqueado_ate]));
       const ehAdm = new Set((admins ?? []).map((a) => a.user_id));
       const porId = new Map((perfis ?? []).map((p) => [p.user_id, p]));
       const usuarios = data.users.map((u) => {
@@ -126,6 +150,7 @@ Deno.serve(async (req) => {
           usuario: p.usuario ?? '',
           perfil: ehAdm.has(u.id) ? 'admin' : 'campo',
           ativo: !banido && p.ativo !== false,
+          senha_bloqueada_ate: travado.get((u.email ?? '').toLowerCase()) ?? null,
           ultimo_acesso: u.last_sign_in_at, criado_em: u.created_at,
         };
       }).sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email, 'pt-BR'));
@@ -195,6 +220,15 @@ Deno.serve(async (req) => {
       const eS = erroSenha(String(b.senha ?? ''), alvo.user.email ?? '', String(alvo.user.user_metadata?.usuario ?? ''));
       if (eS) return json({ erro: eS }, 400);
       const { error } = await adm.auth.admin.updateUserById(id, { password: String(b.senha) });
+      if (error) throw error;
+      await adm.from('acessos_falhos').delete().eq('chave', (alvo.user.email ?? '').toLowerCase());
+      return json({ ok: true });
+    }
+
+    if (b.acao === 'desbloquear') {
+      const { data: alvo } = await adm.auth.admin.getUserById(String(b.id ?? ''));
+      if (!alvo?.user?.email) return json({ erro: 'Usuário não encontrado.' }, 400);
+      const { error } = await adm.from('acessos_falhos').delete().eq('chave', alvo.user.email.toLowerCase());
       if (error) throw error;
       return json({ ok: true });
     }

@@ -420,3 +420,13 @@ README.md               Este documento
 ## Laudo técnico de engenheiro
 
 Para bens que exigem avaliação de profissional habilitado (imóveis, veículos, máquinas), a ficha de reavaliação do painel tem o botão **+ Laudo técnico de engenheiro**. Nele se informam número e data do laudo, responsável técnico, título e registro profissional, ART/RRT, valor avaliado, metodologia, observações e o arquivo do laudo (PDF ou imagem). O valor do laudo passa a ser o valor reavaliado do bem e os dados aparecem no laudo de reavaliação e como fonte no relatório geral. Requer `supabase/laudo-tecnico.sql`.
+
+## Segurança do acesso
+
+- **Três senhas erradas bloqueiam por 15 minutos.** As duas telas de entrada passam pela função `usuarios`, que conta os erros por e-mail (tabela `acessos_falhos`). O administrador vê o bloqueio na aba Usuários e pode liberar antes do prazo; definir uma nova senha também libera.
+- **Só usuário cadastrado e ativo acessa os dados.** As regras do banco usam `usuario_ativo()`: uma conta criada fora do painel não lê nem grava nada, e um usuário bloqueado perde o acesso na hora.
+- **Equipe de campo só altera a placa do bem**; o restante do cadastro de bens é do administrador.
+- Depósito de fotos limitado a 15 MB por arquivo, só imagem ou PDF.
+- O painel encerra a sessão depois de 30 minutos sem uso, e as páginas só carregam conteúdo do próprio site e do Supabase do projeto (Content-Security-Policy).
+
+Instalação: rodar `supabase/seguranca-acesso.sql` no SQL Editor e atualizar o código da função `usuarios`. No painel do Supabase, desligar "Allow new users to sign up" em Authentication.

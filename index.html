@@ -2,6 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://wrhtisnejlpjsliplloz.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://wrhtisnejlpjsliplloz.supabase.co wss://wrhtisnejlpjsliplloz.supabase.co; worker-src 'self' blob:; frame-src 'self' blob: https://wrhtisnejlpjsliplloz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Levantamento Patrimonial</title>
 <link rel="manifest" href="manifest.json">
@@ -525,7 +527,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.14-10'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.15-1'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -640,23 +642,31 @@ try{
   if(emailSalvo && $('#loginEmail')) $('#loginEmail').value=emailSalvo;
 }catch(_){}
 
+// Entrada pelo servidor (função "usuarios"): conta as senhas erradas e bloqueia por 15 minutos na 3ª.
+// Devolve '' quando entrou, ou a mensagem de erro.
+async function entrarPeloServidor(login, senha){
+  const direto=async()=>{ const {error}=await sb.auth.signInWithPassword({email:login,password:senha});
+    return !error?'':/invalid login/i.test(error.message)?'E-mail ou senha incorretos.':/banned/i.test(error.message)?'Este usuário está bloqueado. Fale com o administrador.':/fetch|network/i.test(error.message)?'Sem conexão. Tente de novo.':error.message; };
+  let j=null, data=null;
+  try{
+    const r=await sb.functions.invoke('usuarios',{body:{acao:'entrar',login,usuario:login,senha}});
+    data=r.data; if(r.error){ try{ j=await r.error.context.json(); }catch(_){ j=null; } if(!j) return login.includes('@')?await direto():'Sem conexão. Tente de novo.'; }
+  }catch(_){ return login.includes('@')?await direto():'Sem conexão. Tente de novo.'; }
+  if(data&&data.session){ const r=await sb.auth.setSession(data.session); return r.error?r.error.message:''; }
+  j=j||data||{};
+  if(!j.v&&login.includes('@')) return await direto();   // função antiga no servidor: entra como antes
+  if(j.bloqueado_ate){ const h=new Date(j.bloqueado_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return 'Acesso bloqueado depois de 3 senhas erradas. Tente de novo às '+h+' ou peça ao administrador para liberar.'; }
+  let m=j.erro||'E-mail, usuário ou senha incorretos.';
+  if(j.restantes===1) m+=' Resta 1 tentativa antes do bloqueio.'; else if(j.restantes>1) m+=' Restam '+j.restantes+' tentativas.';
+  return m;
+}
 async function doLogin(){
   const login=norm($('#loginEmail').value), pass=$('#loginPass').value;
   if(!login||!pass){$('#loginMsg').innerHTML='<span class="err">Informe o e-mail ou nome de usuário e a senha.</span>';return;}
   $('#loginMsg').innerHTML='<span class="spin"></span> Entrando...';
   try{ localStorage.setItem('lev_email', login); }catch(_){}
-  let erro='';
-  if(login.includes('@')){
-    const {error}=await sb.auth.signInWithPassword({email:login.toLowerCase(),password:pass});
-    if(error) erro=/invalid login/i.test(error.message)?'E-mail ou senha incorretos.':/banned/i.test(error.message)?'Este usuário está bloqueado. Fale com o administrador.':error.message;
-  }else{
-    // nome de usuário: a função "usuarios" acha o e-mail no servidor e devolve a sessão
-    try{
-      const {data,error}=await sb.functions.invoke('usuarios',{body:{acao:'entrar',usuario:login.toLowerCase(),senha:pass}});
-      if(error){ let m='Usuário ou senha incorretos.'; try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){} erro=m; }
-      else{ const r=await sb.auth.setSession(data.session); if(r.error) erro=r.error.message; }
-    }catch(e){ erro='Sem conexão. Tente de novo.'; }
-  }
+  const erro=await entrarPeloServidor(login.toLowerCase(),pass);
   $('#loginMsg').innerHTML=erro?'<span class="err">'+esc(erro)+'</span>':'';
 }
 
@@ -734,7 +744,7 @@ async function loadAux(){
 }
 function fillSelect(sel,list,ph){
   const el=$(sel); if(!el)return;
-  el.innerHTML=`<option value="">${ph}</option>`+list.map(o=>`<option value="${o.cod}">${o.desc}${o.cod?` (${o.cod})`:''}</option>`).join('');
+  el.innerHTML=`<option value="">${ph}</option>`+list.map(o=>`<option value="${esc(o.cod)}">${esc(o.desc)}${o.cod?` (${esc(o.cod)})`:''}</option>`).join('');
 }
 
 /* ====================== ESTATÍSTICAS ====================== */
@@ -1167,7 +1177,7 @@ function showLocSuggest(){
   if(!LOCS.length){sug.innerHTML='<div class="opt empty">Sem relação de localizações.</div>';sug.classList.remove('hidden');return;}
   const list=locFilter(inp.value);
   if(!list.length){sug.innerHTML='<div class="opt empty">Nenhuma localização encontrada</div>';sug.classList.remove('hidden');return;}
-  sug.innerHTML=list.map((l,i)=>`<div class="opt" data-i="${i}"><b>${l.desc||'(sem descrição)'}</b><small>Código: ${l.cod||'—'}</small></div>`).join('');
+  sug.innerHTML=list.map((l,i)=>`<div class="opt" data-i="${i}"><b>${esc(l.desc||'(sem descrição)')}</b><small>Código: ${esc(l.cod||'—')}</small></div>`).join('');
   sug._list=list;locActiveIdx=-1;
   sug.querySelectorAll('.opt[data-i]').forEach(el=>el.addEventListener('mousedown',ev=>{ev.preventDefault();pickLoc(list[+el.dataset.i]);}));
   sug.classList.remove('hidden');

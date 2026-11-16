@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://wrhtisnejlpjsliplloz.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://wrhtisnejlpjsliplloz.supabase.co wss://wrhtisnejlpjsliplloz.supabase.co; worker-src 'self' blob:; frame-src 'self' blob: https://wrhtisnejlpjsliplloz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
 <title>Administração · Levantamento Patrimonial</title>
 <link rel="icon" href="icon-192.png">
 <style>
@@ -729,7 +731,7 @@ function tela(id){ ['loginScreen','blockScreen','app'].forEach(x=>$('#'+x).class
 async function iniciar(){
   const {data:{session}}=await sb.auth.getSession();
   if(LINK_RECUPERACAO){ LINK_RECUPERACAO=false; history.replaceState(null,'',location.pathname); if(session){ tela('loginScreen'); painelLogin('pNovaSenha'); return; } }
-  if(!session){ tela('loginScreen'); if(LINK_ERRO){ $('#loginMsg').textContent='O link de recuperação venceu ou já foi usado. Peça um novo em “Esqueci minha senha”.'; LINK_ERRO=''; history.replaceState(null,'',location.pathname); } return; }
+  if(!session){ tela('loginScreen'); try{ const av=sessionStorage.getItem('lev_aviso'); if(av){ sessionStorage.removeItem('lev_aviso'); $('#loginMsg').textContent=av; } }catch(_){} if(LINK_ERRO){ $('#loginMsg').textContent='O link de recuperação venceu ou já foi usado. Peça um novo em “Esqueci minha senha”.'; LINK_ERRO=''; history.replaceState(null,'',location.pathname); } return; }
   USER=session.user;
   let admin=false, falta=false;
   try{
@@ -748,18 +750,31 @@ async function iniciar(){
 }
 $('#btnLogin').addEventListener('click',entrar);
 $('#loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
+// Entrada pelo servidor (função "usuarios"): conta as senhas erradas e bloqueia por 15 minutos na 3ª.
+// Devolve '' quando entrou, ou a mensagem de erro.
+async function entrarPeloServidor(login, senha){
+  const direto=async()=>{ const {error}=await sb.auth.signInWithPassword({email:login,password:senha});
+    return !error?'':/invalid login/i.test(error.message)?'E-mail ou senha incorretos.':/banned/i.test(error.message)?'Este usuário está bloqueado. Fale com o administrador.':/fetch|network/i.test(error.message)?'Sem conexão. Tente de novo.':error.message; };
+  let j=null, data=null;
+  try{
+    const r=await sb.functions.invoke('usuarios',{body:{acao:'entrar',login,usuario:login,senha}});
+    data=r.data; if(r.error){ try{ j=await r.error.context.json(); }catch(_){ j=null; } if(!j) return login.includes('@')?await direto():'Sem conexão. Tente de novo.'; }
+  }catch(_){ return login.includes('@')?await direto():'Sem conexão. Tente de novo.'; }
+  if(data&&data.session){ const r=await sb.auth.setSession(data.session); return r.error?r.error.message:''; }
+  j=j||data||{};
+  if(!j.v&&login.includes('@')) return await direto();   // função antiga no servidor: entra como antes
+  if(j.bloqueado_ate){ const h=new Date(j.bloqueado_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return 'Acesso bloqueado depois de 3 senhas erradas. Tente de novo às '+h+' ou peça ao administrador para liberar.'; }
+  let m=j.erro||'E-mail, usuário ou senha incorretos.';
+  if(j.restantes===1) m+=' Resta 1 tentativa antes do bloqueio.'; else if(j.restantes>1) m+=' Restam '+j.restantes+' tentativas.';
+  return m;
+}
 async function entrar(){
   const login=$('#loginEmail').value.trim().toLowerCase(), password=$('#loginPass').value;
   if(!login||!password){ $('#loginMsg').textContent='Informe o e-mail ou nome de usuário e a senha.'; return; }
   $('#loginMsg').textContent='';
-  if(login.includes('@')){
-    const {error}=await sb.auth.signInWithPassword({email:login,password});
-    if(error){ $('#loginMsg').textContent=/invalid login/i.test(error.message)?'E-mail ou senha incorretos.':error.message; return; }
-  }else{
-    const {data,error}=await sb.functions.invoke('usuarios',{body:{acao:'entrar',usuario:login,senha:password}});
-    if(error){ let m='Usuário ou senha incorretos.'; try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){} $('#loginMsg').textContent=m; return; }
-    const r=await sb.auth.setSession(data.session); if(r.error){ $('#loginMsg').textContent=r.error.message; return; }
-  }
+  $('#btnLogin').disabled=true; const erro=await entrarPeloServidor(login,password); $('#btnLogin').disabled=false;
+  if(erro){ $('#loginMsg').textContent=erro; return; }
   iniciar();
 }
 function painelLogin(id){ ['pEntrar','pRecuperar','pNovaSenha'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id)); $('#loginMsg').textContent=''; $('#loginMsg').style.color='var(--danger)'; if(id==='pNovaSenha') mostrarRegras($('#novaSenhaRegras'),'',''); }
@@ -785,6 +800,16 @@ $('#btnSalvarSenha').onclick=async()=>{
   painelLogin('pEntrar'); toast('Senha alterada'); iniciar();
 };
 async function sair(){ await sb.auth.signOut(); location.reload(); }
+// encerra a sessão do painel depois de 30 minutos sem uso
+const INATIVIDADE_MIN=30; let ultimoUso=Date.now();
+['pointerdown','keydown','wheel','touchstart'].forEach(ev=>addEventListener(ev,()=>{ultimoUso=Date.now();},{passive:true,capture:true}));
+setInterval(async()=>{
+  if(Date.now()-ultimoUso<INATIVIDADE_MIN*60000) return;
+  ultimoUso=Date.now();
+  const {data}=await sb.auth.getSession(); if(!data||!data.session) return;
+  try{ sessionStorage.setItem('lev_aviso','Sessão encerrada por inatividade. Entre de novo.'); }catch(_){}
+  sair();
+},30000);
 $('#btnLogout').addEventListener('click',sair);
 $('#btnBlockLogout').addEventListener('click',sair);
 $('#btnReload').addEventListener('click',()=>carregar());
@@ -1543,9 +1568,9 @@ function renderUsuarios(){
     <td style="font-variant-numeric:tabular-nums">${u.usuario?esc(u.usuario):'<span style="color:var(--muted)">—</span>'}</td>
     <td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}</td>
     <td><select class="uPerfil" ${u.id===USER.id?'disabled':''}><option value="campo"${u.perfil!=='admin'?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option></select></td>
-    <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}</td>
+    <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}${u.senha_bloqueada_ate?` <span class="pill p-pend" title="Errou a senha 3 vezes">senha bloqueada até ${new Date(u.senha_bloqueada_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`:''}</td>
     <td style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(u.ultimo_acesso)}</td>
-    <td><div class="acts"><button class="btn-2 uEditar">Editar</button>${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button></div></td></tr>`).join('')
+    <td><div class="acts"><button class="btn-2 uEditar">Editar</button>${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button>${u.senha_bloqueada_ate?'<button class="btn-2 uLiberar">Liberar acesso</button>':''}</div></td></tr>`).join('')
     :'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
   document.querySelectorAll('#usuBody tr[data-id]').forEach(tr=>{
     const u=USUARIOS.find(x=>x.id===tr.dataset.id);
@@ -1553,6 +1578,7 @@ function renderUsuarios(){
     const ba=tr.querySelector('.uAtivo'); if(ba) ba.onclick=()=>{ if(u.ativo&&!confirm(`Bloquear ${u.email}? A pessoa não consegue mais entrar até ser reativada.`)) return; atualizarUsuario(u,{ativo:!u.ativo}); };
     tr.querySelector('.uEditar').onclick=()=>abrirEditar(u);
     tr.querySelector('.uSenha').onclick=()=>abrirSenha(u);
+    const bl=tr.querySelector('.uLiberar'); if(bl) bl.onclick=async()=>{ try{ await chamarUsuarios({acao:'desbloquear',id:u.id}); u.senha_bloqueada_ate=null; renderUsuarios(); toast('Acesso liberado'); }catch(e){ toast('Erro: '+e.message,5000); } };
   });
 }
 async function atualizarUsuario(u,mud){
