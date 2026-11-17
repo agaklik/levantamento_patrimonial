@@ -714,8 +714,8 @@ function ligarOlhos(){
 ligarOlhos();
 
 
-const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo','5':'Ruim'};
-const ORDEM_EST = ['1','2','3','5','4'];   // ordem de exibição: do melhor para o pior
+const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo'};   // o "Ruim" das tabelas do órgão é tratado como Péssimo
+const ORDEM_EST = ['1','2','3','4'];
 const UNIDADES_GESTORAS = {'0':'Prefeitura Municipal','1':'Câmara Municipal de Vereadores'};
 const CFG_PADRAO = {
   orgao:'', municipio:'', cnpj:'', dataBase:'', ato:'', modalidade:'comissao',
@@ -727,10 +727,10 @@ const CFG_PADRAO = {
   // metodoFator 'anos' (anterior): Fator = (pesoEc × EC + pesoPvu × anos restantes − pesoPub × anos de uso) ÷ 100
   metodoFator:'pontos',
   pesoEc:4, pesoPvu:6, pesoPub:3, residualPct:10, fatorMin:0,
-  ec:{'1':10,'2':8,'3':5,'4':2,'5':3},
+  ec:{'1':10,'2':8,'3':5,'4':2},
   tabUso:[10,10,9,8,7,6,5,4,3,3,3],        // pontos por anos já utilizados: menos de 1, 1, 2 ... 9, 10 ou mais
   tabRest:[8,8,8,7,6,5,4,3,2,1],           // pontos por anos restantes: 1 (ou menos), 2 ... 9, 10 ou mais
-  pctRest:{'1':100,'2':80,'3':50,'4':20,'5':30}, // vida útil restante estimada, em % da vida útil do bem
+  pctRest:{'1':100,'2':80,'3':50,'4':20}, // vida útil restante estimada, em % da vida útil do bem
   vidaPadrao:10,
     fundamento:'Avaliação realizada com base no Manual de Contabilidade Aplicada ao Setor Público (MCASP) e na NBC TSP 07 (Ativo Imobilizado), considerando o estado de conservação verificado em vistoria, o tempo de uso e a vida útil futura estimada do bem.'
 };
@@ -822,7 +822,7 @@ function sugestao(b){
   if(porPontos()) return {pub:a==null?null:Math.floor(a), pvu:anosRestantes(b,estCod(b))};
   // método anterior: PUB vem da data de ingresso; PVU é o que resta de 10 anos, com mínimo pelo estado
   const pub=a==null?null:Math.min(10,Math.round(a));
-  const pvu=pub==null?null:Math.min(10,Math.max(10-pub, +({'1':8,'2':6,'3':4,'4':1,'5':2}[estCod(b)]||1)));
+  const pvu=pub==null?null:Math.min(10,Math.max(10-pub, +({'1':8,'2':6,'3':4,'4':1}[estCod(b)]||1)));
   return {pub,pvu};
 }
 function textoFormula(){
