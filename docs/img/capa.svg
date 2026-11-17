@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-label="Levantamento Patrimonial: cada bem contado, cada valor justificado">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18212B"/>
+      <stop offset="1" stop-color="#22324A"/>
+    </linearGradient>
+    <linearGradient id="aluminio" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4F6F8"/>
+      <stop offset=".55" stop-color="#D9DEE4"/>
+      <stop offset="1" stop-color="#BCC4CD"/>
+    </linearGradient>
+    <radialGradient id="brilho" cx=".85" cy=".1" r=".7">
+      <stop offset="0" stop-color="#2347A8" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#2347A8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="sombra" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="440" rx="28" fill="url(#fundo)"/>
+  <rect width="1280" height="440" rx="28" fill="url(#brilho)"/>
+  <g stroke="#FFFFFF" stroke-opacity=".05">
+    <path d="M0 110H1280M0 220H1280M0 330H1280M320 0V440M640 0V440M960 0V440"/>
+  </g>
+
+  <g font-family="Archivo, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="72" y="104" fill="#F5C518" font-size="20" font-weight="700" letter-spacing="4">INVENTÁRIO · REAVALIAÇÃO · PRESTAÇÃO DE CONTAS</text>
+    <text x="70" y="188" fill="#FFFFFF" font-size="68" font-weight="800">Levantamento</text>
+    <text x="70" y="262" fill="#FFFFFF" font-size="68" font-weight="800">Patrimonial</text>
+    <text x="72" y="320" fill="#C9D3E0" font-size="26">Cada bem contado. Cada valor justificado.</text>
+    <text x="72" y="356" fill="#C9D3E0" font-size="26">Cada assinatura protegida.</text>
+  </g>
+
+  <g transform="translate(820 96) rotate(-4)" filter="url(#sombra)">
+    <rect width="360" height="190" rx="18" fill="url(#aluminio)" stroke="#9AA4AF" stroke-width="2"/>
+    <circle cx="26" cy="95" r="7" fill="#9AA4AF"/>
+    <circle cx="334" cy="95" r="7" fill="#9AA4AF"/>
+    <text x="180" y="52" text-anchor="middle" fill="#3B4654" font-family="Archivo, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="3">PATRIMÔNIO</text>
+    <text x="180" y="122" text-anchor="middle" fill="#18212B" font-family="Archivo, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="64" font-weight="800" letter-spacing="2">024542</text>
+    <g fill="#18212B" transform="translate(84 140)">
+      <rect x="0" width="4" height="30"/><rect x="8" width="2" height="30"/><rect x="14" width="6" height="30"/><rect x="24" width="2" height="30"/><rect x="30" width="4" height="30"/><rect x="38" width="2" height="30"/><rect x="44" width="8" height="30"/><rect x="56" width="2" height="30"/><rect x="62" width="4" height="30"/><rect x="70" width="2" height="30"/><rect x="76" width="6" height="30"/><rect x="86" width="2" height="30"/><rect x="92" width="4" height="30"/><rect x="100" width="8" height="30"/><rect x="112" width="2" height="30"/><rect x="118" width="4" height="30"/><rect x="126" width="2" height="30"/><rect x="132" width="6" height="30"/><rect x="142" width="2" height="30"/><rect x="148" width="4" height="30"/><rect x="156" width="2" height="30"/><rect x="162" width="8" height="30"/><rect x="174" width="2" height="30"/><rect x="180" width="4" height="30"/><rect x="188" width="6" height="30"/>
+    </g>
+  </g>
+  <rect x="790" y="250" width="440" height="3" rx="1.5" fill="#F5C518" opacity=".95"/><rect x="790" y="244" width="440" height="15" rx="7" fill="#F5C518" opacity=".18"/>
+  <g font-family="Archivo, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#FFFFFF">
+    <rect x="836" y="330" width="150" height="40" rx="20" fill="#FFFFFF" fill-opacity=".1" stroke="#FFFFFF" stroke-opacity=".25"/>
+    <text x="911" y="356" text-anchor="middle">App de campo</text>
+    <rect x="1000" y="330" width="176" height="40" rx="20" fill="#FFFFFF" fill-opacity=".1" stroke="#FFFFFF" stroke-opacity=".25"/>
+    <text x="1088" y="356" text-anchor="middle">Painel do gestor</text>
+  </g>
+</svg>

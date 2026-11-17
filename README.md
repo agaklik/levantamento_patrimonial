@@ -1,495 +1,138 @@
-# Levantamento Patrimonial
+<p align="center">
+  <img src="docs/img/capa.svg" alt="Levantamento Patrimonial: cada bem contado, cada valor justificado" width="100%">
+</p>
 
-Aplicativo de campo para o levantamento (inventário físico) de bens patrimoniais de órgãos públicos. A equipe percorre os locais com o celular, lê a placa de cada bem, confere localização, estado de conservação e situação, registra fotos e, ao final, o administrador exporta um arquivo pronto para atualizar o sistema de patrimônio.
+<p align="center">
+  <a href="https://agaklik.github.io/levantamento_patrimonial/"><b>Abrir o app de campo</b></a> ·
+  <a href="https://agaklik.github.io/levantamento_patrimonial/admin.html"><b>Abrir o painel</b></a> ·
+  <a href="docs/MANUAL.md"><b>Manual completo</b></a>
+</p>
 
-Versão atual: `v2026.11.11-27` (aparece na tela de login).
+---
 
-## Sumário
+> **Se o Tribunal de Contas pedisse hoje a lista de todos os bens do órgão, com localização, estado e valor justo, quanto tempo levaria para entregar?**
 
-- [O que o app faz](#o-que-o-app-faz)
-- [Como funciona por dentro](#como-funciona-por-dentro)
-- [Perfis de acesso](#perfis-de-acesso)
-- [Uso em campo](#uso-em-campo)
-- [Uso pelo administrador](#uso-pelo-administrador)
-- [Página de administração: reavaliação e documentos](#página-de-administração-reavaliação-e-documentos)
-- [Arquivos CSV de importação](#arquivos-csv-de-importação)
-- [Arquivo de exportação ATUALIZA.csv](#arquivo-de-exportação-atualizacsv)
-- [Regras de negócio](#regras-de-negócio)
-- [Instalação e configuração](#instalação-e-configuração)
-- [Banco de dados](#banco-de-dados)
-- [Segurança](#segurança)
-- [Publicar uma nova versão](#publicar-uma-nova-versão)
-- [Limitações conhecidas](#limitações-conhecidas)
-- [Estrutura do repositório](#estrutura-do-repositório)
+Na maioria das prefeituras e câmaras, a resposta honesta é *"não sei"*. O cadastro diz uma coisa, as salas dizem outra, o valor contábil não reflete o que o bem vale e quem assina as contas responde por essa diferença.
 
-## O que o app faz
+**Levantamento Patrimonial** existe para fechar essa conta. Ele leva a equipe de campo de sala em sala com o celular, transforma cada placa lida em um registro com foto, autor e data, e entrega ao gestor a reavaliação, os laudos e o arquivo que atualiza o sistema de patrimônio.
 
-- **Login** por e-mail e senha.
-- **Localiza o bem** lendo o código de barras da placa pela câmera, ou digitando a placa ou o código do item.
-- **Mostra a ficha do bem**: placa, código, descrição, classificação, marca, modelo e valor atual.
-- **Registra o levantamento**: localização encontrada, estado de conservação, situação, motivo da movimentação, comissão de avaliação e fotos.
-- **Trata bens sem placa**: permite informar ou escanear a placa encontrada em campo, com checagem de duplicidade.
-- **Acompanha o progresso**: barra com o percentual de bens já levantados.
-- **Importa os dados de base** (bens, localizações e motivos) por CSV.
-- **Lista e exporta** os bens encontrados e os não encontrados.
-- **Gera o `ATUALIZA.csv`**, no layout de importação do sistema de patrimônio.
-- **Instala como aplicativo** no celular (PWA), com ícone na tela inicial.
+Do corredor ao balanço, num só lugar.
 
-## Como funciona por dentro
+---
 
-| Parte | Tecnologia |
-| --- | --- |
-| Interface | Um único arquivo `index.html`, com HTML, CSS e JavaScript puro |
-| Banco de dados, login e fotos | [Supabase](https://supabase.com) (PostgreSQL, Auth e Storage) |
-| Leitura de código de barras | ZXing (embutido no `index.html`) |
-| Leitura de CSV | PapaParse (embutido no `index.html`) |
-| Instalação como app | `manifest.json` e `sw.js` (service worker) |
+## Três atos, um resultado
 
-Não há etapa de build nem dependências para instalar. As bibliotecas estão embutidas no próprio `index.html`, e o app é servido como site estático.
-
-O service worker guarda em cache a "casca" do app (a tela). O envio dos dados segue o parâmetro **Envio dos dados do app de campo**, definido pelo administrador:
-
-- **Online:** cada item salvo vai direto para a nuvem. Se a internet cair no meio do trabalho, o item fica guardado no celular e é enviado sozinho quando a conexão voltar.
-- **Offline (exportação):** o app baixa a base para o celular e guarda os registros localmente. Pelo botão de nuvem no topo, a equipe envia tudo quando tiver internet ou exporta um arquivo `.json`, que o administrador recebe na aba **Configuração** do painel.
-
-## Perfis de acesso
-
-| Perfil | O que pode fazer |
-| --- | --- |
-| **Equipe de campo** (usuário logado) | Buscar bens pela placa, pela câmera ou pelo nome, registrar o levantamento, tirar fotos, informar placa de bem sem placa e enviar ou exportar o que fez |
-| **Administrador** | Tudo o que a equipe faz, mais a página de administração (`admin.html`): importar CSVs, cadastrar usuários e a comissão, definir o modo de envio, receber arquivos do campo, baixar listas, gerar o `ATUALIZA.csv`, reavaliar e emitir documentos |
-
-Quem é administrador é definido no banco, pela tabela `admins` e pela função `is_admin()`, criadas pelo script [`supabase/seguranca.sql`](supabase/seguranca.sql). As regras de acesso do mesmo script é que de fato impedem um usuário comum de importar ou excluir dados; esconder a engrenagem é só a parte visual.
-
-Enquanto o script não for executado, a página de administração mostra um aviso pedindo para executá-lo.
-
-## Uso em campo
-
-1. Abra o app e entre com e-mail e senha.
-2. Toque em **📷 Ler código de barras** e aponte para a placa. Se a etiqueta estiver ilegível, digite a placa, ou troque para **Por código** e digite o código do item.
-3. Confira a ficha do bem.
-4. Ajuste o que for diferente do cadastro:
-   - **Localização:** toque no ✕ e digite parte do nome ou do código para buscar.
-   - **Estado de conservação** e **Situação.**
-   - **Motivo da movimentação:** já vem preenchido com o motivo padrão do levantamento.
-5. Toque em **📸 Tirar foto** quantas vezes precisar. As fotos são enviadas ao salvar.
-6. Marque **Levantamento deste item concluído**.
-7. Toque em **💾 Salvar item**. O app volta para a busca, pronto para o próximo bem.
-
-**Bem sem placa:** abra o item pelo código. A ficha mostra um campo para digitar ou escanear a placa encontrada. O app avisa se a placa já pertence a outro bem e, ao salvar, grava a placa no cadastro. Deixe em branco se o bem realmente não tiver placa.
-
-**Instalar no celular:** no Chrome (Android), menu ⋮ e "Adicionar à tela inicial". No Safari (iPhone), botão de compartilhar e "Adicionar à Tela de Início".
-
-## Uso pelo administrador
-
-Toda a configuração é feita na página de administração (endereço do app seguido de `/admin.html`), na aba **Configuração**. O app de campo não tem configurações: serve só para o levantamento.
-
-### Preparar um levantamento
-
-1. Em **Configuração**, **Importar localizações**, **Importar motivos** e **Importar bens**, nessa ordem.
-2. Cadastrar a **Comissão de avaliação** (código e descrição), na mesma aba.
-3. Cadastrar a equipe na aba **Usuários**: nome completo (nome e sobrenome), nome de usuário opcional, e-mail válido, senha inicial e perfil (campo ou administrador). A senha precisa ter 10 ou mais caracteres, com maiúscula, minúscula, número e símbolo, sem conter o e-mail nem o nome de usuário; o botão **gerar** cria uma senha assim. Na mesma aba é possível editar nome e usuário, trocar o perfil, bloquear, reativar e definir nova senha.
-
-No app de campo e no painel, a pessoa entra com o e-mail ou com o nome de usuário. **Esqueci minha senha** envia um link para o e-mail cadastrado criar uma nova senha.
-4. Escolher, em **Configuração**, se o app de campo envia os dados **online** ou por **exportação de arquivo**.
-
-### Importação
-
-A importação **inclui ou atualiza** os registros do arquivo pela chave (código do bem, código da localização ou código do motivo). Ela nunca apaga o levantamento já feito.
-
-- Se a base tiver registros que não vieram no arquivo, o app pergunta se deve removê-los.
-- Um bem que já tem levantamento nunca é removido, mesmo que não esteja no arquivo.
-- A placa informada em campo é preservada quando o arquivo traz a placa em branco.
-- Linhas com a mesma chave no arquivo são ignoradas a partir da segunda ocorrência.
-
-### Comissão de Avaliação
-
-O levantamento usa uma única comissão. Ao salvar uma nova, ela substitui a anterior e é aplicada a todos os itens já levantados. O código informado vai para o `ATUALIZA.csv`.
-
-### Acompanhamento
-
-- Na aba **Reavaliação**, o filtro de situação mostra os bens encontrados ou não localizados.
-- Na aba **Documentos**, **Listas do levantamento** baixa a lista completa de encontrados ou não encontrados (CSV com código, placa, descrição e localização).
-
-### Exportação
-
-Na aba **Documentos**, **Arquivo para o sistema de patrimônio** gera o `ATUALIZA.csv` com todos os itens levantados. Antes de gerar, o painel confere se há placas repetidas e pede confirmação.
-
-No modo offline, os arquivos `.json` exportados pelo app de campo são recebidos em **Configuração**, **Receber arquivo do app de campo**. Um registro mais antigo que o já gravado na nuvem é ignorado.
-
-## Página de administração: reavaliação e documentos
-
-O app de campo cuida do levantamento. Depois que ele termina, o trabalho continua em **`admin.html`**, uma página pensada para o computador e restrita a administradores. O acesso é pelo endereço do app seguido de `/admin.html`.
-
-Antes do primeiro uso, execute [`supabase/reavaliacao.sql`](supabase/reavaliacao.sql) no SQL Editor do Supabase (depois do `seguranca.sql`).
-
-### Abas
-
-| Aba | Para que serve |
-| --- | --- |
-| **Painel** | Totais de bens, encontrados, não localizados e reavaliados; valor contábil, valor reavaliado e variação; resumo por classificação |
-| **Reavaliação** | Lista dos bens com filtros. Clicar em um bem abre a ficha com os dados do levantamento, as fotos e o formulário de reavaliação |
-| **Documentos** | Geração dos laudos, termos e relatórios |
-| **Configuração** | Dados do órgão, comissão, responsável técnico e parâmetros do cálculo |
-
-### Métodos de reavaliação
-
-| Método | Como o valor é obtido |
-| --- | --- |
-| **Valor de bem novo × fator de reavaliação** | Valor de referência (preço de um bem novo equivalente) multiplicado pelo fator |
-| **Valor de mercado de bem equivalente** | Valor informado diretamente |
-| **Valor definido em laudo técnico** | Valor informado diretamente |
-
-O fator de reavaliação é calculado por:
-
-```
-Fator = (4 × EC + 6 × PVU − 3 × PUB) ÷ 100
+```mermaid
+flowchart LR
+    A["<b>1. Preparar</b><br/>importa o cadastro do<br/>sistema de patrimônio"] --> B["<b>2. Contar</b><br/>a equipe lê cada placa<br/>com o celular"]
+    B --> C["<b>3. Avaliar</b><br/>valor de referência,<br/>fórmula e laudo"]
+    C --> D["<b>4. Prestar contas</b><br/>termos, relatórios e<br/>ATUALIZA.csv"]
+    style A fill:#18212B,color:#fff,stroke:#18212B
+    style B fill:#2347A8,color:#fff,stroke:#2347A8
+    style C fill:#2347A8,color:#fff,stroke:#2347A8
+    style D fill:#F5C518,color:#18212B,stroke:#F5C518
 ```
 
-- **EC**, estado de conservação: Excelente 10, Bom 8, Regular 5, Péssimo 2. Vem do estado registrado no levantamento.
-- **PVU**, vida útil futura estimada, de 0 a 10 anos.
-- **PUB**, tempo de uso do bem, de 0 a 10 anos. Vem sugerido pela data de ingresso e pela data-base.
-- Quando o resultado fica abaixo do **fator mínimo** (padrão 0,10), vale o mínimo.
-
-PVU e PUB chegam preenchidos com uma sugestão e podem ser alterados pelo avaliador. Pesos, notas, fator mínimo e percentual de valor residual são ajustáveis na aba Configuração. **Confira esses parâmetros com a norma adotada pelo órgão antes de emitir os laudos.**
-
-### Conclusão das localizações e valor por tipo de bem
-
-A reavaliação segue a ordem do levantamento:
-
-1. Ao terminar uma sala ou setor, a equipe toca em **Concluir uma localização** no app de campo. O banco registra quem concluiu, a data e a hora. A conclusão precisa de internet.
-2. A aba **Painel** traz a lista **Conclusão das localizações**, com bens, levantados, quem concluiu e quando. O administrador pode concluir por ali ou **reabrir** uma localização.
-3. Na aba **Reavaliação**, só os bens de localizações concluídas ficam liberados (filtro "Liberados, a reavaliar").
-4. Cada descrição de bem tem **um único valor de referência**, guardado na tabela `referencias`. Ao salvar o valor de um bem, o painel oferece aplicar o mesmo valor aos outros bens liberados com a mesma descrição; o fator de cada um vem do estado e do tempo de uso dele. Quando outra localização é concluída depois, o botão **Valores por tipo de bem** aplica os valores já definidos aos novos bens, sem nova pesquisa.
-5. Alterar o valor de referência de um tipo exige confirmação e recalcula todos os bens daquele tipo já reavaliados, para que bens iguais nunca fiquem com referências diferentes.
-
-**Localização de origem.** Quando, antes da importação, todos os bens são transferidos no sistema para uma única localização (ex.: "Levantamento 2026"), o painel e o app a reconhecem sozinhos: é a localização que concentra mais da metade dos bens do cadastro importado. Ela fica fora da conclusão das localizações: cada bem encontrado sai dela para a sala onde está, as salas mostram só os bens encontrados, e o que sobrar nela ao final é tratado como não localizado.
-
-Instalação: rodar [`supabase/conclusao.sql`](supabase/conclusao.sql) no SQL Editor. Sem ele, o painel funciona como antes (todos os bens encontrados liberados).
-
-### Pesquisa de preços de referência
-
-Na ficha do bem, ao lado do valor de referência, o botão **Pesquisar preços** consulta os preços pagos em compras públicas, na base de dados abertos do Compras.gov.br (módulo Pesquisa de Preço):
-
-1. Digite o nome do bem (ex.: cadeira escritório) e escolha o **tipo de material** do catálogo do governo (PDM do CATMAT), ou digite o código CATMAT do item. Na primeira busca o painel copia a lista de tipos de material para o Supabase (a API do governo não tem busca por palavra); leva cerca de um minuto.
-2. Escolha a abrangência: **estado** (padrão: o estado do órgão, tirado de "Município / UF" na Configuração), **região** (Sul, Sudeste, Centro-Oeste, Nordeste, Norte) ou **Brasil inteiro**; e o período (6, 12 ou 24 meses; padrão 12).
-3. Use **Filtrar pela descrição** para ficar só com bens iguais ao avaliado (ex.: giratória, espaldar médio), desmarque os preços que não servem (outro modelo, valor fora da realidade) e clique em **Usar mediana**, **Usar média** ou **Usar menor**.
-
-O valor vai para o campo de referência, a fonte é preenchida sozinha e os preços marcados ficam guardados com a reavaliação e aparecem no laudo. As consultas ficam em cache por 24 horas.
-
-**PNCP.** Em "Onde pesquisar", a opção **PNCP** busca pela descrição do bem nas licitações publicadas no Portal Nacional de Contratações Públicas (prefeituras, câmaras, estados e União). O painel localiza as licitações encerradas com resultado que tenham as palavras digitadas, lê os itens e traz o valor unitário homologado. Quando o item ainda não tem resultado, vem o valor estimado do edital, marcado como "estimado" e desmarcado. São lidas até 15 licitações por pesquisa, as mais recentes. A localização usa a busca do próprio portal do PNCP, que não faz parte da API documentada e pode mudar. Próxima fonte prevista: LicitaCon (TCE-RS).
-
-### Reavaliar em lote
-
-**Pela tela:** na aba Reavaliação, marque os bens na lista e clique em **Reavaliar selecionados**. Informe o valor de referência de cada bem (ou um mesmo valor para todos) e a fonte; o painel calcula o fator de cada um e grava tudo de uma vez. Bens com a mesma descrição recebem sempre o mesmo valor.
-
-**Pela planilha:**
-
-1. Na aba Reavaliação, filtre os bens e clique em **Planilha de pesquisa de preços**. O arquivo traz código, placa, descrição, marca, modelo, estado e valor atual.
-2. Preencha as colunas `valor_referencia` e `fonte`.
-3. Clique em **Importar valores de referência**. Cada bem com valor preenchido é reavaliado pelo método do fator, com os parâmetros sugeridos. Depois é possível abrir qualquer bem e ajustar.
-
-### Documentos gerados
-
-| Documento | Conteúdo |
-| --- | --- |
-| **Laudo de avaliação por item** | Um por bem: identificação, vistoria (com fotos), metodologia, resultado e assinaturas |
-| **Termo de responsabilidade** | Um por localização, com os bens encontrados e espaço para assinatura do responsável |
-| **Relatório de bens não localizados** | Bens sem levantamento concluído, por localização de origem |
-| **Relatório geral da reavaliação** | Todos os bens reavaliados, com totais por classificação. Também disponível em CSV |
-
-Os documentos abrem em uma pré-visualização. O botão **Imprimir / salvar em PDF** usa a impressão do navegador. As assinaturas seguem a modalidade escolhida na Configuração: comissão de servidores, responsável técnico ou ambos.
-
-## Arquivos CSV de importação
-
-O separador (vírgula ou ponto e vírgula) é detectado automaticamente. A primeira linha deve conter os cabeçalhos. São aceitos tanto os nomes das colunas do banco quanto os cabeçalhos do relatório do sistema de patrimônio.
-
-### Bens
-
-`Código` é obrigatório e é a chave. `Placa` é opcional. Zeros à esquerda de código e placa são removidos.
-
-| Coluna no banco | Cabeçalhos aceitos |
-| --- | --- |
-| `placa` | `placa`, `Placa` |
-| `codigo` | `codigo`, `Código`, `Codigo` |
-| `descricao` | `descricao`, `Descrição Completa`, `Descricao Completa` |
-| `descricao_reduzida` | `descricao_reduzida`, `Descrição Reduzida`, `Descricao Reduzida` |
-| `marca` | `marca`, `MARCA` |
-| `modelo` | `modelo`, `MODELO` |
-| `cod_localizacao` | `cod_localizacao`, `Cód Localização`, `Cod Localizacao` |
-| `localizacao` | `localizacao`, `Localização`, `Localizacao` |
-| `cod_classificacao` | `cod_classificacao`, `Cód. Classificação`, `Cod. Classificacao` |
-| `classificacao` | `classificacao`, `Classificação`, `Classificacao` |
-| `cod_situacao` | `cod_situacao`, `Cód. Situação`, `Cod. Situacao` |
-| `situacao` | `situacao`, `Situação`, `Situacao` |
-| `cod_estado` | `cod_estado`, `Cód. EstadoConservação`, `Cod. EstadoConservacao` |
-| `estado` | `estado`, `Estado de Conservação`, `Estado de Conservacao` |
-| `data_ingresso` | `data_ingresso`, `Data do Ingresso` |
-| `tipo_ingresso` | `tipo_ingresso`, `Tipo de Ingresso` |
-| `cod_fornecedor` | `cod_fornecedor`, `Cód. Fornecedor`, `Cod. Fornecedor` |
-| `cod_convenio` | `cod_convenio`, `Cód. Convenio`, `Cod. Convenio` |
-| `valor_atual` | `valor_atual`, `Valor Atual` |
-| `contabil` | `contabil`, `Contábil`, `Contabil` |
-| `depreciavel` | `depreciavel`, `Depreciável`, `Depreciavel` |
-| `metodo_depreciacao` | `metodo_depreciacao`, `Método de Depreciação`, `Metodo de Depreciacao` |
-| `vida_util` | `vida_util`, `Vida Útil`, `Vida Util` |
-| `valor_residual` | `valor_residual`, `Valor Residual` |
-| `data_inicio_depreciacao` | `data_inicio_depreciacao`, `Data Inicio Depreciação`, `Data Inicio Depreciacao` |
-
-### Localizações
-
-| Coluna no banco | Cabeçalhos aceitos | Observação |
+| | O que acontece | Onde |
 | --- | --- | --- |
-| `cod` | `cod`, `cdLocalReduzido` | Obrigatório, chave |
-| `desc_` | `desc_`, `dsLocalizacao` | Descrição |
-| `unidade_gestora` | `unidade_gestora`, `cdUnidadeGestora` | Opcional |
+| **Preparar** | O cadastro sai do sistema de patrimônio em CSV e entra no painel sem apagar nada que já foi feito | Painel |
+| **Contar** | A câmera lê a placa, a ficha aparece, a equipe confere sala, estado e situação, tira fotos e segue para o próximo | App de campo |
+| **Avaliar** | O painel pesquisa preços pagos em compras públicas, aplica a fórmula do órgão e gera um laudo por bem | Painel |
+| **Prestar contas** | Termos de responsabilidade, relatório de não localizados, relatório geral e o arquivo de volta para o sistema | Painel |
 
-### Motivos
+---
 
-| Coluna no banco | Cabeçalhos aceitos | Observação |
-| --- | --- | --- |
-| `cod` | `cod`, `cdMotivo` | Obrigatório, chave |
-| `desc_` | `desc_`, `dsMotivo` | Descrição |
+## No campo: rápido como ler um código de barras
 
-## Arquivo de exportação ATUALIZA.csv
+<p align="center">
+  <img src="docs/img/celular-busca.jpg" alt="Tela de busca do app de campo" width="31%">
+  &nbsp;
+  <img src="docs/img/celular-ficha.jpg" alt="Ficha do bem com a placa em destaque" width="31%">
+  &nbsp;
+  <img src="docs/img/celular-conferencia.jpg" alt="Conferência de estado, situação e fotos" width="31%">
+</p>
 
-Codificação UTF-8 com BOM, separador vírgula, quebra de linha CRLF. Uma linha por item levantado, com as colunas nesta ordem:
+- **Aponte e pronto.** A câmera lê a etiqueta; se ela estiver ilegível, busque pela placa, pelo código ou pelo nome.
+- **Sem internet, sem problema.** No modo offline o trabalho fica no celular e sobe quando houver sinal, ou vira um arquivo que o gestor importa.
+- **A vida real tem bens sem placa e placas sem bem.** Os dois casos têm fluxo próprio: a placa encontrada vai para o cadastro, e o bem que não existe no cadastro vira uma *sobra*, com fotos e destinação.
+- **Sala concluída é sala fechada.** Ao terminar um setor, a equipe conclui a localização. O que sobrou na localização de origem é, por definição, *não localizado*.
+- **Instala como aplicativo** no Android e no iPhone, com avisos do gestor direto na tela do celular.
 
-| # | Coluna | Origem |
-| --- | --- | --- |
-| 1 | Data do Movimento | Data da movimentação se a localização mudou; senão, a data de hoje |
-| 2 | Placa | Placa do bem, ou a placa informada em campo |
-| 3 | Descrição | Cadastro do bem |
-| 4 | Descrição Reduzida | Cadastro do bem |
-| 5 | Marca | Cadastro do bem |
-| 6 | Modelo | Cadastro do bem |
-| 7 | Código Localização | Levantamento, ou cadastro se não foi alterada |
-| 8 | Código Classificação | Cadastro do bem |
-| 9 | Código Situação | Levantamento, ou cadastro |
-| 10 | Código Estado Conservação | Levantamento, ou cadastro |
-| 11 | Data da Aquisição | Cadastro do bem (data de ingresso) |
-| 12 | Código Tipo Ingresso | Cadastro do bem |
-| 13 | Código Fornecedor | Cadastro do bem |
-| 14 | Código Convênio | Cadastro do bem |
-| 15 | Valor Atual | Cadastro do bem |
-| 16 | inContabil | Cadastro do bem |
-| 17 | inDepreciavel | Cadastro do bem |
-| 18 | Código Método Depreciação | Cadastro do bem |
-| 19 | Vida Útil | Cadastro do bem |
-| 20 | Valor Residual | Cadastro do bem |
-| 21 | Data Início Depreciação | Cadastro do bem |
-| 22 | Código Motivo Movimentação | Levantamento, ou o motivo padrão |
-| 23 | Código Comissão Avaliação | Comissão cadastrada |
+---
 
-Datas saem como `dd/mm/aaaa` e valores com vírgula decimal.
+## No painel: do inventário ao valor justo
 
-## Regras de negócio
+<p align="center">
+  <img src="docs/img/painel-valores.jpg" alt="Painel com bens, encontrados, valor contábil, valor reavaliado e variação" width="100%">
+</p>
 
-- **Unidade gestora:** um bem não pode ser movido para uma localização de outra unidade gestora. A busca de localização só mostra as da mesma unidade do bem.
-- **Motivo:** se a localização mudou, o motivo da movimentação é obrigatório.
-- **Comissão:** não é possível salvar um item sem uma comissão cadastrada.
-- **Placa nova:** não pode repetir a placa de outro bem nem uma placa já informada em outro levantamento.
-- **Encontrado:** um bem conta como encontrado quando o levantamento está marcado como concluído.
-- **Leitura de etiqueta:** o que a câmera lê é sempre buscado como placa.
+O gestor acompanha, em tempo real, quanto já foi encontrado e quanto o patrimônio realmente vale.
 
-## Instalação e configuração
+### Uma reavaliação que se defende
 
-### 1. Projeto no Supabase
+Cada valor reavaliado nasce de três peças que qualquer auditor consegue refazer:
 
-Crie um projeto no Supabase com as tabelas descritas em [Banco de dados](#banco-de-dados) e um bucket de Storage chamado `fotos`.
+1. **Preço de um bem novo**, pesquisado em fontes públicas oficiais (Compras.gov.br, PNCP e LicitaCon do TCE-RS), na mesma busca. O laudo guarda até 10 preços, os mais próximos da mediana, com pelo menos um de cada fonte.
+2. **Fórmula do órgão**, com tabelas de pontos para estado de conservação, vida útil já usada e vida útil restante:
 
-### 2. Apontar o app para o projeto
+   ```
+   valor reavaliado = valor de bem novo × (4 × EC + 6 × PVU − 3 × VUR) ÷ 100
+   ```
 
-No início do bloco de script do `index.html` ficam os parâmetros:
+   O resultado nunca fica abaixo de 10% do valor de bem novo. Pesos, tabelas e piso são editáveis por cliente.
+3. **Um valor por tipo de bem.** Cadeiras iguais nunca recebem referências diferentes. Mudou a referência, todos os bens daquele tipo são recalculados.
 
-| Constante | Significado |
+Imóveis, veículos e máquinas podem receber **laudo de engenheiro** com ART, que passa a ser o valor do bem.
+
+### Documentos que saem prontos
+
+| Documento | Para quê |
 | --- | --- |
-| `SUPABASE_URL` | Endereço do projeto Supabase |
-| `SUPABASE_KEY` | Chave pública (publishable/anon) do projeto |
-| `FOTOS_BUCKET` | Nome do bucket das fotos (`fotos`) |
-| `MOTIVO_PADRAO` | Código do motivo de movimentação padrão do levantamento |
-| `APP_VERSION` | Versão exibida na tela de login |
-| `ESTADOS_FIXOS` | Estados de conservação: 1 Excelente, 2 Bom, 3 Regular, 4 Péssimo |
-| `SITUACOES_FIXAS` | Situações: 1 Em uso, 2 Em estoque, 3 Cedido, 4 Depósito (inservível) |
-| `UNIDADES_GESTORAS` | Código e nome das unidades gestoras |
+| **Laudo de avaliação por item** | Identificação, vistoria com fotos, metodologia, resultado e assinaturas |
+| **Termo de responsabilidade** | Um por sala, com os bens encontrados, para o responsável assinar |
+| **Relatório de não localizados** | O que não apareceu, por localização de origem |
+| **Relatório geral da reavaliação** | Todos os bens reavaliados, com totais por classificação |
+| **Histórico de alterações** | Quem fez o quê, quando, com o valor de antes e o de depois |
+| **ATUALIZA.csv** | O arquivo que leva o resultado de volta ao sistema de patrimônio |
 
-Use somente a chave pública. A chave `service_role` nunca deve aparecer no código.
+Todos têm o brasão do órgão e saem em PDF pela impressão do navegador.
 
-### 3. Regras de acesso
+---
 
-No painel do Supabase, abra o SQL Editor, cole o conteúdo de [`supabase/seguranca.sql`](supabase/seguranca.sql), troque `SEU_EMAIL_AQUI` pelo e-mail de login do administrador e execute. O script pode ser executado mais de uma vez.
+## Construído para dados públicos
 
-Em seguida, execute da mesma forma o [`supabase/reavaliacao.sql`](supabase/reavaliacao.sql), que cria as tabelas da página de administração.
+- **Cada órgão só enxerga o que é seu.** Vários clientes dividem o mesmo banco, separados por regras do próprio banco de dados, não por telas.
+- **Tudo tem autor.** Quem levantou, quem reavaliou e quem concluiu cada sala fica gravado pelo servidor, com histórico que ninguém altera.
+- **Acesso blindado.** Senha forte, bloqueio após três tentativas erradas, troca obrigatória da senha provisória, cadastro público desligado e sessão do painel que expira após 30 minutos sem uso.
+- **Fotos privadas.** Nada fica em link público; as imagens abrem por links temporários.
+- **Nenhum segredo no código.** A única chave nas páginas é a pública do Supabase; as chaves de serviço e de e-mail ficam guardadas no servidor.
+- **Demonstração sem risco.** Uma prefeitura fictícia completa, com botão para voltar ao ponto de partida, e acesso de teste com prazo que só alcança essa base.
+- **Cópia de segurança** de um cliente ou de todos, com fotos, em um clique.
 
-Para incluir outro administrador depois:
+---
 
-```sql
-insert into public.admins (user_id)
-select id from auth.users where email = 'email-do-novo-administrador'
-on conflict do nothing;
-```
+## Leve por dentro
 
-### 4. Usuários
-
-O cadastro de usuários pela aba **Usuários** precisa de duas peças no Supabase:
-
-1. Rodar [`supabase/usuarios.sql`](supabase/usuarios.sql) no SQL Editor (depois do `seguranca.sql`).
-2. Publicar a função [`supabase/functions/usuarios`](supabase/functions/usuarios/index.ts) em Edge Functions (nome `usuarios`). Ela usa a chave de serviço do próprio Supabase, que nunca vai para o navegador, e só atende administradores.
-
-Sem essas peças, os usuários continuam podendo ser criados em Authentication, Users, no painel do Supabase.
-
-Ajustes no painel do Supabase para o login por nome de usuário e a recuperação de senha:
-
-- Em Edge Functions, `usuarios`, **desligar "Verify JWT"** (Enforce JWT Verification). A função confere a sessão por conta própria e só atende administradores, exceto nas ações de entrar e recuperar senha.
-- Em Authentication, URL Configuration, cadastrar o endereço do app em **Redirect URLs** (ex.: `https://agaklik.github.io/levantamento_patrimonial/**`).
-- Em Authentication, configurar um **SMTP próprio** (Gmail, Resend etc.). O envio padrão do Supabase só entrega e-mails para membros da equipe do projeto e tem limite baixo por hora.
-- Opcional: em Authentication, exigir senha mínima de 10 caracteres com letras, números e símbolos, para a regra valer também no servidor.
-
-Para a **pesquisa de preços** na reavaliação:
-
-1. Rodar [`supabase/precos.sql`](supabase/precos.sql) no SQL Editor (depois do `reavaliacao.sql`).
-2. Publicar a função [`supabase/functions/precos`](supabase/functions/precos/index.ts) em Edge Functions (nome `precos`) e **desligar "Verify JWT"**. Ela confere a sessão e só atende administradores.
-
-### 5. Hospedagem
-
-Publique os arquivos da raiz do repositório em qualquer hospedagem de site estático com HTTPS (por exemplo, GitHub Pages). O HTTPS é obrigatório para a câmera e para a instalação como app.
-
-## Banco de dados
-
-| Tabela | Chave | Conteúdo |
-| --- | --- | --- |
-| `bens` | `codigo` | Cadastro dos bens, importado do sistema de patrimônio (colunas na seção de CSV) |
-| `levantamento` | `codigo` | Um registro por bem levantado |
-| `localizacoes` | `cod` | `cod`, `desc_`, `unidade_gestora` |
-| `motivos` | `cod` | `cod`, `desc_` |
-| `comissoes` | `cod` | `cod`, `desc_` |
-| `admins` | `user_id` | Usuários administradores (criada pelo script de segurança) |
-| `reavaliacao` | `codigo` | Uma reavaliação por bem: método, parâmetros, valor reavaliado, nova vida útil, valor residual e fonte |
-| `configuracao` | `id` | Linha única com os dados do órgão, a comissão e os parâmetros do cálculo |
-
-Colunas de `levantamento`: `codigo`, `placa_nova`, `cod_localizacao`, `localizacao`, `cod_situacao`, `situacao`, `cod_estado`, `estado`, `cod_motivo`, `cod_comissao`, `data_movimento`, `concluido`, `atualizado_em`.
-
-As fotos ficam no bucket `fotos`, em uma pasta por bem: `<código do bem>/<data e hora>_<sufixo>.jpg`.
-
-## Segurança
-
-O script [`supabase/seguranca.sql`](supabase/seguranca.sql) configura:
-
-- **RLS ligado** nas tabelas. Sem login, ninguém lê nem grava.
-- **Equipe de campo:** lê todas as tabelas, inclui e altera levantamentos e atualiza o cadastro do bem (para gravar a placa encontrada).
-- **Somente administrador:** incluir e excluir bens, alterar localizações, motivos e comissões, excluir levantamentos e excluir fotos.
-- **Bucket `fotos` privado:** o app abre as fotos por link assinado, válido por uma hora.
-
-Ao ser executado, o script remove as políticas de acesso que já existiam nessas tabelas e no bucket `fotos` antes de criar as novas.
-
-A chave que aparece no `index.html` é pública por natureza. O que protege os dados são as regras acima, por isso o script precisa estar aplicado em qualquer projeto que use este app.
-
-## Publicar uma nova versão
-
-1. Altere o `index.html`.
-2. Atualize `APP_VERSION` para que a equipe consiga conferir, na tela de login, se está com a versão nova.
-3. Envie para o branch `main`.
-
-O service worker busca sempre a versão da rede quando há conexão. Se um aparelho continuar mostrando a versão antiga, feche e abra o app novamente.
-
-## Limitações conhecidas
-
-- **Modo offline:** as fotos tiradas sem internet ficam no celular até o envio; evite limpar os dados do navegador antes de enviar ou exportar.
-- **Sem registro de autoria:** o levantamento guarda a data da última alteração, mas não quem a fez, e não mantém histórico.
-- **Bem sem cadastro:** não há fluxo para registrar um bem encontrado em campo que não está na base.
-- **Não localizado:** é deduzido pela ausência de levantamento concluído; não há marcação explícita nem campo de observações.
-- **Exportação:** o `ATUALIZA.csv` inclui todos os itens salvos, mesmo os não marcados como concluídos.
-- **Um cliente por projeto:** os parâmetros do órgão ficam fixos no código, e cada cliente precisa de um projeto Supabase próprio.
-- **Comissão única** por levantamento.
-
-## Estrutura do repositório
+| Peça | Como é feita |
+| --- | --- |
+| **Sem build, sem instalação** | Duas páginas HTML com JavaScript puro, servidas como site estático (GitHub Pages) |
+| **Banco, login e arquivos** | [Supabase](https://supabase.com): PostgreSQL com regras de acesso por linha, autenticação e armazenamento |
+| **Funções no servidor** | Edge Functions para usuários, pesquisa de preços e avisos |
+| **Funciona como app** | PWA com service worker, instalação na tela inicial e notificações |
 
 ```
-index.html              App de campo (interface, lógica e bibliotecas embutidas)
-admin.html              Página de administração (reavaliação e documentos)
-vendor/supabase.js      Biblioteca do Supabase usada pela página de administração
-manifest.json           Dados para instalação como app (nome, cores, ícones)
-sw.js                   Service worker (cache da casca do app)
-icon-192.png            Ícone do app
-icon-512.png            Ícone do app
-supabase/seguranca.sql  Regras de acesso, perfil de administrador e bucket privado
-supabase/reavaliacao.sql  Tabelas da reavaliação e da configuração
-supabase/usuarios.sql   Tabela de perfil e situação dos usuários
-supabase/functions/usuarios/  Função que cadastra e controla usuários
-README.md               Este documento
+index.html     App de campo
+admin.html     Painel do gestor
+instalar.html  QR code e passo a passo para instalar no celular
+sw.js          Service worker (funcionamento offline)
+supabase/      Scripts SQL e Edge Functions
+docs/          Manual completo e imagens
 ```
 
-## Laudo técnico de engenheiro
+---
 
-Para bens que exigem avaliação de profissional habilitado (imóveis, veículos, máquinas), a ficha de reavaliação do painel tem o botão **+ Laudo técnico de engenheiro**. Nele se informam número e data do laudo, responsável técnico, título e registro profissional, ART/RRT, valor avaliado, metodologia, observações e o arquivo do laudo (PDF ou imagem). O valor do laudo passa a ser o valor reavaliado do bem e os dados aparecem no laudo de reavaliação e como fonte no relatório geral. Requer `supabase/laudo-tecnico.sql`.
+## Quer instalar ou entender cada detalhe?
 
-## Segurança do acesso
+O **[manual completo](docs/MANUAL.md)** traz o passo a passo de instalação no Supabase, os layouts dos arquivos CSV e do `ATUALIZA.csv`, as regras de negócio, o banco de dados e a segurança, seção por seção.
 
-- **Três senhas erradas bloqueiam por 15 minutos.** As duas telas de entrada passam pela função `usuarios`, que conta os erros por e-mail (tabela `acessos_falhos`). O administrador vê o bloqueio na aba Usuários e pode liberar antes do prazo; definir uma nova senha também libera.
-- **Só usuário cadastrado e ativo acessa os dados.** As regras do banco usam `usuario_ativo()`: uma conta criada fora do painel não lê nem grava nada, e um usuário bloqueado perde o acesso na hora.
-- **Equipe de campo só altera a placa do bem**; o restante do cadastro de bens é do administrador.
-- Depósito de fotos limitado a 15 MB por arquivo, só imagem ou PDF.
-- O painel encerra a sessão depois de 30 minutos sem uso, e as páginas só carregam conteúdo do próprio site e do Supabase do projeto (Content-Security-Policy).
-
-Instalação: rodar `supabase/seguranca-acesso.sql` no SQL Editor e atualizar o código da função `usuarios`. No painel do Supabase, desligar "Allow new users to sign up" em Authentication.
-
-## Autor e histórico de alterações
-
-O banco grava sozinho quem levantou cada bem e quem fez cada reavaliação (o nome vem da sessão, não do navegador) e guarda na tabela `historico` tudo o que foi incluído, alterado ou excluído no levantamento, na reavaliação, nos valores por tipo de bem, na conclusão das localizações e na placa dos bens, com o valor de antes e de depois. Só administradores leem e ninguém altera. No painel: "Levantado por" e "Ver histórico de alterações" na ficha do bem, e o relatório "Histórico de alterações" em Documentos. No app de campo, a ficha mostra o último registro. Requer `supabase/historico.sql`.
-
-## Bens sem cadastro (sobras)
-
-Quando o bem está no local mas não consta no cadastro, a equipe usa **Registrar bem sem cadastro** no app de campo: descrição, placa se houver, marca, modelo, localização, estado, observação e até 4 fotos (precisa de internet). No painel, o card **Bens sem cadastro (sobras)** lista os registros, mostra as fotos e recebe a destinação de cada um; em Documentos há o relatório por localização. Os bens não localizados continuam sendo os que sobram na localização de origem ao final do levantamento. Requer `supabase/sobras.sql`.
-
-## Valores reavaliados no ATUALIZA.csv
-
-Em Documentos, a opção "Usar o valor reavaliado como Valor Atual" faz o ATUALIZA.csv sair com o valor reavaliado e o valor residual da reavaliação nos bens já reavaliados. Desmarcada (padrão), o arquivo sai como antes, com os valores do cadastro.
-
-## Vários clientes no mesmo banco
-
-Um único projeto do Supabase atende vários clientes (prefeituras, câmaras, autarquias). Cada usuário pertence a um cliente e só enxerga os bens, o levantamento, a reavaliação, os valores por tipo de bem, a conclusão das localizações, o histórico, as sobras, as fotos, os laudos e os usuários desse cliente. Quem decide é o banco (RLS), pela função `cliente_atual()`; as telas só mostram o nome do cliente.
-
-- **Equipe da empresa** (`usuarios.geral = true`, sempre administrador): vê a lista de clientes em Configuração > Clientes, cadastra clientes novos e troca de cliente pelo seletor no alto do painel. A troca vale também para o app de campo desse usuário.
-- **Escolha do órgão no app de campo**: a equipe da empresa escolhe o órgão toda vez que abre o app ("Em qual órgão você vai trabalhar?") e pode trocar tocando no nome do órgão no topo. Com itens guardados no celular, a troca só é liberada depois de enviá-los.
-- **Administrador do cliente**: administra só o próprio cliente; os usuários que ele cadastra entram nesse cliente.
-- **Cliente desativado**: os usuários dele deixam de ver os dados; nada é apagado.
-- Os dados que já existiam ficam no cliente nº 1. Fotos e laudos dele continuam nas pastas antigas do bucket `fotos`; os clientes novos usam a pasta `c<nº>/`.
-- Bancos de preços (catálogo do Compras.gov.br, cache de preços e LicitaCon) são comuns a todos os clientes.
-- O celular guarda os bens de um cliente só: se o usuário passa a outro cliente, a base local é baixada de novo. Arquivo exportado pelo app de campo só é importado no painel do mesmo cliente.
-
-Requer `supabase/clientes.sql` (rodar depois de todos os outros) e a função `usuarios` atualizada. As telas funcionam com ou sem o script: sem ele, tudo segue como um cliente só.
-
-## Cópia de segurança (backup)
-
-O plano gratuito do Supabase não guarda cópias do banco. Em **admin > Configuração > Cópia de segurança**:
-
-- **Baixar cópia deste cliente**: gera um `.zip` com `copia.json` (bens, levantamento, localizações, motivos, comissões, configuração, reavaliações, referências, localizações concluídas, sobras, histórico e lista de usuários) e, se marcado, a pasta `fotos/` com as fotos dos bens, das sobras e os laudos em PDF.
-- **Baixar cópia de todos os clientes** (só equipe da empresa): o painel passa por cada cliente e junta tudo num `.zip`, uma pasta `cliente-<nº>_<nome>/` por cliente; no fim volta ao cliente em uso.
-- **Restaurar a partir de uma cópia** (`.zip` ou `copia.json`): grava no cliente em uso só o que está diferente da cópia (inclui o que sumiu e volta o que mudou); nada é apagado e fotos que já existem ficam como estão. Antes de começar, baixa uma cópia (só dados) da situação atual. Histórico e usuários ficam só no arquivo, para consulta. Uma cópia de outro cliente pode ser restaurada em um cliente diferente (por exemplo, para montar a base de demonstração): as sobras ganham identificação nova.
-- A data da última cópia fica em `configuracao.dados.ultimaCopia` e aparece no cartão; passa de 7 dias, fica em amarelo.
-
-Não precisa de SQL nem de função nova: tudo usa as permissões do administrador do cliente.
-
-## Acesso de teste com prazo
-
-Para liberar a base de demonstração a outras pessoas por um tempo definido:
-
-1. Rode `supabase/acesso-teste.sql` no SQL Editor (depois do `clientes.sql`) e atualize a função `usuarios`.
-2. No painel, aba **Usuários** (só a equipe da empresa vê): marque **Acesso de teste por N dias** ao cadastrar, ou use **Dar prazo / Prazo** num usuário existente (+7, +15, +30 dias ou data escolhida; **Tirar o prazo** volta ao acesso sem data).
-3. O acesso vale até as 23h59 (horário de Brasília) do último dia. Depois disso o banco não entrega mais nenhum dado a essa pessoa (as funções `usuario_ativo`, `is_admin` e `cliente_atual` conferem `usuarios.acesso_ate`), o login avisa que o teste terminou e o que ela fez fica preservado.
-4. Usuário de teste fica preso ao cliente em que foi cadastrado, não pode ser da empresa, não troca de cliente e não cadastra usuários.
-
-## Instalar no celular e avisos (notificações)
-
-**Instalação.** Ao abrir o app pelo navegador do celular ou tablet, aparece uma janela ensinando a instalar: no Android, o botão "Instalar agora" (ou o menu ⋮ > Instalar app); no iPhone e iPad, Compartilhar > Adicionar à Tela de Início, no Safari. "Agora não" fecha, e a janela volta na próxima vez que o app for aberto pelo navegador, até ser instalado ou até a pessoa tocar em "Já instalei". O passo a passo fica sempre no menu ☰ > Instalar o app no celular. A página `instalar.html` tem o QR code e as instruções para imprimir ou mostrar à equipe (também na aba Avisos do painel).
-
-**Avisos.** O administrador escreve na aba Avisos do painel, para toda a equipe do cliente ou para uma pessoa. O aviso aparece no app (menu ☰ > Avisos, com contador) e, para quem ligou as notificações (menu ☰ > Notificações), também na tela do celular com o app fechado. No iPhone, as notificações só funcionam com o app instalado (iOS 16.4 ou mais novo). Cada pessoa escolhe se quer receber as mensagens do administrador e os avisos automáticos.
-
-Avisos automáticos (cada um pode ser desligado no painel):
-- acesso de teste terminando: 3 dias e 1 dia antes do prazo (agendador do banco, de hora em hora);
-- localização reaberta: para quem tinha concluído;
-- itens parados no celular há mais de 24 horas: o próprio app avisa, no máximo a cada 12 horas.
-
-**Instalação no Supabase (uma vez):**
-1. SQL Editor: cole e rode `supabase/avisos.sql` (cria as tabelas, as regras de acesso, o aviso de localização reaberta e o agendador com pg_cron e pg_net).
-2. Edge Functions > Deploy a new function > Via Editor: nome `avisos`, cole `supabase/functions/avisos/index.ts` e publique. Em Details, deixe **Verify JWT desligado**. Não precisa configurar segredo: as chaves das notificações são criadas na primeira chamada e guardadas na tabela `push_config`, que só o servidor lê.
+<p align="center"><sub>As telas deste documento usam dados fictícios.</sub></p>
