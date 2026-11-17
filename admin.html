@@ -160,6 +160,8 @@
   #cliSel option{color:#18212B;background:#fff}
   .hdr-versao{font-size:11.5px!important;color:rgba(255,255,255,.45)!important;font-variant-numeric:tabular-nums}
   .cli-tbl input{min-width:0}
+  .g5{display:grid;gap:12px;grid-template-columns:2fr 1.2fr 1.2fr 1.2fr auto}
+  @media(max-width:900px){.g5{grid-template-columns:1fr 1fr}}
   .toast{border-radius:18px;background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.78));-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 28px rgba(24,33,43,.3)}
   #drawerBg{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
   .login{background:radial-gradient(70vmax 50vmax at 100% 0%,rgba(35,71,168,.55),transparent 60%),radial-gradient(60vmax 40vmax at 0% 100%,rgba(245,197,24,.22),transparent 60%),var(--txt)}
@@ -409,13 +411,15 @@
     <div class="card hidden" id="cardClientes">
       <h2>Clientes</h2>
       <p class="sub">Cada cliente (prefeitura, câmara, autarquia) tem os próprios bens, levantamento, reavaliação, documentos e usuários. A equipe de campo e os administradores de um cliente só enxergam os dados dele. Só a equipe da empresa vê esta lista e troca de cliente pelo seletor no alto da página. Desativar um cliente corta o acesso dos usuários dele, sem apagar nada.</p>
-      <div class="grid g4" style="align-items:end;margin-bottom:16px">
+      <div class="grid g5" style="align-items:end;margin-bottom:16px">
         <div><label for="nCliNome">Nome do cliente</label><input id="nCliNome" placeholder="Ex.: Prefeitura Municipal de ..."></div>
         <div><label for="nCliCnpj">CNPJ</label><input id="nCliCnpj"></div>
         <div><label for="nCliMun">Município / UF</label><input id="nCliMun" placeholder="Ex.: Santa Rosa/RS"></div>
+        <div><label for="nCliSis">Sistema de origem</label><input id="nCliSis" list="listaSistemas" placeholder="Escolha ou digite"></div>
         <div><button class="btn" id="btnNovoCliente">Cadastrar cliente</button></div>
       </div>
-      <div class="tblwrap"><table class="cli-tbl"><thead><tr><th>Nº</th><th>Nome</th><th>CNPJ</th><th>Município / UF</th><th>Situação</th><th></th></tr></thead><tbody id="cliBody"></tbody></table></div>
+      <div class="tblwrap"><table class="cli-tbl"><thead><tr><th>Nº</th><th>Nome</th><th>CNPJ</th><th>Município / UF</th><th>Sistema de origem</th><th>Situação</th><th></th></tr></thead><tbody id="cliBody"></tbody></table></div>
+      <datalist id="listaSistemas"><option value="Abase"><option value="Betha"><option value="Delta"><option value="Dueto (Pronim)"><option value="GovBR"><option value="Governança Brasil"><option value="IPM"><option value="Tecnosweb"><option value="Thema"><option value="Outro"></datalist>
     </div>
     <div class="card">
       <h2>Dados do órgão e do trabalho</h2>
@@ -676,7 +680,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-3'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-4'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -845,13 +849,14 @@ function renderClientes(){
     <td><input class="cNome" value="${esc(c.nome)}"></td>
     <td><input class="cCnpj" value="${esc(c.cnpj||'')}"></td>
     <td><input class="cMun" value="${esc(c.municipio||'')}"></td>
+    <td><input class="cSis" list="listaSistemas" value="${esc(c.sistema||'')}" placeholder="Escolha ou digite"></td>
     <td>${c.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Desativado</span>'}${c.id===CLIENTE.id?' <span class="pill p-mut">em uso</span>':''}</td>
     <td><div class="acts"><button class="btn-2 cSalvar">Salvar</button>${c.id===CLIENTE.id?'':'<button class="btn-2 cUsar">Trabalhar neste</button>'}${c.id===CLIENTE.id?'':`<button class="btn-2 cAtivo">${c.ativo?'Desativar':'Reativar'}</button>`}</div></td></tr>`).join('');
   document.querySelectorAll('#cliBody tr[data-id]').forEach(tr=>{
     const c=CLIENTES.find(x=>String(x.id)===tr.dataset.id);
     tr.querySelector('.cSalvar').onclick=async()=>{
       const nome=tr.querySelector('.cNome').value.trim(); if(!nome){ toast('Informe o nome do cliente.'); return; }
-      const {error}=await sb.from('clientes').update({nome,cnpj:tr.querySelector('.cCnpj').value.trim()||null,municipio:tr.querySelector('.cMun').value.trim()||null}).eq('id',c.id);
+      const {error}=await sb.from('clientes').update({nome,cnpj:tr.querySelector('.cCnpj').value.trim()||null,municipio:tr.querySelector('.cMun').value.trim()||null,sistema:tr.querySelector('.cSis').value.trim()||null}).eq('id',c.id);
       if(error){ toast('Erro: '+error.message,5000); return; }
       toast('Cliente salvo'); if(c.id===CLIENTE.id){ CLIENTE.nome=nome; $('#hdrCliente').textContent=nome; } carregarClientes();
     };
@@ -877,10 +882,10 @@ $('#cliSel').addEventListener('change',e=>{
 $('#btnNovoCliente').addEventListener('click',async()=>{
   const nome=$('#nCliNome').value.trim(); if(nome.length<3){ toast('Informe o nome do cliente.'); return; }
   const btn=$('#btnNovoCliente'); btn.disabled=true;
-  const {data,error}=await sb.from('clientes').insert({nome,cnpj:$('#nCliCnpj').value.trim()||null,municipio:$('#nCliMun').value.trim()||null}).select().single();
+  const {data,error}=await sb.from('clientes').insert({nome,cnpj:$('#nCliCnpj').value.trim()||null,municipio:$('#nCliMun').value.trim()||null,sistema:$('#nCliSis').value.trim()||null}).select().single();
   btn.disabled=false;
   if(error){ toast('Erro: '+error.message,5000); return; }
-  ['#nCliNome','#nCliCnpj','#nCliMun'].forEach(i=>$(i).value='');
+  ['#nCliNome','#nCliCnpj','#nCliMun','#nCliSis'].forEach(i=>$(i).value='');
   await carregarClientes();
   if(confirm(`Cliente "${data.nome}" cadastrado. Trabalhar nele agora?\n\nDepois, em Configuração, importe os bens, as localizações e os motivos dele e cadastre os usuários.`)) trocarCliente(data.id);
 });

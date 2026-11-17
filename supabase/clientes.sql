@@ -26,6 +26,7 @@ create table if not exists public.clientes (
   nome      text not null,
   cnpj      text,
   municipio text,
+  sistema   text,                 -- sistema de origem (Governança Brasil, IPM, Betha...)
   pasta     text unique,          -- prefixo das fotos no bucket ('' = cliente 1, antigo)
   ativo     boolean not null default true,
   criado_em timestamptz not null default now()
