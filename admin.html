@@ -156,6 +156,9 @@
   .hdr-right{margin-left:auto}
   .hdr-right a,.hdr-right button{border:0;border-radius:999px;padding:8px 14px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.12)}
   .hdr-right a:hover,.hdr-right button:hover{background:rgba(255,255,255,.26)}
+  #cliSel{width:auto;max-width:260px;border:0;border-radius:999px;padding:8px 30px 8px 14px;font-size:13px;font-weight:600;color:#fff;background-color:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+  #cliSel option{color:#18212B;background:#fff}
+  .cli-tbl input{min-width:0}
   .toast{border-radius:18px;background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.78));-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 28px rgba(24,33,43,.3)}
   #drawerBg{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
   .login{background:radial-gradient(70vmax 50vmax at 100% 0%,rgba(35,71,168,.55),transparent 60%),radial-gradient(60vmax 40vmax at 0% 100%,rgba(245,197,24,.22),transparent 60%),var(--txt)}
@@ -257,7 +260,7 @@
 <!-- ===== APLICAÇÃO ===== -->
 <div id="app" class="hidden">
 <header>
-  <h1>Administração <small>Levantamento patrimonial</small></h1>
+  <h1>Administração <small id="hdrCliente">Levantamento patrimonial</small></h1>
   <nav id="nav">
     <button data-tab="painel" class="active">Painel</button>
     <button data-tab="reav">Reavaliação</button>
@@ -265,7 +268,7 @@
     <button data-tab="usu">Usuários</button>
     <button data-tab="cfg">Configuração</button>
   </nav>
-  <div class="hdr-right"><a href="./">App de campo</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
+  <div class="hdr-right"><select id="cliSel" class="hidden" title="Cliente em que você está trabalhando" aria-label="Cliente"></select><a href="./">App de campo</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
 </header>
 <main>
   <div id="schemaMsg" class="msg hidden">As tabelas de reavaliação ainda não existem no banco. Execute o script supabase/reavaliacao.sql no SQL Editor do Supabase e recarregue esta página.</div>
@@ -383,7 +386,7 @@
   <section id="tab-usu" class="hidden">
     <div class="card">
       <h2>Usuários</h2>
-      <p class="sub">Quem pode entrar no app de campo e na administração. Administradores também usam o app de campo. Um usuário bloqueado não consegue mais entrar, e o que ele já levantou fica preservado.</p>
+      <p class="sub">Quem pode entrar no app de campo e na administração. Administradores também usam o app de campo. Um usuário bloqueado não consegue mais entrar, e o que ele já levantou fica preservado. Aparecem aqui só os usuários do cliente atual, e quem você cadastra entra nele.</p>
       <div id="usuAviso" class="msg hidden"></div>
       <div id="usuArea">
         <div class="u-form">
@@ -392,6 +395,7 @@
           <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com" autocomplete="off"></div>
           <div><label for="uSenha">Senha inicial <button type="button" class="link-btn" id="btnGerarSenha" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="uSenha" type="password" autocomplete="new-password" spellcheck="false"></div>
           <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option></select></div>
+          <div class="full hidden" id="uGeralBox"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="uGeral" style="width:auto"> Equipe da empresa: administrador com acesso a todos os clientes</label></div>
           <div class="full" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><ul class="pw-rules" id="uSenhaRegras"></ul><button class="btn" id="btnCriarUsu">Cadastrar usuário</button></div>
         </div>
         <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
@@ -401,6 +405,17 @@
 
   <!-- CONFIGURAÇÃO -->
   <section id="tab-cfg" class="hidden">
+    <div class="card hidden" id="cardClientes">
+      <h2>Clientes</h2>
+      <p class="sub">Cada cliente (prefeitura, câmara, autarquia) tem os próprios bens, levantamento, reavaliação, documentos e usuários. A equipe de campo e os administradores de um cliente só enxergam os dados dele. Só a equipe da empresa vê esta lista e troca de cliente pelo seletor no alto da página. Desativar um cliente corta o acesso dos usuários dele, sem apagar nada.</p>
+      <div class="grid g4" style="align-items:end;margin-bottom:16px">
+        <div><label for="nCliNome">Nome do cliente</label><input id="nCliNome" placeholder="Ex.: Prefeitura Municipal de ..."></div>
+        <div><label for="nCliCnpj">CNPJ</label><input id="nCliCnpj"></div>
+        <div><label for="nCliMun">Município / UF</label><input id="nCliMun" placeholder="Ex.: Santa Rosa/RS"></div>
+        <div><button class="btn" id="btnNovoCliente">Cadastrar cliente</button></div>
+      </div>
+      <div class="tblwrap"><table class="cli-tbl"><thead><tr><th>Nº</th><th>Nome</th><th>CNPJ</th><th>Município / UF</th><th>Situação</th><th></th></tr></thead><tbody id="cliBody"></tbody></table></div>
+    </div>
     <div class="card">
       <h2>Dados do órgão e do trabalho</h2>
       <p class="sub">Usados no cabeçalho e nas assinaturas dos documentos.</p>
@@ -698,6 +713,7 @@ const PAGE = 100;
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
 let BENS=[], LEV={}, REAV={}, LOCS={}, COMISSOES=[], NMOTIVOS=0, CFG=structuredClone(CFG_PADRAO);
+let CLIENTE={id:null,nome:'',pasta:'',geral:false}, CLIENTES=[];
 let USER=null, schemaOk=true, filtrados=[], pagina=0, selecionados=new Set(), atual=null;
 
 const toast=(m,ms=2600)=>{const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);};
@@ -786,9 +802,91 @@ async function iniciar(){
       : 'O usuário '+(USER.email||'')+' não está cadastrado como administrador.';
     tela('blockScreen'); return;
   }
+  if(!(await carregarCliente())) return;
   tela('app');
   await carregar();
 }
+/* ====================== CLIENTES ====================== */
+// O banco separa os dados pelo cliente do usuário logado (supabase/clientes.sql).
+// id null = banco ainda sem a separação: o painel funciona como antes.
+const pastaCliente=()=>(CLIENTE&&CLIENTE.pasta)||'';
+const conflito=c=>CLIENTE.id!=null?'cliente_id,'+c:c;
+const comCliente=r=>CLIENTE.id!=null?Object.assign({},r,{cliente_id:CLIENTE.id}):r;
+async function carregarCliente(){
+  const {data,error}=await sb.rpc('meu_cliente');
+  if(error){
+    const naoExiste=error.code==='PGRST202'||error.code==='42883'||/could not find the function|does not exist/i.test(error.message||'');
+    if(naoExiste){ CLIENTE={id:null,nome:'',pasta:'',geral:false}; return true; }
+    $('#blockMsg').textContent='Não foi possível identificar o cliente: '+error.message; tela('blockScreen'); return false;
+  }
+  if(!data){ $('#blockMsg').textContent='O usuário '+(USER.email||'')+' não está ligado a um cliente ativo.'; tela('blockScreen'); return false; }
+  CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true};
+  $('#hdrCliente').textContent=CLIENTE.nome||'Levantamento patrimonial';
+  document.title=(CLIENTE.nome?CLIENTE.nome+' · ':'')+'Administração';
+  $('#cardClientes').classList.toggle('hidden',!CLIENTE.geral);
+  if(CLIENTE.geral) await carregarClientes(); else $('#cliSel').classList.add('hidden');
+  return true;
+}
+async function carregarClientes(){
+  const {data,error}=await sb.from('clientes').select('*').order('nome');
+  if(error){ toast('Erro ao ler os clientes: '+error.message,5000); return; }
+  CLIENTES=data||[];
+  const sel=$('#cliSel');
+  sel.innerHTML=CLIENTES.map(c=>`<option value="${c.id}"${c.id===CLIENTE.id?' selected':''}>${esc(c.nome)}${c.ativo?'':' (desativado)'}</option>`).join('');
+  sel.classList.toggle('hidden',CLIENTES.length<2);
+  renderClientes();
+}
+function renderClientes(){
+  $('#cliBody').innerHTML=CLIENTES.map(c=>`<tr data-id="${c.id}">
+    <td style="font-variant-numeric:tabular-nums">${c.id}</td>
+    <td><input class="cNome" value="${esc(c.nome)}"></td>
+    <td><input class="cCnpj" value="${esc(c.cnpj||'')}"></td>
+    <td><input class="cMun" value="${esc(c.municipio||'')}"></td>
+    <td>${c.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Desativado</span>'}${c.id===CLIENTE.id?' <span class="pill p-mut">em uso</span>':''}</td>
+    <td><div class="acts"><button class="btn-2 cSalvar">Salvar</button>${c.id===CLIENTE.id?'':'<button class="btn-2 cUsar">Trabalhar neste</button>'}${c.id===CLIENTE.id?'':`<button class="btn-2 cAtivo">${c.ativo?'Desativar':'Reativar'}</button>`}</div></td></tr>`).join('');
+  document.querySelectorAll('#cliBody tr[data-id]').forEach(tr=>{
+    const c=CLIENTES.find(x=>String(x.id)===tr.dataset.id);
+    tr.querySelector('.cSalvar').onclick=async()=>{
+      const nome=tr.querySelector('.cNome').value.trim(); if(!nome){ toast('Informe o nome do cliente.'); return; }
+      const {error}=await sb.from('clientes').update({nome,cnpj:tr.querySelector('.cCnpj').value.trim()||null,municipio:tr.querySelector('.cMun').value.trim()||null}).eq('id',c.id);
+      if(error){ toast('Erro: '+error.message,5000); return; }
+      toast('Cliente salvo'); if(c.id===CLIENTE.id){ CLIENTE.nome=nome; $('#hdrCliente').textContent=nome; } carregarClientes();
+    };
+    const u=tr.querySelector('.cUsar'); if(u) u.onclick=()=>trocarCliente(c.id);
+    const a=tr.querySelector('.cAtivo'); if(a) a.onclick=async()=>{
+      if(c.ativo&&!confirm(`Desativar "${c.nome}"? Os usuários deste cliente deixam de acessar os dados (nada é apagado).`)) return;
+      const {error}=await sb.from('clientes').update({ativo:!c.ativo}).eq('id',c.id);
+      if(error){ toast('Erro: '+error.message,5000); return; }
+      toast(c.ativo?'Cliente desativado':'Cliente reativado'); carregarClientes();
+    };
+  });
+}
+async function trocarCliente(id){
+  const {error}=await sb.rpc('escolher_cliente',{p_id:+id});
+  if(error){ toast('Erro ao trocar de cliente: '+error.message,5000); $('#cliSel').value=CLIENTE.id; return; }
+  location.reload();
+}
+$('#cliSel').addEventListener('change',e=>{
+  const c=CLIENTES.find(x=>String(x.id)===e.target.value);
+  if(!confirm(`Trabalhar agora em "${c?c.nome:''}"? O painel recarrega com os dados deste cliente.\n\nNo app de campo, o seu usuário também passa a ver este cliente.`)){ e.target.value=CLIENTE.id; return; }
+  trocarCliente(e.target.value);
+});
+$('#btnNovoCliente').addEventListener('click',async()=>{
+  const nome=$('#nCliNome').value.trim(); if(nome.length<3){ toast('Informe o nome do cliente.'); return; }
+  const btn=$('#btnNovoCliente'); btn.disabled=true;
+  const {data,error}=await sb.from('clientes').insert({nome,cnpj:$('#nCliCnpj').value.trim()||null,municipio:$('#nCliMun').value.trim()||null}).select().single();
+  btn.disabled=false;
+  if(error){ toast('Erro: '+error.message,5000); return; }
+  ['#nCliNome','#nCliCnpj','#nCliMun'].forEach(i=>$(i).value='');
+  await carregarClientes();
+  if(confirm(`Cliente "${data.nome}" cadastrado. Trabalhar nele agora?\n\nDepois, em Configuração, importe os bens, as localizações e os motivos dele e cadastre os usuários.`)) trocarCliente(data.id);
+});
+// se o cliente foi trocado em outra aba, recarrega para não gravar no cliente errado
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||CLIENTE.id==null||!USER) return;
+  const {data}=await sb.rpc('meu_cliente');
+  if(data&&data.id!==CLIENTE.id){ toast('O cliente foi trocado em outra aba. Recarregando...',3000); setTimeout(()=>location.reload(),1200); }
+});
 $('#btnLogin').addEventListener('click',entrar);
 $('#loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
 // Entrada pelo servidor (função "usuarios"): conta as senhas erradas e bloqueia por 15 minutos na 3ª.
@@ -974,7 +1072,7 @@ async function excluirSobra(x){
 }
 async function fotosSobra(x){
   const w=window.open('','_blank');
-  const paths=Array.from({length:x.fotos},(_,i)=>`sobras/${x.id}/${i+1}.jpg`);
+  const paths=Array.from({length:x.fotos},(_,i)=>`${pastaCliente()}sobras/${x.id}/${i+1}.jpg`);
   const {data,error}=await sb.storage.from(FOTOS_BUCKET).createSignedUrls(paths,3600);
   const urls=(data||[]).filter(r=>r.signedUrl).map(r=>r.signedUrl);
   if(error||!urls.length){ if(w) w.close(); toast('Não foi possível abrir as fotos.'); return; }
@@ -1687,7 +1785,7 @@ $('#ltUsar').addEventListener('click',async()=>{
   if(f){
     if(f.size>15*1024*1024){ err.textContent='O arquivo passa de 15 MB.'; return; }
     btn.disabled=true; btn.textContent='Enviando arquivo...';
-    const ext=(f.name.match(/\.[A-Za-z0-9]{1,5}$/)||['.pdf'])[0].toLowerCase(), path=`laudos/${atual.codigo}/${Date.now()}${ext}`;
+    const ext=(f.name.match(/\.[A-Za-z0-9]{1,5}$/)||['.pdf'])[0].toLowerCase(), path=`${pastaCliente()}laudos/${atual.codigo}/${Date.now()}${ext}`;
     const {error}=await sb.storage.from(FOTOS_BUCKET).upload(path,f,{contentType:f.type||'application/pdf'});
     btn.disabled=false; btn.textContent='Usar este laudo';
     if(error){ err.textContent='Erro ao enviar o arquivo: '+error.message; return; }
@@ -1722,12 +1820,12 @@ function linhaAuto(b,ref,fonte,precos){
 }
 let schemaPrecos=true;
 async function gravarReavs(rows){
-  for(let i=0;i<rows.length;i+=500){ const {error}=await sb.from('reavaliacao').upsert(rows.slice(i,i+500),{onConflict:'codigo'}); if(error) throw error; }
+  for(let i=0;i<rows.length;i+=500){ const {error}=await sb.from('reavaliacao').upsert(rows.slice(i,i+500).map(comCliente),{onConflict:conflito('codigo')}); if(error) throw error; }
   rows.forEach(r=>REAV[r.codigo]=Object.assign({},REAV[r.codigo],r));
 }
 async function gravarRef(b,valor,fonte,precos){
   const row={chave:chaveRef(b),descricao:b.descricao||b.descricao_reduzida||'',valor,fonte:fonte||null,precos:precos||null,atualizado_em:new Date().toISOString(),atualizado_por:USER?USER.id:null};
-  const {error}=await sb.from('referencias').upsert(row,{onConflict:'chave'}); if(error) throw error;
+  const {error}=await sb.from('referencias').upsert(comCliente(row),{onConflict:conflito('chave')}); if(error) throw error;
   REFS[row.chave]=row; return row;
 }
 // bens do mesmo tipo (mesma descrição) que ainda não usam o valor de referência do tipo
@@ -1772,7 +1870,7 @@ async function salvarItem(proximo){
     const outros=BENS.filter(x=>x.codigo!==b.codigo&&chaveRef(x)===chave&&reav(x)&&reav(x).metodo==='fator'&&reav(x).valor_referencia!=null).length;
     if(!confirm(`O valor de referência de "${b.descricao||''}" é ${brl(+rfAnt.valor)}.\n\nAlterar para ${brl(o.valor_referencia)} vale para todos os bens com esta descrição, em qualquer localização.`+(outros?`\n\n${outros} bem(ns) já reavaliados serão recalculados com o novo valor.`:'')+'\n\nOK = alterar para todos · Cancelar = voltar')) return false;
   }
-  const {error}=await sb.from('reavaliacao').upsert(row,{onConflict:'codigo'});
+  const {error}=await sb.from('reavaliacao').upsert(comCliente(row),{onConflict:conflito('codigo')});
   if(error){ toast(/laudo_tecnico/.test(error.message)?'Execute antes o script supabase/laudo-tecnico.sql no Supabase.':/precos/.test(error.message)?'Execute antes o script supabase/precos.sql no Supabase.':'Erro ao salvar: '+error.message,4500); return false; }
   PRECOS_MUDOU=false; LAUDO_MUDOU=false;
   REAV[b.codigo]=Object.assign({},REAV[b.codigo],row); toast('✓ Reavaliação salva');
@@ -1815,8 +1913,9 @@ $('#btnLaudoItem').addEventListener('click',async()=>{
 /* ---------- fotos ---------- */
 async function fotosDoBem(codigo,limite){
   try{
-    const {data}=await sb.storage.from(FOTOS_BUCKET).list(String(codigo),{limit:20});
-    const paths=(data||[]).filter(f=>f.name&&f.id!==null).slice(0,limite).map(f=>codigo+'/'+f.name);
+    const pasta=pastaCliente()+codigo;
+    const {data}=await sb.storage.from(FOTOS_BUCKET).list(pasta,{limit:20});
+    const paths=(data||[]).filter(f=>f.name&&f.id!==null).slice(0,limite).map(f=>pasta+'/'+f.name);
     if(!paths.length) return [];
     const sig=await sb.storage.from(FOTOS_BUCKET).createSignedUrls(paths,3600);
     const urls=(sig.data||[]).filter(x=>x&&x.signedUrl&&!x.error).map(x=>x.signedUrl);
@@ -1830,7 +1929,7 @@ $('#btnSalvarModo').addEventListener('click',async()=>{
   if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
   const m=(document.querySelector('input[name=modoEnvio]:checked')||{}).value||'online';
   const dados=Object.assign({},CFG,{modoEnvio:m});
-  const {error}=await sb.from('configuracao').upsert({id:1,dados,atualizado_em:new Date().toISOString()},{onConflict:'id'});
+  const {error}=await sb.from('configuracao').upsert(comCliente({id:1,dados,atualizado_em:new Date().toISOString()}),{onConflict:conflito('id')});
   if(error){ toast('Erro ao salvar: '+error.message,5000); return; }
   CFG=dados; toast(m==='offline'?'Envio offline salvo':'Envio online salvo');
 });
@@ -1844,6 +1943,9 @@ $('#fileCampo').addEventListener('change',async e=>{
   let arq; try{ arq=JSON.parse(await f.text()); }catch(_){ msg.innerHTML='<span class="neg">O arquivo não é um levantamento exportado pelo app.</span>'; return; }
   if(!arq||arq.tipo!=='levantamento-patrimonial-campo'||!Array.isArray(arq.registros)){ msg.innerHTML='<span class="neg">O arquivo não é um levantamento exportado pelo app.</span>'; return; }
   const regs=arq.registros;
+  if(arq.cliente_id!=null && CLIENTE.id!=null && arq.cliente_id!==CLIENTE.id){
+    msg.innerHTML=`<span class="neg">Este arquivo é de outro cliente${arq.cliente?' ('+esc(arq.cliente)+')':''}. ${CLIENTE.geral?'Troque para ele no seletor do alto da página e importe de novo.':'Peça a quem trabalha nesse cliente para importar.'}</span>`; return;
+  }
   // o autor informado no arquivo só é gravado se o banco já tiver a coluna (supabase/historico.sql)
   const comAutor=!(await sb.from('levantamento').select('usuario_nome').limit(1)).error;
   if(!confirm(`Importar ${regs.length} item(ns) levantados${arq.usuario?' por '+arq.usuario:''} em ${new Date(arq.gerado_em).toLocaleString('pt-BR')}?`)) return;
@@ -1852,14 +1954,14 @@ $('#fileCampo').addEventListener('change',async e=>{
     msg.textContent=`Importando ${ok+mantidos+erros.length+1} de ${regs.length}...`;
     try{
       for(const ft of (reg.fotos||[])){
-        const {error}=await sb.storage.from(FOTOS_BUCKET).upload(`${reg.codigo}/${ft.id}.jpg`,blobDeDataUrl(ft.data),{contentType:'image/jpeg',upsert:false});
+        const {error}=await sb.storage.from(FOTOS_BUCKET).upload(`${pastaCliente()}${reg.codigo}/${ft.id}.jpg`,blobDeDataUrl(ft.data),{contentType:'image/jpeg',upsert:false});
         if(error && !/exist|duplicate/i.test(error.message||'') && String(error.statusCode)!=='409') throw new Error('foto: '+error.message);
         if(!error) fotos++;
       }
       const atual=LEV[reg.codigo];
       if(atual && atual.atualizado_em && reg.row.atualizado_em && atual.atualizado_em>reg.row.atualizado_em){ mantidos++; continue; }
       const linha=comAutor&&(reg.usuario||arq.usuario)?Object.assign({},reg.row,{usuario_nome:reg.usuario||arq.usuario}):reg.row;
-      const {error}=await sb.from('levantamento').upsert(linha,{onConflict:'codigo'}); if(error) throw error;
+      const {error}=await sb.from('levantamento').upsert(comCliente(linha),{onConflict:conflito('codigo')}); if(error) throw error;
       if(reg.placa_nova){ const {error:eb}=await sb.from('bens').update({placa:reg.placa_nova}).eq('codigo',reg.codigo); if(eb) throw eb; }
       ok++;
     }catch(err){ erros.push(reg.codigo+': '+(err.message||err)); }
@@ -1922,7 +2024,7 @@ async function carregarUsuarios(){
   const aviso=$('#usuAviso');
   try{
     const d=await chamarUsuarios({acao:'listar'});
-    USUARIOS=d.usuarios||[]; usuCarregado=true; aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
+    USUARIOS=d.usuarios||[]; usuCarregado=true; $('#uGeralBox').classList.toggle('hidden',!(CLIENTE.id!=null&&CLIENTE.geral)); aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
     renderUsuarios();
   }catch(e){
     $('#usuArea').classList.toggle('hidden',!!e.semFuncao);
@@ -1969,7 +2071,7 @@ function gerarSenha(){
 function renderUsuarios(){
   const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'nunca entrou';
   $('#usuBody').innerHTML=USUARIOS.length?USUARIOS.map(u=>`<tr data-id="${esc(u.id)}">
-    <td>${esc(u.nome||'—')}${u.nome&&erroNome(u.nome)?' <span class="pill p-pend" title="Cadastro sem nome completo">completar</span>':''}</td>
+    <td>${esc(u.nome||'—')}${u.geral?' <span class="pill p-mut" title="Acesso a todos os clientes">empresa</span>':''}${u.nome&&erroNome(u.nome)?' <span class="pill p-pend" title="Cadastro sem nome completo">completar</span>':''}</td>
     <td style="font-variant-numeric:tabular-nums">${u.usuario?esc(u.usuario):'<span style="color:var(--muted)">—</span>'}</td>
     <td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}</td>
     <td><select class="uPerfil" ${u.id===USER.id?'disabled':''}><option value="campo"${u.perfil!=='admin'?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option></select></td>
@@ -2029,7 +2131,8 @@ $('#btnCriarUsu').addEventListener('click',async()=>{
     ||(!RX_EMAIL.test(email)?'Informe um e-mail válido.':'')||erroSenha(senha,email,usuario);
   if(err){ toast(err,4500); return; }
   const btn=$('#btnCriarUsu'); btn.disabled=true;
-  try{ await chamarUsuarios({acao:'criar',nome,usuario,email,senha,perfil}); ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); verSenha($('#uSenha'),false); mostrarRegras($('#uSenhaRegras'),''); toast('Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
+  const geral=perfil==='admin'&&$('#uGeral').checked;
+  try{ await chamarUsuarios({acao:'criar',nome,usuario,email,senha,perfil,geral}); $('#uGeral').checked=false; ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); verSenha($('#uSenha'),false); mostrarRegras($('#uSenhaRegras'),''); toast('Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
   catch(e){ toast('Erro: '+e.message,5000); }
   finally{ btn.disabled=false; }
 });
@@ -2049,7 +2152,7 @@ $('#btnSalvarComissao').addEventListener('click',async()=>{
   try{
     // comissão é única: limpa a tabela e grava só esta
     const del=await sb.from('comissoes').delete().neq('cod','__nunca__'); if(del.error) throw del.error;
-    const ins=await sb.from('comissoes').insert([{cod, desc_:desc}]); if(ins.error) throw ins.error;
+    const ins=await sb.from('comissoes').insert([comCliente({cod, desc_:desc})]); if(ins.error) throw ins.error;
     // aplica a todos os itens já levantados
     btn.textContent='Atualizando itens...';
     const upd=await sb.from('levantamento').update({cod_comissao:cod}).neq('codigo','__nunca__'); if(upd.error) throw upd.error;
@@ -2158,7 +2261,7 @@ async function importCSV(file,cfg){
   try{
     for(let i=0;i<total;i+=lote){
       const slice=registros.slice(i,i+lote);
-      const {error}=await sb.from(cfg.table).upsert(slice,{onConflict:chave}); if(error) throw error;
+      const {error}=await sb.from(cfg.table).upsert(slice.map(comCliente),{onConflict:conflito(chave)}); if(error) throw error;
       feitos+=slice.length; showImportProgress(8+Math.round(feitos/total*85),`Importando ${cfg.label}: ${feitos} de ${total}...`);
     }
   }catch(err){ showImportProgress(0,`Erro ao importar (parou em ${feitos} de ${total}; nada foi apagado): `+(err.message||err)); return; }
@@ -2338,7 +2441,7 @@ $('#tpAplicarTodos').addEventListener('click',async()=>{
 
 /* ====================== CONFIGURAÇÃO ====================== */
 function preencherCfg(){
-  $('#cOrgao').value=CFG.orgao; $('#cMunicipio').value=CFG.municipio; $('#cCnpj').value=CFG.cnpj;
+  $('#cOrgao').value=CFG.orgao||CLIENTE.nome||''; $('#cMunicipio').value=CFG.municipio; $('#cCnpj').value=CFG.cnpj;
   $('#cDataBase').value=CFG.dataBase; $('#cAto').value=CFG.ato; $('#cModalidade').value=CFG.modalidade;
   $('#cMembros').innerHTML=CFG.membros.map((m,i)=>`<div><label>Nome do membro ${i+1}</label><input class="cmN" value="${esc(m.nome)}"></div><div><label>Cargo ou função</label><input class="cmC" value="${esc(m.cargo)}"></div>`).join('');
   $('#cRtNome').value=CFG.rtNome; $('#cRtTitulo').value=CFG.rtTitulo; $('#cRtRegistro').value=CFG.rtRegistro;
@@ -2360,7 +2463,7 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     fundamento:$('#cFundamento').value.trim(),
     modoEnvio:CFG.modoEnvio||'online'
   };
-  const {error}=await sb.from('configuracao').upsert({id:1,dados:novo,atualizado_em:new Date().toISOString()},{onConflict:'id'});
+  const {error}=await sb.from('configuracao').upsert(comCliente({id:1,dados:novo,atualizado_em:new Date().toISOString()}),{onConflict:conflito('id')});
   if(error){ toast('Erro ao salvar: '+error.message); return; }
   CFG=novo; toast('✓ Configuração salva'); renderPainel();
 });

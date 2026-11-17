@@ -16,6 +16,10 @@
 //   { acao: 'atualizar', id, nome?, usuario?, perfil?, ativo? }
 //   { acao: 'senha', id, senha }
 //   { acao: 'desbloquear', id }                        (libera quem errou a senha 3 vezes)
+//
+// Vários clientes (supabase/clientes.sql): o administrador só vê e altera os usuários
+// do cliente em que está; quem ele cadastra entra nesse mesmo cliente. Usuário "da
+// empresa" (geral) só é visto e alterado por outro usuário da empresa.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -118,6 +122,21 @@ Deno.serve(async (req) => {
     const { data: ehAdmin } = await asUser.rpc('is_admin');
     if (ehAdmin !== true) return json({ erro: 'Apenas administradores podem gerenciar usuários.' }, 403);
 
+    // cliente em que o administrador está trabalhando (null = banco ainda sem clientes.sql)
+    const { data: eu, error: eEu } = await adm.from('usuarios').select('cliente_id,geral').eq('user_id', user.id).maybeSingle();
+    const multi = !eEu && eu != null && eu.cliente_id != null;
+    const meuCliente: number | null = multi ? eu!.cliente_id : null;
+    const souGeral = multi ? eu!.geral === true : true;
+    // o alvo precisa ser do mesmo cliente; usuário da empresa só por outro da empresa
+    const podeMexer = async (id: string) => {
+      if (!multi) return true;
+      const { data } = await adm.from('usuarios').select('cliente_id,geral').eq('user_id', id).maybeSingle();
+      if (!data) return souGeral;
+      if (data.geral) return souGeral;
+      return data.cliente_id === meuCliente;
+    };
+    const negado = () => json({ erro: 'Este usuário não pertence ao cliente em que você está.' }, 403);
+
     const definirPerfil = async (id: string, perfil: string) => {
       if (perfil === 'admin') {
         const { error } = await adm.from('admins').upsert({ user_id: id }, { onConflict: 'user_id' });
@@ -136,12 +155,17 @@ Deno.serve(async (req) => {
       const { data, error } = await adm.auth.admin.listUsers({ perPage: 1000 });
       if (error) throw error;
       const { data: admins } = await adm.from('admins').select('user_id');
-      const { data: perfis } = await adm.from('usuarios').select('*');
+      let qp = adm.from('usuarios').select('*');
+      if (multi) qp = qp.or(souGeral ? `cliente_id.eq.${meuCliente},geral.is.true` : `cliente_id.eq.${meuCliente}`);
+      const { data: perfis } = await qp;
       const { data: falhas } = await adm.from('acessos_falhos').select('chave,bloqueado_ate').gt('bloqueado_ate', new Date().toISOString());
       const travado = new Map((falhas ?? []).map((x) => [x.chave, x.bloqueado_ate]));
       const ehAdm = new Set((admins ?? []).map((a) => a.user_id));
       const porId = new Map((perfis ?? []).map((p) => [p.user_id, p]));
-      const usuarios = data.users.map((u) => {
+      const usuarios = data.users.filter((u) => !multi || porId.has(u.id)).filter((u) => {
+        const p = porId.get(u.id);
+        return !multi || !p?.geral || souGeral;
+      }).map((u) => {
         const p = porId.get(u.id) ?? {};
         const banido = u.banned_until ? new Date(u.banned_until) > new Date() : false;
         return {
@@ -149,12 +173,13 @@ Deno.serve(async (req) => {
           nome: p.nome ?? u.user_metadata?.nome ?? '',
           usuario: p.usuario ?? '',
           perfil: ehAdm.has(u.id) ? 'admin' : 'campo',
+          geral: p.geral === true,
           ativo: !banido && p.ativo !== false,
           senha_bloqueada_ate: travado.get((u.email ?? '').toLowerCase()) ?? null,
           ultimo_acesso: u.last_sign_in_at, criado_em: u.created_at,
         };
       }).sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email, 'pt-BR'));
-      return json({ usuarios });
+      return json({ usuarios, geral: souGeral });
     }
 
     if (b.acao === 'criar') {
@@ -171,7 +196,9 @@ Deno.serve(async (req) => {
       const { data, error } = await adm.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome, usuario: usuario || null } });
       if (error) return json({ erro: /already|registered|exists/i.test(error.message) ? 'Já existe um usuário com este e-mail.' : error.message }, 400);
       const id = data.user.id;
-      const { error: e2 } = await adm.from('usuarios').upsert({ user_id: id, nome, usuario: usuario || null, perfil, ativo: true });
+      const linha: Record<string, unknown> = { user_id: id, nome, usuario: usuario || null, perfil, ativo: true };
+      if (multi) { linha.cliente_id = meuCliente; linha.geral = souGeral && b.geral === true && perfil === 'admin'; }
+      const { error: e2 } = await adm.from('usuarios').upsert(linha);
       if (e2) throw e2;
       await definirPerfil(id, perfil);
       return json({ ok: true, id });
@@ -180,6 +207,7 @@ Deno.serve(async (req) => {
     if (b.acao === 'atualizar') {
       const id = String(b.id ?? '');
       if (!id) return json({ erro: 'Usuário não informado.' }, 400);
+      if (!(await podeMexer(id))) return negado();
       if (id === user.id && (b.ativo === false || b.perfil === 'campo')) return json({ erro: 'Você não pode bloquear nem tirar o próprio acesso de administrador.' }, 400);
       const mud: Record<string, unknown> = { user_id: id, atualizado_em: new Date().toISOString() };
       if (b.nome !== undefined) {
@@ -194,7 +222,17 @@ Deno.serve(async (req) => {
       }
       if (b.perfil !== undefined) mud.perfil = b.perfil === 'admin' ? 'admin' : 'campo';
       if (b.ativo !== undefined) mud.ativo = !!b.ativo;
-      const { error } = await adm.from('usuarios').upsert(mud);
+      if (multi && souGeral && b.geral !== undefined) {
+        if (id === user.id && b.geral === false) return json({ erro: 'Você não pode tirar o próprio acesso a todos os clientes.' }, 400);
+        mud.geral = b.geral === true;
+      }
+      if (multi && mud.perfil === 'campo') mud.geral = false;
+      // update (e não upsert): a linha já existe e o cliente dela não muda aqui
+      const { data: achou, error } = await adm.from('usuarios').update(mud).eq('user_id', id).select('user_id');
+      if (!error && !(achou ?? []).length) {
+        const { error: e3 } = await adm.from('usuarios').insert({ ...mud, ...(multi ? { cliente_id: meuCliente } : {}) });
+        if (e3) throw e3;
+      }
       if (error) throw error;
       if (b.perfil !== undefined) await definirPerfil(id, mud.perfil as string);
       if (b.ativo !== undefined || b.nome !== undefined || b.usuario !== undefined) {
@@ -215,6 +253,7 @@ Deno.serve(async (req) => {
 
     if (b.acao === 'senha') {
       const id = String(b.id ?? '');
+      if (!(await podeMexer(id))) return negado();
       const { data: alvo } = await adm.auth.admin.getUserById(id);
       if (!alvo?.user) return json({ erro: 'Usuário não encontrado.' }, 400);
       const eS = erroSenha(String(b.senha ?? ''), alvo.user.email ?? '', String(alvo.user.user_metadata?.usuario ?? ''));
@@ -226,6 +265,7 @@ Deno.serve(async (req) => {
     }
 
     if (b.acao === 'desbloquear') {
+      if (!(await podeMexer(String(b.id ?? '')))) return negado();
       const { data: alvo } = await adm.auth.admin.getUserById(String(b.id ?? ''));
       if (!alvo?.user?.email) return json({ erro: 'Usuário não encontrado.' }, 400);
       const { error } = await adm.from('acessos_falhos').delete().eq('chave', alvo.user.email.toLowerCase());

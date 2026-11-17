@@ -34,6 +34,7 @@
   .hdr-center{flex:1;min-width:0}
   header h1{font-size:17px;margin:0;font-weight:700;font-stretch:92%;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
   .stats{display:none}
+  .cliente-nome{font-size:12px;font-weight:600;opacity:.8;letter-spacing:.02em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
   #progWrap{margin-top:7px!important}
   #progWrap>div:first-child{height:6px!important;background:rgba(255,255,255,.16)!important;border-radius:3px!important}
   #progBar{background:var(--signal)!important;border-radius:3px!important}
@@ -312,6 +313,7 @@
 <header>
   <div class="hdr-center">
     <h1>Levantamento patrimonial</h1>
+    <div class="cliente-nome hidden" id="clienteNome"></div>
     <div class="stats" id="stats"></div>
     <div id="progWrap">
       <div style="overflow:hidden">
@@ -555,7 +557,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.16-1'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-1'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -609,7 +611,11 @@ async function enterApp(session){
   if(session&&session.user) USUARIO_EMAIL=session.user.email||USUARIO_EMAIL;
   if(_entrando) return; _entrando=true;
   try{
-    if(!SEM_SESSAO){ await carregarPerfil(); await carregarModoEnvio(); }
+    if(!SEM_SESSAO){
+      if(!(await carregarCliente())) return;
+      await carregarPerfil(); await carregarModoEnvio();
+    }
+    await conferirBaseDoCliente(); mostrarCliente();
     await loadAux();
     // modo offline: na primeira entrada com internet, baixa os bens para o celular
     if(OFFLINE() && !SEM_SESSAO && navigator.onLine && !(await baseLocalPronta())){
@@ -637,6 +643,48 @@ async function carregarPerfil(){
   }catch(_){ /* sem rede: fica sem acesso de administrador */ }
   IS_ADMIN=admin; SEGURANCA_CONFIGURADA=configurada;
   $('#btnPainel').classList.toggle('hidden',!(admin&&configurada));
+}
+/* ====================== CLIENTE (órgão) ====================== */
+// Cada usuário pertence a um cliente (prefeitura, câmara...) e só enxerga os dados dele.
+// O banco decide pelo login (supabase/clientes.sql). Aqui guardamos o nome para a tela
+// e a pasta das fotos. id null = banco ainda sem a separação por cliente.
+let CLIENTE={id:null,nome:'',pasta:''};
+try{ const c=JSON.parse(localStorage.getItem('lev_cliente')||'null'); if(c) CLIENTE=c; }catch(_){}
+const pastaCliente=()=>(CLIENTE&&CLIENTE.pasta)||'';
+function mostrarCliente(){
+  const el=$('#clienteNome'); if(!el) return;
+  el.textContent=CLIENTE&&CLIENTE.nome?CLIENTE.nome:''; el.classList.toggle('hidden',!(CLIENTE&&CLIENTE.nome));
+}
+async function carregarCliente(){
+  try{
+    const {data,error}=await sb.rpc('meu_cliente');
+    if(error){
+      const naoExiste=error.code==='PGRST202'||error.code==='42883'||/could not find the function|does not exist/i.test(error.message||'');
+      if(naoExiste){ CLIENTE={id:null,nome:'',pasta:''}; mostrarCliente(); return true; }
+      throw error;
+    }
+    if(!data){
+      showLogin(); $('#loginMsg').innerHTML='<span class="err">Seu usuário não está ligado a um órgão ativo. Fale com o administrador.</span>';
+      try{ await sb.auth.signOut(); }catch(_){}
+      return false;
+    }
+    CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||''};
+    try{ localStorage.setItem('lev_cliente',JSON.stringify(CLIENTE)); }catch(_){}
+  }catch(_){ /* sem internet: fica o último cliente conhecido */ }
+  mostrarCliente();
+  return true;
+}
+// os bens guardados no celular são de um cliente só: se mudou, baixa de novo
+async function conferirBaseDoCliente(){
+  if(CLIENTE.id==null) return;
+  try{
+    const dono=await idbGet('meta','cliente');
+    if(dono===undefined||dono===null){ await idbPut('meta',CLIENTE.id,'cliente'); return; }
+    if(dono===CLIENTE.id) return;
+    await idbTroca('bens',[]); await idbTroca('lev',[]); _bensLocais=null;
+    await idbDel('meta','baixado_em').catch(()=>{}); await idbDel('meta','aux').catch(()=>{});
+    await idbPut('meta',CLIENTE.id,'cliente');
+  }catch(_){}
 }
 function exigirAdmin(){
   if(IS_ADMIN) return true;
@@ -748,6 +796,7 @@ $('#btnLogout').addEventListener('click',async()=>{
   let n=0; try{ n=(await idbAll('fila')).length; }catch(_){}
   if(n && !confirm(`Há ${n} item(ns) guardados neste celular que ainda não foram enviados. Eles continuam guardados. Sair mesmo assim?`)) return;
   SEM_SESSAO=false; try{ await sb.auth.signOut(); }catch(_){} showLogin(); toast('Sessão encerrada');
+  try{ localStorage.removeItem('lev_cliente'); }catch(_){} CLIENTE={id:null,nome:'',pasta:''}; mostrarCliente();
 });
 
 /* ====================== TABELAS DE APOIO ====================== */
@@ -1343,7 +1392,8 @@ async function saveItem(){
     // cada foto ganha um nome fixo: reenviar o mesmo registro não duplica fotos
     const fotos=(current.fotosFila||[]).concat(currentFotos.map((d,i)=>({id:Date.now()+'_'+i+'_'+Math.random().toString(36).slice(2,7),data:d})));
     const reg={codigo:b.codigo,row,fotos,placa_nova:(!current.temPlaca&&current.placa_nova)?current.placa_nova:null,
-      descricao:b.descricao||'',placa:b.placa||current.placa_nova||'',salvo_em:agora,usuario:USUARIO_EMAIL};
+      descricao:b.descricao||'',placa:b.placa||current.placa_nova||'',salvo_em:agora,usuario:USUARIO_EMAIL,
+      cliente_id:CLIENTE.id,pasta:pastaCliente()};
 
     if(OFFLINE() || SEM_SESSAO){
       await guardarNaFila(reg);
@@ -1419,10 +1469,14 @@ async function guardarNaFila(reg){
 // envia um registro: fotos (com nome fixo), levantamento e placa nova
 async function enviarRegistro(reg){
   for(const f of (reg.fotos||[])){
-    const {error}=await sb.storage.from(FOTOS_BUCKET).upload(`${reg.codigo}/${f.id}.jpg`,dataURLtoBlob(f.data),{contentType:'image/jpeg',upsert:false});
+    const pasta=reg.pasta!=null?reg.pasta:pastaCliente();
+    const {error}=await sb.storage.from(FOTOS_BUCKET).upload(`${pasta}${reg.codigo}/${f.id}.jpg`,dataURLtoBlob(f.data),{contentType:'image/jpeg',upsert:false});
     if(error && !/exist|duplicate/i.test(error.message||'') && String(error.statusCode)!=='409') throw new Error('Foto: '+error.message);
   }
-  const {error}=await sb.from('levantamento').upsert(reg.row,{onConflict:'codigo'});
+  // o registro vai com o cliente em que foi feito: se o usuário mudou de cliente, o banco recusa
+  const cli=reg.cliente_id!=null?reg.cliente_id:CLIENTE.id;
+  const row=cli!=null?Object.assign({},reg.row,{cliente_id:cli}):reg.row;
+  const {error}=await sb.from('levantamento').upsert(row,{onConflict:cli!=null?'cliente_id,codigo':'codigo'});
   if(error) throw error;
   if(reg.placa_nova){ const {error:eb}=await sb.from('bens').update({placa:reg.placa_nova}).eq('codigo',reg.codigo); if(eb) throw eb; }
 }
@@ -1566,7 +1620,7 @@ $('#btnSalvarSobra').addEventListener('click',async()=>{
       cod_localizacao:cod,localizacao:loc.desc||null,cod_estado:est?est.cod:null,estado:est?est.desc:null,observacao:$('#sbObs').value.trim()||null}).select('id').single();
     if(error) throw error;
     let enviadas=0;
-    for(let i=0;i<SB_FOTOS.length;i++){ const r=await sb.storage.from(FOTOS_BUCKET).upload(`sobras/${data.id}/${i+1}.jpg`,dataURLtoBlob(SB_FOTOS[i]),{contentType:'image/jpeg',upsert:false}); if(!r.error) enviadas++; }
+    for(let i=0;i<SB_FOTOS.length;i++){ const r=await sb.storage.from(FOTOS_BUCKET).upload(`${pastaCliente()}sobras/${data.id}/${i+1}.jpg`,dataURLtoBlob(SB_FOTOS[i]),{contentType:'image/jpeg',upsert:false}); if(!r.error) enviadas++; }
     if(enviadas) await sb.from('sobras').update({fotos:enviadas}).eq('id',data.id);
     const faltou=SB_FOTOS.length-enviadas;
     limparSobra(); msg.innerHTML=faltou?'<span class="err">Bem registrado, mas '+faltou+' foto(s) não foram enviadas.</span>':''; toast('✓ Bem sem cadastro registrado'); listarSobras();
@@ -1610,7 +1664,7 @@ $('#btnSincronizar').addEventListener('click',async()=>{
 $('#btnExportarArquivo').addEventListener('click',async()=>{
   const fila=await idbAll('fila'); if(!fila.length) return;
   const agora=new Date();
-  const arq={tipo:'levantamento-patrimonial-campo',versao:1,gerado_em:agora.toISOString(),usuario:USUARIO_EMAIL,registros:fila};
+  const arq={tipo:'levantamento-patrimonial-campo',versao:1,gerado_em:agora.toISOString(),usuario:USUARIO_EMAIL,cliente_id:CLIENTE.id,cliente:CLIENTE.nome||'',registros:fila};
   const nome='levantamento_campo_'+(USUARIO_EMAIL.split('@')[0]||'celular')+'_'+agora.toISOString().slice(0,16).replace(/[-:T]/g,'')+'.json';
   const blob=new Blob([JSON.stringify(arq)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -1664,9 +1718,10 @@ function renderPhotos(){
 async function loadFotosExistentes(codigo){
   if(OFFLINE() || SEM_SESSAO || !navigator.onLine) return;
   try{
-    const {data}=await sb.storage.from(FOTOS_BUCKET).list(codigo,{limit:20});
+    const pasta=pastaCliente()+codigo;
+    const {data}=await sb.storage.from(FOTOS_BUCKET).list(pasta,{limit:20});
     if(!data||!data.length)return;
-    const paths=data.filter(f=>f.name&&f.id!==null).map(f=>codigo+'/'+f.name);
+    const paths=data.filter(f=>f.name&&f.id!==null).map(f=>pasta+'/'+f.name);
     if(!paths.length)return;
     // link assinado (1h): funciona com o bucket privado; se falhar, cai no link público antigo
     const sig=await sb.storage.from(FOTOS_BUCKET).createSignedUrls(paths,3600);
