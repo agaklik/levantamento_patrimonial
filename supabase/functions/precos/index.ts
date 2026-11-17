@@ -401,7 +401,10 @@ async function carregarOrgaoLc(adm: ReturnType<typeof createClient>, cd: number)
 }
 
 async function precosLicitacon(adm: ReturnType<typeof createClient>, texto: string, orgaos: number[], meses: number) {
-  const palavras = [...new Set(semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !PALAVRAS_VAZIAS.has(w)).map(raiz))];
+  // palavras com números (100w, 12000) ficam de fora: cada licitação escreve de um jeito; o filtro da tela cuida delas.
+  // compara pelo começo (7 letras), o que aguenta plural e erro de digitação no fim da palavra
+  const todas = [...new Set(semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !PALAVRAS_VAZIAS.has(w)).map(raiz))];
+  const palavras = [...new Set((todas.some((w) => !/\d/.test(w)) ? todas.filter((w) => !/\d/.test(w)) : todas).map((w) => (w.length > 7 ? w.slice(0, 7) : w)))];
   if (!palavras.length) throw new Error('Digite ao menos uma palavra com 3 letras.');
   const desde = new Date(); desde.setMonth(desde.getMonth() - meses);
   let q = adm.from('licitacon_itens').select('*').gte('data', desde.toISOString().slice(0, 10));
@@ -463,17 +466,26 @@ Deno.serve(async (req) => {
       }
       const { count } = await adm.from('catmat_pdm').select('codigo', { count: 'exact', head: true });
       if (!count) return json({ indexar: true, itens: [] });
-      const palavras = [...new Set(semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !PALAVRAS_VAZIAS.has(w)).map(raiz))];
+      // compara pelo começo das palavras (7 letras): "amplificadora" acha "amplificação" e aguenta erro de digitação no fim
+      const pref = (w: string) => (w.length > 7 ? w.slice(0, 7) : w);
+      // palavras de 2 letras (ex.: "ar" condicionado) só contam como palavra inteira no nome
+      const curtas = semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length === 2 && !PALAVRAS_VAZIAS.has(w));
+      const palavras = [...new Set(semAcento(texto).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !PALAVRAS_VAZIAS.has(w)).map(raiz).map(pref))];
       if (!palavras.length) return json({ erro: 'Digite ao menos uma palavra com 3 letras.' }, 400);
+      // contexto = descrição completa do bem: as outras palavras dela ajudam a desempatar
+      const ctx = [...new Set(semAcento(txt(b.contexto).slice(0, 600)).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !PALAVRAS_VAZIAS.has(w)).map(raiz).map(pref))]
+        .filter((w) => !palavras.includes(w)).slice(0, 30);
       const { data: cand, error } = await adm.from('catmat_pdm').select('codigo,nome,classe,ativo,busca')
-        .or(palavras.map((w) => `busca.ilike.*${w}*`).join(',')).limit(1000);
+        .or(palavras.map((w) => `busca.ilike.*${w}*`).join(',')).limit(2000);
       if (error) throw new Error(error.message);
       const lista = (cand || []).map((x) => {
-        const nome = semAcento(x.nome as string);
+        const nome = semAcento(x.nome as string), busca = x.busca as string;
         const noNome = palavras.filter((w) => nome.includes(w)).length;
-        const naClasse = palavras.filter((w) => (x.busca as string).includes(w)).length;
-        const comeca = nome.startsWith(palavras[0]) ? 1 : 0;
-        return { ...x, pontos: noNome * 10 + naClasse * 2 + comeca * 5 + (x.ativo ? 3 : 0) - nome.length / 100 };
+        const naClasse = palavras.filter((w) => busca.includes(w)).length;
+        const extraNome = ctx.filter((w) => nome.includes(w)).length, extra = ctx.filter((w) => busca.includes(w)).length;
+        const curta = curtas.filter((w) => new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`).test(nome)).length;
+        const comeca = nome.startsWith(curtas.length && texto.trim().toLowerCase().startsWith(curtas[0] + ' ') ? curtas[0] : palavras[0]) ? 1 : 0;
+        return { ...x, pontos: (noNome + curta) * 10 + naClasse * 4 + extraNome * 3 + extra + comeca * 5 + (x.ativo ? 3 : 0) - (/ - /.test(nome) ? 3 : 0) - nome.length / 100 }; // "X - Y" costuma ser peça ou acessório
       }).sort((a, c) => c.pontos - a.pontos).slice(0, 60);
       return json({
         itens: lista.map((x) => ({ tipo: 'codigoPdm', codigo: String(x.codigo), nome: x.nome, classe: x.classe, ativo: x.ativo })),

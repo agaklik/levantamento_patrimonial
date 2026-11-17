@@ -1286,7 +1286,7 @@ function pzEscolherItem(it){
 function abrirPrecos(bem,aoUsar,anterior){
   if(!bem||!bem.codigo){ bem=atual; aoUsar=null; anterior=PRECOS_SEL; }
   if(!bem) return;
-  PZ.aoUsar=aoUsar||null;
+  PZ.aoUsar=aoUsar||null; PZ.contexto=[bem.descricao,bem.descricao_reduzida].filter(Boolean).join(' ');
   PZ.itens=[]; PZ.off=new Set(); PZ.item=null; $('#pzFiltro').value='';
   const p=anterior&&anterior.tipo?anterior:null;
   $('#pzTexto').value=(bem.descricao_reduzida||bem.descricao||'').split(/[,;(]/)[0].trim().split(/\s+/).slice(0,3).join(' ');
@@ -1450,10 +1450,13 @@ async function emParaleloJs(lista,n,f){ const out=new Array(lista.length); let i
 async function pncpNoNavegador(texto,ufs,meses){
   const raizJs=w=>w.length>4?w.replace(/(oes|aes|ais|eis|es|s)$/,''):w;
   const vazias=new Set(['de','da','do','das','dos','com','sem','para','por','em','e','ou','tipo','uso']);
-  const palavras=[...new Set(semAc(texto).split(/[^a-z0-9]+/).filter(w=>w.length>=3&&!vazias.has(w)).map(raizJs))];
-  if(!palavras.length) throw new Error('Digite ao menos uma palavra com 3 letras.');
+  const todas=[...new Set(semAc(texto).split(/[^a-z0-9]+/).filter(w=>w.length>=3&&!vazias.has(w)).map(raizJs))];
+  if(!todas.length) throw new Error('Digite ao menos uma palavra com 3 letras.');
+  // palavras com números (100w) não são exigidas; as demais comparam pelo começo (7 letras)
+  const semNum=todas.some(w=>!/\d/.test(w))?todas.filter(w=>!/\d/.test(w)):todas;
+  const palavras=[...new Set(semNum.map(w=>w.length>7?w.slice(0,7):w))];
   const desde=new Date(); desde.setMonth(desde.getMonth()-meses); const desdeTxt=desde.toISOString().slice(0,10);
-  const f={q:semAc(texto),tipos_documento:'edital',ordenacao:'-data',pagina:1,tam_pagina:50,status:'encerradas'};
+  const f={q:semAc(texto).split(/\s+/).filter(w=>!/\d/.test(w)||!semNum.length).join(' ')||semAc(texto),tipos_documento:'edital',ordenacao:'-data',pagina:1,tam_pagina:50,status:'encerradas'};
   if(ufs.length) f.ufs=ufs.join('|');
   const busca=await pncpGet('/api/search/',f);
   const d10=v=>{ const m=String(v||'').match(/^(\d{4}-\d{2}-\d{2})/); return m?m[1]:null; };
@@ -1501,8 +1504,8 @@ async function pzBuscarTodas(pdm){
     const compras=(async()=>{
       let alts=so?PZ.res.compras.alts:[], esc=pdm;
       if(!esc){
-        let d=await chamarPrecos({acao:'catalogo',texto:t});
-        if(d.indexar){ await pzPrepararCatalogo(); d=await chamarPrecos({acao:'catalogo',texto:t}); }
+        let d=await chamarPrecos({acao:'catalogo',texto:t,contexto:PZ.contexto||''});
+        if(d.indexar){ await pzPrepararCatalogo(); d=await chamarPrecos({acao:'catalogo',texto:t,contexto:PZ.contexto||''}); }
         alts=(d.itens||[]).slice(0,12); esc=alts[0];
       }
       if(!esc) return {itens:[],alts:[],pdm:null};
