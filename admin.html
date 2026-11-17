@@ -19,7 +19,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://wrhtisnejlpjsliplloz.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://wrhtisnejlpjsliplloz.supabase.co wss://wrhtisnejlpjsliplloz.supabase.co https://pncp.gov.br; worker-src 'self' blob:; frame-src 'self' blob: https://wrhtisnejlpjsliplloz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>Administração · Levantamento Patrimonial</title>
-<link rel="icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <style>
   @font-face{font-family:'Archivo';src:url(vendor/archivo.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
   :root{
@@ -798,7 +799,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-16'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-17'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
