@@ -484,17 +484,28 @@
     </div>
     <div class="card">
       <h2>Parâmetros do método do fator de reavaliação</h2>
-      <p class="sub">Fator = (peso EC × EC + peso PVU × PVU − peso PUB × PUB) ÷ 100. Quando o resultado fica abaixo do fator mínimo, vale o mínimo. Confira os pesos, as notas e o mínimo com a norma adotada pelo órgão antes de emitir os laudos.</p>
+      <p class="sub" id="cFormulaTxt"></p>
       <div class="grid g4">
-        <div><label>Peso do estado (EC)</label><input type="number" id="cPesoEc" step="0.1"></div>
-        <div><label>Peso da vida útil futura (PVU)</label><input type="number" id="cPesoPvu" step="0.1"></div>
-        <div><label>Peso do tempo de uso (PUB)</label><input type="number" id="cPesoPub" step="0.1"></div>
+        <div style="grid-column:span 2"><label>Forma de cálculo</label><select id="cMetodoFator">
+          <option value="pontos">Tabelas de pontos: (EC + PVU − VUR) ÷ 100</option>
+          <option value="anos">Anos direto (método anterior)</option>
+        </select></div>
+        <div><label>Fator mínimo (0 = sem mínimo)</label><input type="number" id="cFatorMin" step="0.01" min="0" max="1"></div>
         <div><label>Valor residual padrão (%)</label><input type="number" id="cResidual" step="1" min="0" max="100"></div>
-        <div><label>Fator mínimo</label><input type="number" id="cFatorMin" step="0.01" min="0" max="1"></div>
-        <div><label>Nota: Excelente</label><input type="number" id="cEc1" step="0.5"></div>
-        <div><label>Nota: Bom</label><input type="number" id="cEc2" step="0.5"></div>
-        <div><label>Nota: Regular</label><input type="number" id="cEc3" step="0.5"></div>
-        <div><label>Nota: Péssimo</label><input type="number" id="cEc4" step="0.5"></div>
+        <div><label>Peso do estado (EC)</label><input type="number" id="cPesoEc" step="0.1"></div>
+        <div><label id="lPesoPvu">Peso da vida útil utilizada (PVU)</label><input type="number" id="cPesoPvu" step="0.1"></div>
+        <div><label id="lPesoPub">Peso da vida útil restante (VUR)</label><input type="number" id="cPesoPub" step="0.1"></div>
+        <div><label>Vida útil quando o cadastro não tiver (anos)</label><input type="number" id="cVidaPadrao" step="1" min="1"></div>
+      </div>
+      <h3 style="margin:16px 0 6px;font-size:14px">Estado de conservação (EC): pontos e estimativa da vida útil restante</h3>
+      <div class="tblwrap"><table style="font-size:13.5px;max-width:560px"><thead><tr><th>Estado</th><th class="n">Pontos (EC)</th><th class="n" id="hPct">Vida útil restante (% da vida útil do bem)</th></tr></thead><tbody id="cTabEc"></tbody></table></div>
+      <div id="boxTabelas">
+        <div class="grid g2" style="margin-top:14px;align-items:start">
+          <div><h3 style="margin:0 0 6px;font-size:14px">Vida útil utilizada (PVU)</h3>
+            <div class="tblwrap"><table style="font-size:13.5px"><thead><tr><th>Foi utilizado por</th><th class="n">Pontos</th></tr></thead><tbody id="cTabUso"></tbody></table></div></div>
+          <div><h3 style="margin:0 0 6px;font-size:14px">Vida útil restante prevista (VUR)</h3>
+            <div class="tblwrap"><table style="font-size:13.5px"><thead><tr><th>Poderá ser utilizado por</th><th class="n">Pontos</th></tr></thead><tbody id="cTabRest"></tbody></table></div></div>
+        </div>
       </div>
       <div style="margin-top:12px"><label>Fundamentação (texto que aparece nos laudos)</label><textarea id="cFundamento"></textarea></div>
     </div>
@@ -530,8 +541,8 @@
         <div style="grid-column:span 2"><label>Valor de referência (bem novo)</label><div class="ref-row"><input id="rRef" inputmode="decimal" placeholder="0,00"><button type="button" class="btn-2" id="btnPrecos" title="Pesquisar preços em compras públicas">Pesquisar preços</button></div><div id="rPrecosInfo" style="font-size:12px;color:var(--muted);margin-top:4px"></div><div id="rRefInfo" style="font-size:12px;color:var(--muted);margin-top:2px"></div></div>
         <div><label>Estado (EC)</label><select id="rEc"></select></div>
         <div><label>Fator</label><input id="rFator" readonly></div>
-        <div style="grid-column:span 2"><label>Tempo de uso em anos (PUB)</label><input type="number" id="rPub" min="0" max="10" step="1"></div>
-        <div style="grid-column:span 2"><label>Vida útil futura em anos (PVU)</label><input type="number" id="rPvu" min="0" max="10" step="1"></div>
+        <div style="grid-column:span 2"><label id="lPub">Vida útil já utilizada, em anos (PVU)</label><input type="number" id="rPub" min="0" step="1"></div>
+        <div style="grid-column:span 2"><label id="lPvu">Vida útil restante, em anos (VUR)</label><input type="number" id="rPvu" min="0" step="1"></div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-top:6px" id="rFormula"></div>
     </div>
@@ -680,7 +691,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-4'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-5'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -703,16 +714,25 @@ function ligarOlhos(){
 ligarOlhos();
 
 
-const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo'};
+const ESTADOS = {'1':'Excelente','2':'Bom','3':'Regular','4':'Péssimo','5':'Ruim'};
+const ORDEM_EST = ['1','2','3','5','4'];   // ordem de exibição: do melhor para o pior
 const UNIDADES_GESTORAS = {'0':'Prefeitura Municipal','1':'Câmara Municipal de Vereadores'};
 const CFG_PADRAO = {
   orgao:'', municipio:'', cnpj:'', dataBase:'', ato:'', modalidade:'comissao',
   membros:[{nome:'',cargo:'Presidente'},{nome:'',cargo:'Membro'},{nome:'',cargo:'Membro'},{nome:'',cargo:''}],
   rtNome:'', rtTitulo:'', rtRegistro:'',
-  pesoEc:4, pesoPvu:6, pesoPub:3, residualPct:10, fatorMin:0.1,
-  ec:{'1':10,'2':8,'3':5,'4':2},
-  pvuMin:{'1':8,'2':6,'3':4,'4':1},   // vida útil futura mínima sugerida conforme o estado
-  fundamento:'Avaliação realizada com base no Manual de Contabilidade Aplicada ao Setor Público (MCASP) e na NBC TSP 07 (Ativo Imobilizado), considerando o estado de conservação verificado em vistoria, o tempo de uso e a vida útil futura estimada do bem.'
+  // metodoFator 'pontos' (padrão, tabelas do órgão):
+  //   Fator = (pesoEc × EC + pesoPvu × pontos da vida útil utilizada − pesoPub × pontos da vida útil restante) ÷ 100
+  //   No banco, reavaliacao.pub guarda os anos já utilizados e reavaliacao.pvu os anos restantes.
+  // metodoFator 'anos' (anterior): Fator = (pesoEc × EC + pesoPvu × anos restantes − pesoPub × anos de uso) ÷ 100
+  metodoFator:'pontos',
+  pesoEc:4, pesoPvu:6, pesoPub:3, residualPct:10, fatorMin:0,
+  ec:{'1':10,'2':8,'3':5,'4':2,'5':3},
+  tabUso:[10,10,9,8,7,6,5,4,3,3,3],        // pontos por anos já utilizados: menos de 1, 1, 2 ... 9, 10 ou mais
+  tabRest:[8,8,8,7,6,5,4,3,2,1],           // pontos por anos restantes: 1 (ou menos), 2 ... 9, 10 ou mais
+  pctRest:{'1':100,'2':80,'3':50,'4':20,'5':30}, // vida útil restante estimada, em % da vida útil do bem
+  vidaPadrao:10,
+    fundamento:'Avaliação realizada com base no Manual de Contabilidade Aplicada ao Setor Público (MCASP) e na NBC TSP 07 (Ativo Imobilizado), considerando o estado de conservação verificado em vistoria, o tempo de uso e a vida útil futura estimada do bem.'
 };
 const PAGE = 100;
 
@@ -775,18 +795,40 @@ function anosUso(b){
   const fim=parseData(CFG.dataBase)||new Date();
   return Math.max(0,(fim-ini)/(365.25*24*3600*1000));
 }
+const porPontos=()=>CFG.metodoFator!=='anos';
+// pontos da vida útil já utilizada (PVU): índice = anos completos; acima do fim da tabela vale o último
+function ptsUso(anos){ const t=CFG.tabUso||CFG_PADRAO.tabUso; if(anos==null) return null; return +t[Math.min(t.length-1,Math.max(0,Math.floor(+anos)))]; }
+// pontos da vida útil restante (VUR): 1 ano ou menos = 1ª linha; acima do fim da tabela vale o último
+function ptsRest(anos){ const t=CFG.tabRest||CFG_PADRAO.tabRest; if(anos==null) return null; return +t[Math.min(t.length,Math.max(1,Math.floor(+anos)))-1]; }
+// ec = pontos do estado; pvu = anos restantes; pub = anos já utilizados
 function calcFator(ec,pvu,pub){
   if(ec==null||pvu==null||pub==null) return null;
-  return Math.max(+CFG.fatorMin||0, r2((CFG.pesoEc*ec + CFG.pesoPvu*pvu - CFG.pesoPub*pub))/100);
+  const bruto=porPontos()
+    ? CFG.pesoEc*ec + CFG.pesoPvu*ptsUso(pub) - CFG.pesoPub*ptsRest(pvu)
+    : CFG.pesoEc*ec + CFG.pesoPvu*pvu - CFG.pesoPub*pub;
+  return Math.max(+CFG.fatorMin||0, r2(bruto)/100);
 }
 const notaEc=b=>{const n=CFG.ec[estCod(b)];return n==null?null:+n;};
-// sugestão de PUB e PVU (0 a 10): PUB vem da data de ingresso; PVU é o que resta de 10 anos,
-// mas nunca abaixo do mínimo associado ao estado de conservação. O avaliador pode alterar os dois.
+const codPorNota=n=>ORDEM_EST.find(k=>+CFG.ec[k]===+n)||null;
+// anos restantes estimados: vida útil do bem (cadastro, ou o padrão) × % do estado de conservação
+function anosRestantes(b,cod){
+  const v=num(b.vida_util), vida=v&&v>0?v:(+CFG.vidaPadrao||10);
+  const pct=(CFG.pctRest||CFG_PADRAO.pctRest)[cod]; if(pct==null) return null;
+  return Math.max(0,Math.round(vida*(+pct)/100));
+}
+// sugestão de anos utilizados (pub) e restantes (pvu). O avaliador pode alterar os dois.
 function sugestao(b){
   const a=anosUso(b);
+  if(porPontos()) return {pub:a==null?null:Math.floor(a), pvu:anosRestantes(b,estCod(b))};
+  // método anterior: PUB vem da data de ingresso; PVU é o que resta de 10 anos, com mínimo pelo estado
   const pub=a==null?null:Math.min(10,Math.round(a));
-  const pvu=pub==null?null:Math.min(10,Math.max(10-pub, +(CFG_PADRAO.pvuMin[estCod(b)]||1)));
+  const pvu=pub==null?null:Math.min(10,Math.max(10-pub, +({'1':8,'2':6,'3':4,'4':1,'5':2}[estCod(b)]||1)));
   return {pub,pvu};
+}
+function textoFormula(){
+  return porPontos()
+    ? `Fator = (${CFG.pesoEc} × EC + ${CFG.pesoPvu} × PVU − ${CFG.pesoPub} × VUR) ÷ 100`
+    : `Fator = (${CFG.pesoEc} × EC + ${CFG.pesoPvu} × PVU − ${CFG.pesoPub} × PUB) ÷ 100`;
 }
 
 /* ====================== AUTENTICAÇÃO ====================== */
@@ -992,8 +1034,12 @@ async function carregar(){
       (await lerTudo('reavaliacao','*','codigo')).forEach(r=>REAV[r.codigo]=r);
       const c=await sb.from('configuracao').select('dados').eq('id',1).maybeSingle();
       if(c.error) throw c.error;
-      CFG=Object.assign(structuredClone(CFG_PADRAO), (c.data&&c.data.dados)||{});
+      const dd=(c.data&&c.data.dados)||{};
+      CFG=Object.assign(structuredClone(CFG_PADRAO), dd);
+      // configuração salva antes das tabelas de pontos: passa para o método novo, sem fator mínimo
+      if(!dd.metodoFator){ CFG.metodoFator='pontos'; CFG.fatorMin=0; }
       CFG.ec=Object.assign({},CFG_PADRAO.ec,CFG.ec||{});
+      CFG.pctRest=Object.assign({},CFG_PADRAO.pctRest,CFG.pctRest||{});
     }catch(e){ if(tabelaAusente(e)) schemaOk=false; else throw e; }
     CONC={}; REFS={}; concOk=true;
     try{
@@ -1216,7 +1262,7 @@ $('#tbody').addEventListener('click',e=>{
 /* ====================== HISTÓRICO DE ALTERAÇÕES ====================== */
 const HIST_TABELA={levantamento:'Levantamento',reavaliacao:'Reavaliação',bens:'Cadastro do bem',referencias:'Valor por tipo de bem',localizacoes_concluidas:'Conclusão da localização',sobras:'Bem sem cadastro'};
 const HIST_CAMPO={placa:'placa',placa_nova:'placa nova',localizacao:'localização',situacao:'situação',estado:'estado de conservação',cod_motivo:'motivo',cod_comissao:'comissão',data_movimento:'data do movimento',
-  concluido:'concluído',metodo:'método',valor_anterior:'valor anterior',valor_referencia:'valor de referência',ec:'estado (EC)',pvu:'vida útil futura (PVU)',pub:'tempo de uso (PUB)',fator:'fator',
+  concluido:'concluído',metodo:'método',valor_anterior:'valor anterior',valor_referencia:'valor de referência',ec:'estado (EC)',pvu:'vida útil restante, anos',pub:'vida útil utilizada, anos',fator:'fator',
   valor_reavaliado:'valor reavaliado',vida_util_remanescente:'vida útil remanescente',valor_residual:'valor residual',fonte:'fonte',observacao:'observação',data_avaliacao:'data da avaliação',
   precos:'preços pesquisados',laudo_tecnico:'laudo técnico',valor:'valor',descricao:'descrição',valor_atual:'valor atual',marca:'marca',modelo:'modelo',destinacao:'destinação',fotos:'fotos',resolvido_em:'resolvido em'};
 // códigos que repetem a descrição (a descrição já aparece ao lado)
@@ -1299,10 +1345,15 @@ function preencherForm(b){
   $('#rMetodo').value=r.metodo||'fator';
   $('#rData').value=(r.data_avaliacao||CFG.dataBase||hojeISO()).slice(0,10);
   $('#rRef').value=r.valor_referencia!=null?dec(+r.valor_referencia):'';
-  $('#rEc').innerHTML=Object.keys(ESTADOS).map(k=>`<option value="${CFG.ec[k]}">${ESTADOS[k]} (${CFG.ec[k]})</option>`).join('');
-  $('#rEc').value=String(r.ec!=null?+r.ec:(notaEc(b)??CFG.ec['3']));
+  $('#rEc').innerHTML=ORDEM_EST.map(k=>`<option value="${k}">${ESTADOS[k]} (${CFG.ec[k]})</option>`).join('');
+  $('#rEc').value=(r.ec!=null&&codPorNota(r.ec))||(CFG.ec[estCod(b)]!=null?estCod(b):'3');
   $('#rPub').value=r.pub!=null?+r.pub:(s.pub??'');
   $('#rPvu').value=r.pvu!=null?+r.pvu:(s.pvu??'');
+  $('#rPvu').dataset.auto=r.pvu!=null?'':'1';
+  const pp=porPontos();
+  $('#lPub').textContent=pp?'Vida útil já utilizada, em anos (PVU)':'Tempo de uso em anos (PUB)';
+  $('#lPvu').textContent=pp?'Vida útil restante, em anos (VUR)':'Vida útil futura em anos (PVU)';
+  ['#rPub','#rPvu'].forEach(id=>{ if(pp) $(id).removeAttribute('max'); else $(id).max=10; });
   $('#rValorDireto').value=(r.metodo&&r.metodo!=='fator'&&r.valor_reavaliado!=null)?dec(+r.valor_reavaliado):'';
   $('#rVida').value=r.vida_util_remanescente!=null?+r.vida_util_remanescente:($('#rPvu').value||'');
   $('#rResidual').value=r.valor_residual!=null?dec(+r.valor_residual):'';
@@ -1323,7 +1374,7 @@ function lerForm(){
   const metodo=$('#rMetodo').value;
   const o={metodo, valor_referencia:null, ec:null, pvu:null, pub:null, fator:null, valor_reavaliado:null};
   if(metodo==='fator'){
-    o.valor_referencia=num($('#rRef').value); o.ec=num($('#rEc').value); o.pvu=num($('#rPvu').value); o.pub=num($('#rPub').value);
+    o.valor_referencia=num($('#rRef').value); o.ec=CFG.ec[$('#rEc').value]!=null?+CFG.ec[$('#rEc').value]:null; o.pvu=num($('#rPvu').value); o.pub=num($('#rPub').value);
     o.fator=calcFator(o.ec,o.pvu,o.pub);
     if(o.valor_referencia!=null&&o.fator!=null) o.valor_reavaliado=r2(o.valor_referencia*o.fator);
   }else{ o.valor_reavaliado=num($('#rValorDireto').value); }
@@ -1334,13 +1385,18 @@ function recalc(){
   const o=lerForm(), fator=o.metodo==='fator';
   $('#boxFator').classList.toggle('hidden',!fator); $('#boxDireto').classList.toggle('hidden',fator);
   $('#rFator').value=o.fator!=null?o.fator.toFixed(2).replace('.',','):'';
-  $('#rFormula').textContent=fator?`Fator = (${CFG.pesoEc} × EC + ${CFG.pesoPvu} × PVU − ${CFG.pesoPub} × PUB) ÷ 100. Mínimo de ${String(CFG.fatorMin).replace('.',',')}. PUB e PVU vão de 0 a 10 e vêm sugeridos pela data de ingresso e pelo estado; ajuste conforme a vistoria.`:'';
+  const minTxt=+CFG.fatorMin?` Mínimo de ${String(CFG.fatorMin).replace('.',',')}.`:'';
+  $('#rFormula').textContent=!fator?'':(porPontos()
+    ? `${textoFormula()}. EC ${o.ec??'—'} pontos; PVU ${o.pub!=null?o.pub+' ano(s) = '+ptsUso(o.pub)+' pontos':'—'}; VUR ${o.pvu!=null?o.pvu+' ano(s) = '+ptsRest(o.pvu)+' pontos':'—'}.${minTxt} Anos utilizados vêm da data de ingresso; anos restantes, da vida útil do bem × percentual do estado. Ajuste conforme a vistoria.`
+    : `${textoFormula()}.${minTxt} PUB e PVU vão de 0 a 10 e vêm sugeridos pela data de ingresso e pelo estado; ajuste conforme a vistoria.`);
   $('#rValor').textContent=brl(o.valor_reavaliado);
   const a=num(atual.valor_atual);
   if(o.valor_reavaliado!=null){ const d=o.valor_reavaliado-(a||0); $('#rVar').innerHTML=`Variação: <b class="${d>=0?'pos':'neg'}" style="font-size:13px">${d>=0?'+':''}${brl(d)}</b>`; }
   else $('#rVar').textContent='';
   if($('#rResidual').dataset.auto&&o.valor_reavaliado!=null) $('#rResidual').value=dec(r2(o.valor_reavaliado*(+CFG.residualPct||0)/100));
 }
+$('#rEc').addEventListener('input',()=>{ if(atual&&$('#rPvu').dataset.auto){ const s=porPontos()?anosRestantes(atual,$('#rEc').value):null; if(s!=null){ $('#rPvu').value=s; if(!reav(atual)||reav(atual).vida_util_remanescente==null) $('#rVida').value=s; } } });
+$('#rPvu').addEventListener('input',()=>{ $('#rPvu').dataset.auto=''; });
 ['#rMetodo','#rRef','#rEc','#rPub','#rPvu','#rValorDireto'].forEach(s=>$(s).addEventListener('input',recalc));
 $('#rRef').addEventListener('input',()=>infoRef());
 $('#rResidual').addEventListener('input',()=>{ $('#rResidual').dataset.auto=''; });
@@ -1862,7 +1918,8 @@ async function salvarItem(proximo){
   if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return false; }
   const b=atual, o=lerForm(), concluido=$('#rConcluido').checked;
   if(concluido&&o.valor_reavaliado==null){ toast(o.metodo==='fator'?'Informe o valor de referência, o tempo de uso e a vida útil futura.':'Informe o valor reavaliado.'); return false; }
-  if(o.metodo==='fator'&&[o.pvu,o.pub].some(v=>v!=null&&(v<0||v>10))){ toast('PUB e PVU devem ficar entre 0 e 10.'); return false; }
+  if(o.metodo==='fator'&&!porPontos()&&[o.pvu,o.pub].some(v=>v!=null&&(v<0||v>10))){ toast('PUB e PVU devem ficar entre 0 e 10.'); return false; }
+  if(o.metodo==='fator'&&[o.pvu,o.pub].some(v=>v!=null&&v<0)){ toast('Os anos não podem ser negativos.'); return false; }
   const row=linhaReav(b,o,{
     vida_util_remanescente:num($('#rVida').value), valor_residual:num($('#rResidual').value),
     fonte:$('#rFonte').value.trim()||null, observacao:$('#rObs').value.trim()||null,
@@ -2453,10 +2510,27 @@ function preencherCfg(){
   $('#cDataBase').value=CFG.dataBase; $('#cAto').value=CFG.ato; $('#cModalidade').value=CFG.modalidade;
   $('#cMembros').innerHTML=CFG.membros.map((m,i)=>`<div><label>Nome do membro ${i+1}</label><input class="cmN" value="${esc(m.nome)}"></div><div><label>Cargo ou função</label><input class="cmC" value="${esc(m.cargo)}"></div>`).join('');
   $('#cRtNome').value=CFG.rtNome; $('#cRtTitulo').value=CFG.rtTitulo; $('#cRtRegistro').value=CFG.rtRegistro;
+  $('#cMetodoFator').value=porPontos()?'pontos':'anos';
   $('#cPesoEc').value=CFG.pesoEc; $('#cPesoPvu').value=CFG.pesoPvu; $('#cPesoPub').value=CFG.pesoPub; $('#cResidual').value=CFG.residualPct; $('#cFatorMin').value=CFG.fatorMin;
-  ['1','2','3','4'].forEach(k=>$('#cEc'+k).value=CFG.ec[k]);
+  $('#cVidaPadrao').value=CFG.vidaPadrao??10;
+  $('#cTabEc').innerHTML=ORDEM_EST.map(k=>`<tr><td>${ESTADOS[k]}</td><td class="n"><input type="number" class="cEcN" data-k="${k}" step="0.5" value="${esc(CFG.ec[k]??'')}" style="width:90px;text-align:right"></td><td class="n"><input type="number" class="cPct" data-k="${k}" step="1" min="0" max="100" value="${esc((CFG.pctRest||{})[k]??'')}" style="width:90px;text-align:right"> %</td></tr>`).join('');
+  const tu=CFG.tabUso||CFG_PADRAO.tabUso, tr=CFG.tabRest||CFG_PADRAO.tabRest;
+  $('#cTabUso').innerHTML=tu.map((v,i)=>`<tr><td>${i===0?'Menos de 1 ano':i===tu.length-1?i+' anos ou mais':i+(i===1?' ano':' anos')}</td><td class="n"><input type="number" class="cUso" step="0.5" value="${esc(v)}" style="width:80px;text-align:right"></td></tr>`).join('');
+  $('#cTabRest').innerHTML=tr.map((v,i)=>`<tr><td>${i===0?'1 ano ou menos':i===tr.length-1?(i+1)+' anos ou mais':(i+1)+' anos'}</td><td class="n"><input type="number" class="cRest" step="0.5" value="${esc(v)}" style="width:80px;text-align:right"></td></tr>`).join('');
+  cfgMetodoUI();
   $('#cFundamento').value=CFG.fundamento;
 }
+function cfgMetodoUI(){
+  const pp=$('#cMetodoFator').value!=='anos';
+  $('#boxTabelas').classList.toggle('hidden',!pp);
+  $('#hPct').classList.toggle('hidden',!pp); document.querySelectorAll('.cPct').forEach(el=>el.closest('td').classList.toggle('hidden',!pp));
+  $('#lPesoPvu').textContent=pp?'Peso da vida útil utilizada (PVU)':'Peso da vida útil futura (PVU)';
+  $('#lPesoPub').textContent=pp?'Peso da vida útil restante (VUR)':'Peso do tempo de uso (PUB)';
+  $('#cFormulaTxt').textContent=pp
+    ? 'Fator = (peso EC × pontos do estado + peso PVU × pontos da vida útil utilizada − peso VUR × pontos da vida útil restante) ÷ 100. Valor reavaliado = valor de bem novo × fator. Os anos utilizados vêm da data de ingresso; os anos restantes, da vida útil do bem × percentual do estado. Cada cliente tem as próprias tabelas.'
+    : 'Fator = (peso EC × EC + peso PVU × PVU − peso PUB × PUB) ÷ 100, com PVU e PUB em anos (0 a 10). Quando o resultado fica abaixo do fator mínimo, vale o mínimo.';
+}
+$('#cMetodoFator').addEventListener('change',cfgMetodoUI);
 $('#btnSalvarCfg').addEventListener('click',async()=>{
   if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
   const n=[...document.querySelectorAll('.cmN')], c=[...document.querySelectorAll('.cmC')];
@@ -2466,8 +2540,13 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     dataBase:$('#cDataBase').value, ato:$('#cAto').value.trim(), modalidade:$('#cModalidade').value,
     membros:n.map((el,i)=>({nome:el.value.trim(),cargo:c[i].value.trim()})),
     rtNome:$('#cRtNome').value.trim(), rtTitulo:$('#cRtTitulo').value.trim(), rtRegistro:$('#cRtRegistro').value.trim(),
-    pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0.1),
-    ec:{'1':nv('#cEc1',10),'2':nv('#cEc2',8),'3':nv('#cEc3',5),'4':nv('#cEc4',2)},
+    metodoFator:$('#cMetodoFator').value==='anos'?'anos':'pontos',
+    pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0),
+    vidaPadrao:nv('#cVidaPadrao',10),
+    ec:Object.fromEntries([...document.querySelectorAll('.cEcN')].map(el=>[el.dataset.k,num(el.value)??CFG_PADRAO.ec[el.dataset.k]])),
+    pctRest:Object.fromEntries([...document.querySelectorAll('.cPct')].map(el=>[el.dataset.k,num(el.value)??CFG_PADRAO.pctRest[el.dataset.k]])),
+    tabUso:[...document.querySelectorAll('.cUso')].map((el,i)=>num(el.value)??CFG_PADRAO.tabUso[i]),
+    tabRest:[...document.querySelectorAll('.cRest')].map((el,i)=>num(el.value)??CFG_PADRAO.tabRest[i]),
     fundamento:$('#cFundamento').value.trim(),
     modoEnvio:CFG.modoEnvio||'online'
   };
@@ -2542,8 +2621,13 @@ function paginaLaudo(b,fotos){
   const ant=r.valor_anterior!=null?+r.valor_anterior:num(b.valor_atual), novo=+r.valor_reavaliado, dif=novo-(ant||0);
   let metodo;
   if(r.metodo==='fator'){
-    metodo=`<p>Método: ${NOME_METODO.fator}. O valor de referência corresponde ao preço de um bem novo, igual ou equivalente, apurado em pesquisa de preços. O fator de reavaliação pondera o estado de conservação (EC), a vida útil futura estimada (PVU) e o tempo de uso do bem (PUB), pela fórmula:</p>
-    <p style="text-align:center"><b>Fator = (${CFG.pesoEc} × EC + ${CFG.pesoPvu} × PVU − ${CFG.pesoPub} × PUB) ÷ 100</b>${+CFG.fatorMin?`, com mínimo de ${String(CFG.fatorMin).replace('.',',')}`:''}</p>
+    metodo=porPontos()
+    ? `<p>Método: ${NOME_METODO.fator}. O valor de referência corresponde ao preço de um bem novo, igual ou equivalente, apurado em pesquisa de preços. O fator de reavaliação pondera, por tabelas de pontos, o estado de conservação (EC), o período de vida útil já utilizado (PVU) e a previsão de vida útil restante (VUR), pela fórmula:</p>
+    <p style="text-align:center"><b>${textoFormula()}</b>${+CFG.fatorMin?`, com mínimo de ${String(CFG.fatorMin).replace('.',',')}`:''}</p>
+    <table><tr><th>Valor de referência</th><th>EC (pontos)</th><th>PVU</th><th>VUR</th><th>Fator</th><th>Valor reavaliado</th></tr>
+    <tr><td class="n">${brl(+r.valor_referencia)}</td><td class="n">${+r.ec}</td><td class="n">${+r.pub} ano(s) = ${ptsUso(+r.pub)} pontos</td><td class="n">${+r.pvu} ano(s) = ${ptsRest(+r.pvu)} pontos</td><td class="n">${(+r.fator).toFixed(2).replace('.',',')}</td><td class="n">${brl(novo)}</td></tr></table>`
+    : `<p>Método: ${NOME_METODO.fator}. O valor de referência corresponde ao preço de um bem novo, igual ou equivalente, apurado em pesquisa de preços. O fator de reavaliação pondera o estado de conservação (EC), a vida útil futura estimada (PVU) e o tempo de uso do bem (PUB), pela fórmula:</p>
+    <p style="text-align:center"><b>${textoFormula()}</b>${+CFG.fatorMin?`, com mínimo de ${String(CFG.fatorMin).replace('.',',')}`:''}</p>
     <table><tr><th>Valor de referência</th><th>EC</th><th>PVU</th><th>PUB</th><th>Fator</th><th>Valor reavaliado</th></tr>
     <tr><td class="n">${brl(+r.valor_referencia)}</td><td class="n">${+r.ec}</td><td class="n">${+r.pvu}</td><td class="n">${+r.pub}</td><td class="n">${(+r.fator).toFixed(2).replace('.',',')}</td><td class="n">${brl(novo)}</td></tr></table>`;
   }else{
@@ -2691,7 +2775,7 @@ $('#btnDocGeral').addEventListener('click',()=>{
 $('#btnCsvReav').addEventListener('click',()=>{
   const lista=BENS.filter(b=>reav(b));
   if(!lista.length){ toast('Ainda não há reavaliações.'); return; }
-  const linhas=[['codigo','placa','descricao','classificacao','localizacao','estado','metodo','valor_anterior','valor_referencia','ec','pvu','pub','fator','valor_reavaliado','variacao','nova_vida_util_anos','valor_residual','fonte','observacao','data_avaliacao','concluido']];
+  const linhas=[['codigo','placa','descricao','classificacao','localizacao','estado','metodo','valor_anterior','valor_referencia','ec_pontos','anos_restantes','anos_utilizados','fator','valor_reavaliado','variacao','nova_vida_util_anos','valor_residual','fonte','observacao','data_avaliacao','concluido']];
   lista.forEach(b=>{ const r=reav(b), a=num(b.valor_atual); linhas.push([b.codigo,placa(b),b.descricao||'',b.classificacao||'',locDesc(b),estDesc(b),r.metodo,dec(a),r.valor_referencia!=null?dec(+r.valor_referencia):'',r.ec??'',r.pvu??'',r.pub??'',r.fator!=null?String(r.fator).replace('.',','):'',r.valor_reavaliado!=null?dec(+r.valor_reavaliado):'',r.valor_reavaliado!=null?dec(+r.valor_reavaliado-(a||0)):'',r.vida_util_remanescente??'',r.valor_residual!=null?dec(+r.valor_residual):'',r.fonte||'',r.observacao||'',dataBR(r.data_avaliacao),r.concluido?'sim':'não']); });
   baixar('reavaliacao.csv',linhas);
 });
