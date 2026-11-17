@@ -201,7 +201,12 @@
   /* pesquisa de preços */
   dialog.dlg.largo{width:min(1080px,96vw);max-height:92vh;padding:0;display:none;flex-direction:column}
   dialog.dlg.largo[open]{display:flex}
-  .pz-top{padding:20px 22px 12px;border-bottom:1px solid var(--line)}
+  .pz-top{padding:20px 22px 12px;border-bottom:1px solid var(--line);max-height:calc(92vh - 190px);overflow-y:auto;flex-shrink:0}
+  #dlgPrecos:has(#pzTblBox:not(.hidden)) .pz-top{max-height:40vh}
+  .pz-body:has(#pzTblBox:not(.hidden)){min-height:min(320px,30vh)}
+  .pz-foot{flex-shrink:0}
+  .pz-lc>details>summary{cursor:pointer;font-weight:600;list-style-position:inside}
+  .pz-lc>details[open]>summary{margin-bottom:8px}
   .pz-body{padding:14px 22px;overflow-y:auto;flex:1}
   .pz-foot{padding:12px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface2);border-radius:0 0 18px 18px}
   .pz-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
@@ -768,7 +773,7 @@
       <div class="fix"><button class="btn-2" id="pzBuscarCat">Buscar no catálogo</button></div>
     </div>
     <div class="pz-cat hidden" id="pzCat"></div>
-    <div class="pz-lc hidden" id="pzLc">
+    <div class="pz-lc hidden" id="pzLc"><details id="pzLcDet" open><summary id="pzLcResumo">Regiões e órgãos de referência do LicitaCon</summary>
       <div id="pzLcReg"></div>
       <div class="reg-form hidden" id="pzRegForm">
         <label for="pzRegNome" style="font-weight:600;font-size:13px;margin-bottom:-4px">1. Nome da região (só o nome, ex.: AMGSR)</label>
@@ -782,7 +787,7 @@
       <div id="pzLcLista"></div>
       <div class="pz-row" style="margin-top:8px"><div><input id="pzLcTexto" placeholder="Adicionar órgão: digite o município (ex.: Tuparendi) ou o nome do órgão"></div><div class="fix"><button class="btn-2" id="pzLcProcurar">Procurar</button></div></div>
       <div class="pz-cat hidden" id="pzLcAchados"></div>
-    </div>
+    </details></div>
     <div class="pz-sel hidden" id="pzSel"></div>
     <div class="pz-row" style="margin-top:12px">
       <div class="fix" style="min-width:170px" id="pzAbrBox"><label for="pzAbr">Abrangência</label><select id="pzAbr"><option value="estado">Estado</option><option value="regiao">Região</option><option value="brasil">Brasil inteiro</option></select></div>
@@ -814,7 +819,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-19'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-20'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1685,8 +1690,10 @@ function pzLcDesenhar(){
   const tags=o=>LR.regioes.filter(r=>r.municipios.some(m=>chaveMun(m)===chaveMun(o.municipio))).map(r=>`<span class="reg-tag">${esc(r.nome)}</span>`).join('');
   const linhas=LC.orgaos.map(o=>`<div class="org" data-cd="${o.cd_orgao}"><input type="checkbox"${LC.off.has(o.cd_orgao)?'':' checked'}><span><b>${esc(o.nome)}</b>${tags(o)} <small>· ${esc(o.municipio||'')} · ${o.itens.toLocaleString('pt-BR')} itens · carregado em ${new Date(o.carregado_em).toLocaleDateString('pt-BR')}</small></span><span class="acoes"><button class="btn-2" data-a="atualizar">Atualizar</button><button class="btn-2" data-a="remover">Remover</button></span></div>`).join('');
   const marc=LC.orgaos.filter(o=>!LC.off.has(o.cd_orgao)).length;
+  $('#pzLcResumo').textContent=`Regiões e órgãos de referência do LicitaCon · ${marc} de ${LC.orgaos.length} órgão(s) marcado(s)${$('#pzLcDet').open?'':' (clique para abrir)'}`;
   $('#pzLcLista').innerHTML=!LC.orgaos.length?'<small style="color:var(--muted)">Nenhum órgão ainda. Carregue uma região acima ou procure a prefeitura do cliente e as vizinhas logo abaixo.</small>'
     :LC.orgaos.length>6?`<details${LC.aberto?' open':''}><summary>${LC.orgaos.length} órgãos carregados, ${marc} marcado(s) · ${LC.orgaos.reduce((s,o)=>s+o.itens,0).toLocaleString('pt-BR')} itens</summary>${linhas}</details>`:linhas;
+  $('#pzLcDet').ontoggle=()=>pzLcDesenhar();
   const det=$('#pzLcLista').querySelector('details'); if(det) det.ontoggle=()=>{ LC.aberto=det.open; };
   $('#pzLcLista').querySelectorAll('.org').forEach(el=>{
     const cd=+el.dataset.cd;
@@ -1997,6 +2004,7 @@ function pzInfoFiltro(){
 }
 function pzTabela(){
   $('#pzTblBox').classList.toggle('hidden',!PZ.itens.length);
+  if(PZ.itens.length) $('#pzLcDet').open=false; // recolhe as regiões para a tabela ter espaço
   const linhas=[]; PZ.itens.forEach((x,i)=>{ if(!pzVisivel(x)) return;
     linhas.push(`<tr data-i="${i}"${PZ.off.has(i)?' class="off"':''}><td><input type="checkbox"${PZ.off.has(i)?'':' checked'}></td><td>${dataBR(x.data)||'—'}${x.fonte_nome?`<br><span class="pz-tag">${esc(x.fonte_nome)}</span>`:''}</td><td>${esc(x.orgao||'—')}<small>${esc([x.uasg&&x.uasg!==x.orgao?x.uasg:'',x.esfera].filter(Boolean).join(' · '))}</small></td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/')||'—')}</td><td title="${esc(x.descricao||'')}">${esc((x.descricao||'').slice(0,160))}${(x.descricao||'').length>160?'…':''}<small>${esc([x.catmat&&('CATMAT '+x.catmat),x.fornecedor,x.marca&&('marca '+x.marca),x.fonte==='LicitaCon'&&x.item&&('item '+x.item)].filter(Boolean).join(' · '))}${/^https:\/\//.test(x.link||'')?` · <a href="${esc(x.link)}" target="_blank" rel="noopener">ver licitação</a>`:''}</small></td><td>${esc(x.unidade||'')}</td><td class="n">${x.quantidade!=null?x.quantidade.toLocaleString('pt-BR'):''}</td><td class="n"><b>${brl(x.valor)}</b>${x.estimado?'<small style="display:block;color:var(--muted)">estimado</small>':''}</td></tr>`); });
   $('#pzCorpo').innerHTML=linhas.join('')||'<tr><td colspan="8" style="color:var(--muted)">Nenhum preço com essas palavras.</td></tr>';
