@@ -147,6 +147,27 @@
   .pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap}
   .pill::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor}
   .pill.done{background:#E3F2EA;color:var(--ok)}
+  /* varredura por sala */
+  .vr-sala{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+  .vr-sala b{display:block;font-size:16px}.vr-sala small{color:var(--muted);font-size:13px}
+  .vr-cont{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .vr-cont div{border:1.5px solid var(--border);border-radius:12px;padding:8px 12px;background:var(--surface)}
+  .vr-cont b{display:block;font-size:26px;font-weight:800;font-stretch:80%;font-variant-numeric:tabular-nums;line-height:1.1}
+  .vr-cont small{color:var(--muted);font-size:12.5px}
+  .vr-itens{margin:12px 0;display:flex;flex-direction:column;gap:6px}
+  .vr-it{display:flex;align-items:center;gap:10px;border:1.5px solid var(--border);border-radius:12px;padding:8px 10px;background:var(--surface);font-size:14px}
+  .vr-it .vr-ic{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:var(--muted)}
+  .vr-it .vr-tx{flex:1;min-width:0}
+  .vr-it .vr-tx b{font-variant-numeric:tabular-nums}
+  .vr-it .vr-tx small{display:block;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+  .vr-it button{flex:none;min-height:36px;padding:6px 10px;font-size:13px}
+  .vr-it.ok .vr-ic{background:var(--ok)}.vr-it.ok .vr-ic::before{content:'✓'}
+  .vr-it.repetido .vr-ic::before{content:'↺'}
+  .vr-it.outra{border-color:#E8C27A;background:#FFF7E6}.vr-it.outra .vr-ic{background:var(--warn)}.vr-it.outra .vr-ic::before{content:'!'}
+  .vr-it.nao,.vr-it.erro{border-color:#E9B1AA;background:#FDF0EE}.vr-it.nao .vr-ic,.vr-it.erro .vr-ic{background:#C0392B}.vr-it.nao .vr-ic::before{content:'?'}.vr-it.erro .vr-ic::before{content:'!'}
+  .vr-it.buscando .vr-ic::before{content:'…'}
+  .vr-it.novo{animation:vrNovo .9s ease-out}
+  @keyframes vrNovo{from{box-shadow:0 0 0 4px rgba(35,71,168,.35)}to{box-shadow:0 0 0 0 rgba(35,71,168,0)}}
   .pill.pend{background:#FBEFD9;color:var(--warn)}
 
   /* blocos de destaque dentro da ficha */
@@ -433,7 +454,8 @@
     </div>
     <div id="searchMsg" style="font-size:14px"></div>
     <div id="searchResults" class="results hidden"></div>
-    <button class="btn-ghost btn-block" id="btnLocais" style="margin-top:14px">Concluir uma localização</button>
+    <button class="btn-ghost btn-block" id="btnVarredura" style="margin-top:14px">Varredura da sala (ler vários seguidos)</button>
+    <button class="btn-ghost btn-block" id="btnLocais" style="margin-top:8px">Concluir uma localização</button>
     <button class="btn-ghost btn-block" id="btnSobra" style="margin-top:8px">Registrar bem sem cadastro</button>
     <button class="btn-ghost btn-block" id="btnOcor" style="margin-top:8px">Registrar ocorrência</button>
   </div>
@@ -466,6 +488,35 @@
   </div>
 
   <!-- CONCLUSÃO DE LOCALIZAÇÃO -->
+  <!-- VARREDURA POR SALA -->
+  <div class="card hidden" id="varCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h3 style="margin:0">Varredura da sala</h3><button class="btn-ghost" id="btnFecharVar" style="flex:none">‹ Voltar</button></div>
+    <div id="vrEscolha">
+      <p class="hint" style="margin:0 0 12px">Escolha a sala em que você está. Depois é só ir lendo as placas, uma atrás da outra: cada bem lido fica registrado como encontrado nesta sala, sem abrir a ficha.</p>
+      <input type="search" id="vrBusca" placeholder="Nome ou código da sala" aria-label="Sala" style="margin:0">
+      <div class="results" id="vrLista"></div>
+    </div>
+    <div id="vrAtiva" class="hidden">
+      <div class="vr-sala"><span><b id="vrSalaNome">—</b><small id="vrSalaCod"></small></span><button class="btn-ghost" id="btnVrTrocar" style="flex:none">Trocar</button></div>
+      <div class="vr-cont">
+        <div><b id="vrQtd">0</b><small>lidos agora</small></div>
+        <div><b id="vrFaltamQtd">…</b><small>do cadastro ainda faltam</small></div>
+      </div>
+      <button class="btn-scan" id="vrLer"><svg><use href="#i-barcode"/></svg>Ler placas em sequência</button>
+      <div id="vrScanSlot"></div>
+      <div class="row" style="margin-top:10px">
+        <input type="search" id="vrPlaca" inputmode="numeric" placeholder="Ou digite a placa" aria-label="Placa" style="margin:0">
+        <button class="btn" id="btnVrPlaca" style="flex:none;padding:12px 18px">OK</button>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Bipe curto: registrado. Bipe duplo grave: precisa de atenção. Os bens lidos ficam com o estado e a situação que já tinham; para mudar, toque em <b>Ficha</b>.</p>
+      <div class="vr-itens" id="vrItens"></div>
+      <div class="sync-list hidden" id="vrFaltam"></div>
+      <button class="btn-ghost btn-block" id="btnVrFaltam">Ver o que falta nesta sala</button>
+      <button class="btn btn-block" id="btnVrConcluir" style="margin-top:8px">Terminei: concluir esta sala</button>
+      <button class="btn-ghost btn-block" id="btnVrEncerrar" style="margin-top:8px">Encerrar a varredura</button>
+    </div>
+  </div>
+
   <div class="card hidden" id="locCard">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h3 style="margin:0">Concluir localização</h3><button class="btn-ghost" id="btnFecharLocTopo" style="flex:none">‹ Voltar</button></div>
     <p class="hint" style="margin:0 0 12px">Ao terminar de levantar todos os bens de uma sala ou setor, marque a localização como concluída. Ela fica liberada para a reavaliação no painel.</p>
@@ -713,7 +764,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-29'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-30'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1180,7 +1231,7 @@ async function abrirLocal(texto, origem){
 }
 
 /* ====================== SCANNER ====================== */
-$('#btnScan').addEventListener('click',()=>{ scanDestino='busca'; startScan(); });
+$('#btnScan').addEventListener('click',()=>{ scanDestino='busca'; $('#btnScan').after($('#scanWrap'),$('#btnStopScan')); startScan(); });
 
 
 
@@ -1240,6 +1291,7 @@ async function startScan(){
     codeReader.decodeFromConstraints(constraints, video, (result, err)=>{
       if(result){
         const txt=result.getText();
+        if(scanDestino==='varredura'){ varLer(txt); return; }   // varredura: a câmera continua aberta
         stopScan();
         $('#plateInput').value=txt;
         if(navigator.vibrate)navigator.vibrate(120);
@@ -1289,7 +1341,8 @@ function scanLoopReforco(video){
         }
         ctx.putImageData(img,0,0);
         const txt=tryDecodeCanvas(scanCanvas);
-        if(txt){
+        if(txt && scanDestino==='varredura'){ varLer(txt); }
+        else if(txt){
           stopScan();
           $('#plateInput').value=txt;
           if(navigator.vibrate)navigator.vibrate(120);
@@ -1325,6 +1378,7 @@ function stopScan(){
   const v=document.getElementById('scanVideo'); if(v){try{v.pause();}catch(_){}}
   scanReaderCore=null; scanCanvas=null;
   $('#scanWrap').classList.add('hidden');$('#btnStopScan').classList.add('hidden');
+  { const vb=document.getElementById('vrLer'); if(vb) vb.classList.remove('hidden'); }
 }
 
 /* ====================== DETALHE ====================== */
@@ -1508,6 +1562,7 @@ $('#btnBack').addEventListener('click',()=>{
   stopPhoto();
   $('#detailCard').classList.add('hidden');
   origemDetalhe=null;
+  if(VAR.voltar){ VAR.voltar=false; $('#varCard').classList.remove('hidden'); varRender(); varContarFaltam(); return; }
   $('#searchCard').classList.remove('hidden');
   $('#plateInput').value='';$('#searchMsg').innerHTML='';$('#plateInput').focus();
 });
@@ -1716,7 +1771,7 @@ async function atualizarFilaUI(){
 }
 function dataHoraBR(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
 async function abrirEnvio(){
-  stopScan(); ['searchCard','detailCard','locCard','sobraCard','ocorCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#syncCard').classList.remove('hidden');
+  stopScan(); ['searchCard','detailCard','locCard','sobraCard','ocorCard','varCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#syncCard').classList.remove('hidden');
   $('#syncMsg').innerHTML='';
   $('#syncModo').innerHTML = OFFLINE()
     ? '<b>Envio offline</b>Os bens ficam guardados no celular e cada item salvo fica aqui até você enviar pela internet ou exportar o arquivo.'
@@ -1735,7 +1790,7 @@ async function abrirEnvio(){
 /* ====== conclusão de localização ====== */
 let LC_SEL=null, LC_FEITAS={}, LC_CONT=null;
 async function abrirLocais(){
-  stopScan(); ['searchCard','detailCard','syncCard','sobraCard','ocorCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#locCard').classList.remove('hidden');
+  stopScan(); ['searchCard','detailCard','syncCard','sobraCard','ocorCard','varCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#locCard').classList.remove('hidden');
   LC_SEL=null; $('#lcBusca').value=''; $('#lcBusca').classList.remove('hidden'); $('#lcDetalhe').classList.add('hidden'); $('#lcMsg').innerHTML='';
   try{ const {data,error}=await sb.from('localizacoes_concluidas').select('cod,concluido_nome,concluido_em'); if(error) throw error; LC_FEITAS={}; (data||[]).forEach(r=>LC_FEITAS[r.cod]=r); }
   catch(e){ if(!ehErroDeRede(e)) $('#lcMsg').innerHTML='<span class="err">A conclusão de localizações ainda não foi instalada no banco (supabase/conclusao.sql).</span>'; }
@@ -1797,10 +1852,203 @@ async function escolherLocal(l){
 }
 $('#btnLocais').addEventListener('click',abrirLocais);
 
+
+/* ====================== VARREDURA POR SALA ======================
+   A equipe escolhe a sala e lê as placas em sequência, com a câmera aberta.
+   Cada bem lido é gravado como encontrado na sala, com o estado e a situação que já tinha.
+   Casos que pedem atenção (bem já encontrado em outra sala, placa fora do cadastro, outra
+   unidade gestora) não são gravados sozinhos: aparecem na lista com a ação possível. */
+let VAR={loc:null,itens:[],ultimo:'',ultimoEm:0,cadeia:Promise.resolve(),voltar:false,audio:null,tStats:null};
+function varSom(tipo){
+  try{
+    VAR.audio=VAR.audio||new (window.AudioContext||window.webkitAudioContext)();
+    const a=VAR.audio; if(a.state==='suspended') a.resume();
+    const tons=tipo==='ok'?[[1175,0,.09]]:tipo==='repetido'?[[784,0,.06]]:[[392,0,.13],[294,.17,.2]];
+    tons.forEach(([f,t,d])=>{ const o=a.createOscillator(), g=a.createGain(); o.type='square'; o.frequency.value=f; g.gain.value=.05;
+      o.connect(g); g.connect(a.destination); o.start(a.currentTime+t); o.stop(a.currentTime+t+d); });
+  }catch(_){}
+  if(navigator.vibrate) navigator.vibrate(tipo==='ok'?60:tipo==='repetido'?[25,40,25]:[160,90,160]);
+}
+function nomeLocal(cod){ const l=LOCS.find(x=>x.cod===(cod||'')); return l?(l.desc||l.cod):(cod||'—'); }
+function abrirVarredura(){
+  stopScan(); CARTOES.forEach(x=>{ const el=$('#'+x); if(el) el.classList.add('hidden'); }); $('#varCard').classList.remove('hidden');
+  try{ VAR.audio=VAR.audio||new (window.AudioContext||window.webkitAudioContext)(); }catch(_){}   // o som precisa nascer de um toque
+  if(VAR.loc){ varMostrarAtiva(); return; }
+  $('#vrEscolha').classList.remove('hidden'); $('#vrAtiva').classList.add('hidden');
+  $('#vrBusca').value=''; varListarSalas();
+}
+function varListarSalas(){
+  const q=semAcento($('#vrBusca').value.trim());
+  const base=LOCS.filter(l=>l.cod!==LOCAL_TEMP&&(!q||semAcento(l.cod+' '+l.desc).includes(q)))
+    .sort((a,b)=>String(a.desc).localeCompare(String(b.desc),'pt-BR')).slice(0,60);
+  $('#vrLista').innerHTML=base.length?base.map(l=>`<button type="button" data-cod="${esc(l.cod)}"><span><b>${esc(l.desc||'(sem descrição)')}</b><small>Código ${esc(l.cod)}</small></span></button>`).join('')
+    :'<p class="hint">Nenhuma sala com esse nome.</p>';
+  $('#vrLista').querySelectorAll('button').forEach(b=>b.onclick=()=>{ VAR.loc=LOCS.find(l=>l.cod===b.dataset.cod); VAR.itens=[]; VAR.ultimo=''; varMostrarAtiva(); });
+}
+function varMostrarAtiva(){
+  $('#vrEscolha').classList.add('hidden'); $('#vrAtiva').classList.remove('hidden');
+  $('#vrFaltam').classList.add('hidden'); $('#vrPlaca').value='';
+  varRender(); varContarFaltam();
+}
+function varRender(){
+  const l=VAR.loc; if(!l) return;
+  $('#vrSalaNome').textContent=l.desc||l.cod; $('#vrSalaCod').textContent='Código '+l.cod;
+  $('#vrQtd').textContent=String(VAR.itens.filter(i=>i.st==='ok').length);
+  const bt=(cls,txt)=>`<button type="button" class="btn-ghost ${cls}">${txt}</button>`;
+  $('#vrItens').innerHTML=VAR.itens.map((i,k)=>`<div class="vr-it ${i.st}${i.novo?' novo':''}" data-k="${k}"><span class="vr-ic"></span>
+    <span class="vr-tx"><b>${esc(i.placa)}</b> ${esc(i.desc||'')}<small>${esc(i.msg||'')}</small></span>
+    ${i.st==='outra'?bt('vrMover','Trazer'):''}${i.st==='nao'?bt('vrSobra','Sem cadastro'):''}${i.bem?bt('vrFicha','Ficha'):''}</div>`).join('');
+  VAR.itens.forEach(i=>i.novo=false);
+  const it=e=>VAR.itens[+e.closest('.vr-it').dataset.k];
+  $('#vrItens').querySelectorAll('.vrFicha').forEach(b=>b.onclick=()=>varAbrirFicha(it(b)));
+  $('#vrItens').querySelectorAll('.vrMover').forEach(b=>b.onclick=()=>varMover(it(b)));
+  $('#vrItens').querySelectorAll('.vrSobra').forEach(b=>b.onclick=()=>varSobra(it(b)));
+}
+// lê o bem pela placa: na nuvem ou nos dados guardados no celular
+async function varBuscarBem(texto){
+  const placaNum=stripZeros(onlyDigits(texto));
+  const local=async()=>{
+    if(!(await baseLocalPronta())) throw new Error('Os bens ainda não foram baixados para este celular.');
+    const bem=(await bensLocais()).find(b=>b.placa&&(b.placa===texto||(placaNum&&stripZeros(b.placa)===placaNum)));
+    if(!bem) return {};
+    const naFila=await filaGet(bem.codigo);
+    return {bem, naFila, lev:naFila?naFila.row:(await idbGet('lev',bem.codigo).catch(()=>null))};
+  };
+  if(OFFLINE()||SEM_SESSAO) return local();
+  try{
+    const r=await sb.from('bens').select('*').or(placaNum?`placa.eq.${texto},placa.eq.${placaNum}`:`placa.eq.${texto}`).neq('placa','').limit(1).maybeSingle();
+    if(r.error) throw new Error(r.error.message||'erro');
+    if(!r.data) return {};
+    const bem=r.data, naFila=await filaGet(bem.codigo);
+    if(naFila) return {bem, naFila, lev:naFila.row};
+    const l=await sb.from('levantamento').select('*').eq('codigo',bem.codigo).maybeSingle(); if(l.error) throw new Error(l.error.message||'erro');
+    return {bem, lev:l.data||null};
+  }catch(e){ if(ehErroDeRede(e)&&await baseLocalPronta()) return local(); throw e; }
+}
+function varLer(txt){
+  const t=String(txt||'').trim(); if(!t||!VAR.loc) return;
+  const agora=Date.now();
+  // a câmera parada sobre a mesma etiqueta lê várias vezes: só conta de novo depois de 3 s sem vê-la
+  if(t===VAR.ultimo&&agora-VAR.ultimoEm<3000){ VAR.ultimoEm=agora; return; }
+  VAR.ultimo=t; VAR.ultimoEm=agora;
+  VAR.cadeia=VAR.cadeia.then(()=>varProcessar(t)).catch(()=>{});
+}
+async function varProcessar(t){
+  const sala=VAR.loc;
+  const placa=stripZeros(t)||t;
+  const ja=VAR.itens.find(i=>i.placa===placa&&(i.st==='ok'||i.st==='repetido'));
+  if(ja){ varSom('repetido'); toast('Placa '+placa+' já foi lida nesta varredura'); return; }
+  const item={placa,st:'buscando',msg:'Procurando...',novo:true};
+  VAR.itens.unshift(item); varRender();
+  try{
+    const {bem,lev,naFila}=await varBuscarBem(t);
+    if(VAR.loc!==sala) return;
+    if(!bem){ Object.assign(item,{st:'nao',msg:'Placa não encontrada no cadastro. Se o bem está aqui, registre como bem sem cadastro.'}); varSom('alerta'); return; }
+    Object.assign(item,{bem,lev,naFila,desc:bem.descricao||''});
+    if(lev&&lev.concluido&&lev.cod_localizacao===sala.cod){ Object.assign(item,{st:'repetido',msg:'Já estava registrado nesta sala'+(lev.usuario_nome?' por '+lev.usuario_nome:'')+'.'}); varSom('repetido'); return; }
+    if(lev&&lev.concluido&&lev.cod_localizacao&&lev.cod_localizacao!==LOCAL_TEMP){
+      Object.assign(item,{st:'outra',msg:'Já foi encontrado em '+nomeLocal(lev.cod_localizacao)+(lev.usuario_nome?' por '+lev.usuario_nome:'')+'. Toque em Trazer se ele está mesmo aqui.'}); varSom('alerta'); return;
+    }
+    const onde=await varGravar(bem,lev,naFila);
+    const veio=bem.cod_localizacao&&bem.cod_localizacao!==sala.cod&&bem.cod_localizacao!==LOCAL_TEMP?'Veio de '+nomeLocal(bem.cod_localizacao)+'. ':'';
+    Object.assign(item,{st:'ok',msg:veio+(onde==='nuvem'?'Registrado.':'Guardado no celular para enviar.')});
+    varSom('ok');
+  }catch(e){ Object.assign(item,{st:'erro',msg:ehErroDeRede(e)?'Sem internet e sem os bens no celular. Tente de novo.':(e.message||String(e))}); varSom('alerta'); }
+  finally{ if(VAR.loc===sala) varRender(); }
+}
+// grava o bem como encontrado na sala da varredura (mesmas regras do botão Salvar da ficha)
+async function varGravar(bem,lev,naFila){
+  const sala=VAR.loc, L=lev||{}, agora=new Date().toISOString();
+  const locMudou=sala.cod!==bem.cod_localizacao;
+  const locOrig=LOCS.find(l=>l.cod===(bem.cod_localizacao||'')), ugRef=locOrig?stripZeros(String(locOrig.ug||'')):'', ugNova=stripZeros(String(sala.ug||''));
+  if(locMudou&&ugRef&&ugNova&&ugNova!==ugRef) throw new Error('Esta sala é de outra unidade gestora. O bem não foi registrado.');
+  const comissao=COMISSOES[0]?COMISSOES[0].cod:''; if(!comissao) throw new Error('Falta cadastrar a comissão de avaliação no painel (Configuração).');
+  ensureEstSit(bem);
+  const estCod=L.cod_estado??bem.cod_estado, sitCod=L.cod_situacao??bem.cod_situacao;
+  const row={codigo:bem.codigo, placa_nova:L.placa_nova||null,
+    cod_localizacao:sala.cod, localizacao:sala.desc||null,
+    cod_situacao:sitCod||null, situacao:(SITS.find(x=>x.cod===sitCod)||{}).desc||null,
+    cod_estado:estCod||null, estado:(ESTS.find(x=>x.cod===estCod)||{}).desc||null,
+    cod_motivo:L.cod_motivo||MOTIVO_PADRAO, cod_comissao:L.cod_comissao||comissao,
+    data_movimento:locMudou?(L.data_movimento||agora):null, concluido:true, atualizado_em:agora};
+  const reg={codigo:bem.codigo,row,fotos:(naFila&&naFila.fotos)||[],placa_nova:null,descricao:bem.descricao||'',placa:bem.placa||'',
+    salvo_em:agora,usuario:USUARIO_EMAIL,cliente_id:CLIENTE.id,pasta:pastaCliente()};
+  let onde='celular';
+  if(OFFLINE()||SEM_SESSAO) await guardarNaFila(reg);
+  else{
+    try{ await enviarRegistro(reg); await idbDel('fila',bem.codigo).catch(()=>{}); idbPut('lev',row).catch(()=>{}); onde='nuvem'; }
+    catch(e){ if(!ehErroDeRede(e)) throw e; await guardarNaFila(reg); }
+  }
+  clearTimeout(VAR.tStats); VAR.tStats=setTimeout(()=>{ refreshStats(); varContarFaltam(); },1500);
+  return onde;
+}
+async function varMover(item){
+  if(!item||!item.bem) return;
+  Object.assign(item,{st:'buscando',msg:'Registrando nesta sala...'}); varRender();
+  try{ const onde=await varGravar(item.bem,item.lev,item.naFila); Object.assign(item,{st:'ok',msg:'Trazido de '+nomeLocal(item.lev&&item.lev.cod_localizacao)+'. '+(onde==='nuvem'?'Registrado.':'Guardado no celular para enviar.')}); varSom('ok'); }
+  catch(e){ Object.assign(item,{st:'erro',msg:e.message||String(e)}); varSom('alerta'); }
+  varRender();
+}
+function varAbrirFicha(item){
+  if(!item||!item.bem) return;
+  stopScan(); VAR.voltar=true; origemDetalhe=null; $('#varCard').classList.add('hidden');
+  const lev=item.st==='ok'?Object.assign({},item.lev||{},{cod_localizacao:VAR.loc.cod,localizacao:VAR.loc.desc,concluido:true}):item.lev;
+  openDetail(item.bem,lev||null,item.naFila);
+}
+function varSobra(item){
+  stopScan(); VAR.voltar=true; abrirSobra();
+  $('#sbPlaca').value=item?item.placa:''; $('#sbLocal').value=VAR.loc.cod;
+}
+// bens que o cadastro põe nesta sala e ainda não foram encontrados
+async function varFaltam(){
+  const cod=VAR.loc.cod;
+  if(!OFFLINE()&&!SEM_SESSAO){
+    try{ return (await situacaoDoLocal(cod)).faltam; }catch(e){ if(!ehErroDeRede(e)||!(await baseLocalPronta())) throw e; }
+  }
+  if(!(await baseLocalPronta())) return null;
+  const out=[];
+  for(const b of (await bensLocais()).filter(b=>b.cod_localizacao===cod)){
+    const f=await filaGet(b.codigo), l=f?f.row:await idbGet('lev',b.codigo).catch(()=>null);
+    if(l&&l.cod_localizacao&&l.cod_localizacao!==cod) continue;
+    if(!(l&&l.concluido)) out.push(b);
+  }
+  return out;
+}
+async function varContarFaltam(mostrar){
+  if(!VAR.loc) return; const sala=VAR.loc;
+  try{
+    const f=await varFaltam(); if(VAR.loc!==sala) return;
+    $('#vrFaltamQtd').textContent=f==null?'—':String(f.length);
+    if(!mostrar) return;
+    const box=$('#vrFaltam'); box.classList.remove('hidden');
+    box.innerHTML=f==null?'<div><span>Sem internet e sem os bens guardados no celular.</span></div>'
+      :!f.length?'<div><span>Nenhum bem do cadastro está faltando nesta sala. Se os bens estavam todos na localização de origem, confira a sala com os olhos antes de concluir.</span></div>'
+      :'<div><b>Ainda não lidos nesta sala ('+f.length+')</b></div>'+f.slice(0,300).map(b=>`<div><span>${esc(b.placa||'sem placa')} · ${esc((b.descricao||'').slice(0,40))}</span><small>cód. ${esc(b.codigo)}</small></div>`).join('');
+  }catch(e){ $('#vrFaltamQtd').textContent='—'; if(mostrar) toast('Não foi possível ver o que falta: '+(e.message||e)); }
+}
+$('#btnVarredura').addEventListener('click',abrirVarredura);
+$('#vrBusca').addEventListener('input',varListarSalas);
+$('#btnFecharVar').addEventListener('click',()=>{ stopScan(); $('#varCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); $('#btnScan').after($('#scanWrap'),$('#btnStopScan')); });
+$('#btnVrTrocar').addEventListener('click',()=>{ stopScan(); VAR.loc=null; VAR.itens=[]; abrirVarredura(); });
+$('#btnVrEncerrar').addEventListener('click',()=>{ stopScan(); VAR.loc=null; VAR.itens=[]; $('#varCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); $('#btnScan').after($('#scanWrap'),$('#btnStopScan')); refreshStats(); });
+$('#vrLer').addEventListener('click',()=>{
+  try{ VAR.audio=VAR.audio||new (window.AudioContext||window.webkitAudioContext)(); if(VAR.audio.state==='suspended') VAR.audio.resume(); }catch(_){}
+  $('#vrScanSlot').append($('#scanWrap'),$('#btnStopScan')); $('#vrLer').classList.add('hidden'); scanDestino='varredura'; VAR.ultimo=''; startScan();
+});
+const varDigitada=()=>{ const v=$('#vrPlaca').value.trim(); if(!v) return; $('#vrPlaca').value=''; VAR.ultimo=''; varLer(v); $('#vrPlaca').focus(); };
+$('#btnVrPlaca').addEventListener('click',varDigitada);
+$('#vrPlaca').addEventListener('keydown',e=>{ if(e.key==='Enter') varDigitada(); });
+$('#btnVrFaltam').addEventListener('click',()=>{ const box=$('#vrFaltam'); if(!box.classList.contains('hidden')){ box.classList.add('hidden'); return; } box.classList.remove('hidden'); box.innerHTML='<div><span><span class="spin"></span> Conferindo...</span></div>'; varContarFaltam(true); });
+$('#btnVrConcluir').addEventListener('click',async()=>{
+  const l=VAR.loc; if(!l) return; stopScan();
+  $('#varCard').classList.add('hidden');
+  await abrirLocais(); escolherLocal(LOCS.find(x=>x.cod===l.cod)||l);
+});
+
 /* ====================== BEM SEM CADASTRO (SOBRA) ====================== */
 let SB_FOTOS=[];
 function abrirSobra(){
-  stopScan(); ['searchCard','detailCard','syncCard','locCard','ocorCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#sobraCard').classList.remove('hidden');
+  stopScan(); ['searchCard','detailCard','syncCard','locCard','ocorCard','varCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#sobraCard').classList.remove('hidden');
   const ultimo=$('#sbLocal').value;
   fillSelect('#sbLocal',LOCS.filter(l=>l.cod!==LOCAL_TEMP).slice().sort((a,b)=>String(a.desc).localeCompare(String(b.desc),'pt-BR')),'— selecione —');
   if(ultimo) $('#sbLocal').value=ultimo;   // quem registra vários bens da mesma sala não escolhe de novo
@@ -1831,7 +2079,7 @@ async function listarSobras(){
 }
 $('#btnSobra').addEventListener('click',abrirSobra);
 ['sbDesc','sbLocal'].forEach(x=>$('#'+x).addEventListener('input',()=>{ $('#sbMsg').innerHTML=''; }));
-$('#btnFecharSobra').addEventListener('click',()=>{ $('#sobraCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
+$('#btnFecharSobra').addEventListener('click',()=>{ $('#sobraCard').classList.add('hidden'); if(VAR.voltar){ VAR.voltar=false; $('#varCard').classList.remove('hidden'); return; } $('#searchCard').classList.remove('hidden'); });
 $('#btnSalvarSobra').addEventListener('click',async()=>{
   const desc=$('#sbDesc').value.trim(), cod=$('#sbLocal').value, msg=$('#sbMsg'), btn=$('#btnSalvarSobra');
   if(desc.length<3){ msg.innerHTML='<span class="err">Informe a descrição do bem.</span>'; return; }
@@ -2122,7 +2370,7 @@ $('#btnLogout').addEventListener('click',()=>fecharFolha('menuFundo'),true);
 // Os avisos ficam no banco (supabase/avisos.sql); a função "avisos" manda a notificação aos aparelhos.
 let AVISOS=[], AV_LIDOS=new Set(), AVISOS_OK=true, MEU_ID=null, PREF={admin:true,sistema:true}, AVISOS_AUTO={};
 try{ AVISOS_AUTO=JSON.parse(localStorage.getItem('lev_avisos_auto')||'{}')||{}; }catch(_){}
-const CARTOES=['searchCard','detailCard','syncCard','locCard','sobraCard','ocorCard','cliCard','avisosCard'];
+const CARTOES=['searchCard','detailCard','syncCard','locCard','sobraCard','ocorCard','varCard','cliCard','avisosCard'];
 const naoLidos=()=>AVISOS.filter(a=>!AV_LIDOS.has(a.id)).length;
 const tabelaFalta=e=>/PGRST205|PGRST202|42P01|42883|does not exist|could not find/i.test(((e&&e.code)||'')+' '+((e&&e.message)||''));
 function marcarNaoLidos(){

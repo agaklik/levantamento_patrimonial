@@ -30,6 +30,7 @@ Guia completo de uso, instalação e funcionamento. Para a visão geral, veja o 
 - [Base de demonstração](#base-de-demonstração)
 - [Instalar no celular e avisos (notificações)](#instalar-no-celular-e-avisos-notificações)
 - [Painel do gestor e ocorrências do campo](#painel-do-gestor-e-ocorrências-do-campo)
+- [Varredura da sala](#varredura-da-sala)
 
 ## O que o app faz
 
@@ -525,3 +526,12 @@ Avisos automáticos (cada um pode ser desligado no painel):
 **Instalação no Supabase (uma vez):**
 1. SQL Editor: cole e rode `supabase/gestor-ocorrencias.sql` depois dos demais scripts.
 2. Atualize a Edge Function `usuarios` com `supabase/functions/usuarios/index.ts` (Verify JWT continua desligado), para o painel poder cadastrar o perfil gestor.
+
+## Varredura da sala
+
+No app de campo, **Varredura da sala (ler vários seguidos)**: a equipe escolhe a sala, toca em **Ler placas em sequência** e lê as etiquetas uma atrás da outra, com a câmera aberta (ou digita a placa). Cada bem lido é gravado como encontrado na sala, com o estado e a situação que já tinha, o motivo padrão do levantamento e a comissão cadastrada, pelas mesmas regras da ficha (inclusive a da unidade gestora). Bipe curto e ✓ = registrado; bipe duplo grave = atenção:
+- bem já encontrado em outra sala: não é gravado sozinho; **Trazer** registra nesta sala;
+- placa fora do cadastro: **Sem cadastro** abre o registro de sobra com placa e sala preenchidas;
+- sala de outra unidade gestora: não grava.
+
+A mesma etiqueta parada diante da câmera conta uma vez só. **Ficha** abre o bem para mudar estado, situação ou tirar fotos e volta para a varredura. **Ver o que falta nesta sala** lista os bens que o cadastro põe na sala e ainda não foram lidos; **Terminei: concluir esta sala** leva à conclusão da localização. No modo offline as leituras vão para a fila do celular.
