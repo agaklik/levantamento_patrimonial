@@ -440,9 +440,9 @@
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
             <button type="button" class="btn-2" id="btnBrasao">Enviar brasão</button>
             <button type="button" class="btn-2 hidden" id="btnBrasaoTirar">Remover</button>
-            <input type="file" id="cBrasaoFile" accept="image/png,image/jpeg,image/webp" class="hidden">
+            <input type="file" id="cBrasaoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" class="hidden">
           </div>
-          <div style="font-size:12px;color:var(--muted);margin-top:6px">Imagem PNG ou JPG. Aparece no cabeçalho dos documentos e no topo do app de campo deste cliente. Prefira PNG com fundo transparente.</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Imagem PNG, JPG ou SVG. Aparece no cabeçalho dos documentos e no topo do app de campo deste cliente. Prefira PNG com fundo transparente.</div>
         </div>
       </div>
     </div>
@@ -704,7 +704,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-8'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-9'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -2019,16 +2019,33 @@ async function fotosDoBem(codigo,limite){
 // Fica guardado dentro da configuração do cliente, já reduzido (data URL), para servir aos documentos e ao app de campo.
 function mostrarBrasao(){
   const ok=brasaoOk();
-  $('#cBrasaoPrev').innerHTML=ok?`<img src="${CFG.brasao}" alt="Brasão" style="width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box">`:'Sem brasão';
+  $('#cBrasaoPrev').innerHTML=ok?`<img src="${CFG.brasao}" alt="Brasão" style="width:74px;height:74px;object-fit:contain;display:block">`:'Sem brasão';
   $('#btnBrasaoTirar').classList.toggle('hidden',!ok); $('#btnBrasao').textContent=ok?'Trocar brasão':'Enviar brasão';
 }
-function reduzirImagem(file,lado){
+const ehSvg=f=>f.type==='image/svg+xml'||/\.svg$/i.test(f.name||'');
+// SVG: garante largura e altura (pelo viewBox) para o navegador conseguir desenhar; o resultado guardado é sempre PNG
+async function prepararSvg(file){
+  const doc=new DOMParser().parseFromString(await file.text(),'image/svg+xml'), el=doc.documentElement;
+  if(!el||el.nodeName.toLowerCase()!=='svg'||doc.querySelector('parsererror')) throw new Error('O arquivo SVG não pôde ser lido.');
+  const px=v=>{ const n=parseFloat(v); return /%/.test(v||'')||!isFinite(n)||n<=0?null:n; };
+  let w=px(el.getAttribute('width')), h=px(el.getAttribute('height'));
+  const vb=(el.getAttribute('viewBox')||'').trim().split(/[\s,]+/).map(Number);
+  if((!w||!h)&&vb.length===4&&vb[2]>0&&vb[3]>0){ w=vb[2]; h=vb[3]; }
+  if(!w||!h){ w=400; h=400; }
+  el.setAttribute('width',w); el.setAttribute('height',h);
+  return new Blob([new XMLSerializer().serializeToString(el)],{type:'image/svg+xml'});
+}
+async function reduzirImagem(file,lado){
+  const svg=ehSvg(file), origem=svg?await prepararSvg(file):file;
   return new Promise((res,rej)=>{
-    const url=URL.createObjectURL(file), img=new Image();
+    const url=URL.createObjectURL(origem), img=new Image();
     img.onload=()=>{ URL.revokeObjectURL(url);
-      const k=Math.min(1,lado/Math.max(img.naturalWidth,img.naturalHeight)), c=document.createElement('canvas');
-      c.width=Math.max(1,Math.round(img.naturalWidth*k)); c.height=Math.max(1,Math.round(img.naturalHeight*k));
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/png')); };
+      try{
+        const w=img.naturalWidth||400, h=img.naturalHeight||400;
+        const k=svg?lado/Math.max(w,h):Math.min(1,lado/Math.max(w,h)), c=document.createElement('canvas');   // SVG é vetor: pode ampliar sem perder
+        c.width=Math.max(1,Math.round(w*k)); c.height=Math.max(1,Math.round(h*k));
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/png'));
+      }catch(_){ rej(new Error('Não foi possível converter esta imagem. Tente exportar o brasão como PNG.')); } };
     img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('O arquivo não é uma imagem válida.')); };
     img.src=url;
   });
@@ -2043,7 +2060,7 @@ async function salvarBrasao(brasao){
 $('#btnBrasao').addEventListener('click',()=>$('#cBrasaoFile').click());
 $('#cBrasaoFile').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
-  if(!/^image\/(png|jpeg|webp)$/.test(f.type)){ toast('Envie uma imagem PNG ou JPG.'); return; }
+  if(!/^image\/(png|jpeg|webp)$/.test(f.type)&&!ehSvg(f)){ toast('Envie uma imagem PNG, JPG ou SVG.'); return; }
   if(f.size>15*1024*1024){ toast('A imagem é grande demais (máximo 15 MB).'); return; }
   try{
     let d=await reduzirImagem(f,400);
