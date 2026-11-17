@@ -34,6 +34,7 @@
   .hdr-center{flex:1;min-width:0}
   header h1{font-size:17px;margin:0;font-weight:700;font-stretch:92%;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
   .stats{display:none}
+  .versao-topo{font-size:10.5px;opacity:.55;margin-top:1px;font-variant-numeric:tabular-nums}
   .cliente-nome{font-size:12px;font-weight:600;opacity:.8;letter-spacing:.02em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
   #progWrap{margin-top:7px!important}
   #progWrap>div:first-child{height:6px!important;background:rgba(255,255,255,.16)!important;border-radius:3px!important}
@@ -314,6 +315,7 @@
   <div class="hdr-center">
     <h1>Levantamento patrimonial</h1>
     <div class="cliente-nome hidden" id="clienteNome"></div>
+    <div class="versao-topo" id="versaoTopo"></div>
     <div class="stats" id="stats"></div>
     <div id="progWrap">
       <div style="overflow:hidden">
@@ -557,7 +559,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-1'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-2'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1761,7 +1763,7 @@ async function lerColuna(tabela, coluna){ return (await lerTudo(tabela, coluna))
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
 }
-(function(){ const el=document.getElementById('appVersion'); if(el) el.textContent='Versão '+APP_VERSION; })();
+(function(){ ['appVersion','versaoTopo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='Versão '+APP_VERSION; }); })();
 initAuth();
 
 </script>

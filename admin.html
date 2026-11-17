@@ -158,6 +158,7 @@
   .hdr-right a:hover,.hdr-right button:hover{background:rgba(255,255,255,.26)}
   #cliSel{width:auto;max-width:260px;border:0;border-radius:999px;padding:8px 30px 8px 14px;font-size:13px;font-weight:600;color:#fff;background-color:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
   #cliSel option{color:#18212B;background:#fff}
+  .hdr-versao{font-size:11.5px!important;color:rgba(255,255,255,.45)!important;font-variant-numeric:tabular-nums}
   .cli-tbl input{min-width:0}
   .toast{border-radius:18px;background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.78));-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 28px rgba(24,33,43,.3)}
   #drawerBg{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
@@ -260,7 +261,7 @@
 <!-- ===== APLICAÇÃO ===== -->
 <div id="app" class="hidden">
 <header>
-  <h1>Administração <small id="hdrCliente">Levantamento patrimonial</small></h1>
+  <h1>Administração <small id="hdrCliente">Levantamento patrimonial</small><small id="hdrVersao" class="hdr-versao"></small></h1>
   <nav id="nav">
     <button data-tab="painel" class="active">Painel</button>
     <button data-tab="reav">Reavaliação</button>
@@ -675,6 +676,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
+const APP_VERSION = 'v2026.11.17-2'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -785,6 +787,7 @@ function sugestao(b){
 
 /* ====================== AUTENTICAÇÃO ====================== */
 function tela(id){ ['loginScreen','blockScreen','app'].forEach(x=>$('#'+x).classList.toggle('hidden',x!==id)); }
+document.getElementById('hdrVersao').textContent='Versão '+APP_VERSION;
 async function iniciar(){
   const {data:{session}}=await sb.auth.getSession();
   if(LINK_RECUPERACAO){ LINK_RECUPERACAO=false; history.replaceState(null,'',location.pathname); if(session){ tela('loginScreen'); painelLogin('pNovaSenha'); return; } }
