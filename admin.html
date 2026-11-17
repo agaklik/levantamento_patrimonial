@@ -1515,18 +1515,18 @@ async function pzBuscarTodas(pdm){
     const val=r=>r.status==='fulfilled'?r.value:{itens:[],erro:(r.reason&&r.reason.message)||String(r.reason)};
     PZ.res={texto:t,meses,abr:ab.rotulo,compras:val(rc),pncp:val(rp),licitacon:val(rl),orgs:orgs.map(o=>o.nome)};
     // junta tudo, do mais recente para o mais antigo
-    const ws=semAc(t).split(/[^a-z0-9]+/).filter(w=>w.length>=3&&!['de','da','do','das','dos','com','sem','para','por'].includes(w)).map(w=>w.length>4?w.replace(/(oes|aes|ais|eis|es|s)$/,''):w);
     const todos=[];
     for(const f of ['compras','pncp','licitacon']) (PZ.res[f].itens||[]).forEach(x=>todos.push({...x,fonte_nome:FONTE_NOME[f],_f:f}));
     todos.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
     PZ.item={tipo:'todas',codigo:PZ.res.compras.pdm?PZ.res.compras.pdm.codigo:'',nome:t};
     PZ.itens=todos; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:new Date().toISOString()};
-    // entram desmarcados: valor só estimado (PNCP) e preço do Compras.gov.br sem as palavras na descrição
-    todos.forEach((x,i)=>{ const d=semAc(x.descricao); if(x.estimado||(x._f==='compras'&&!ws.every(w=>d.includes(w)))) PZ.off.add(i); });
+    // entram desmarcados só os valores estimados (PNCP, sem resultado homologado).
+    // no Compras.gov.br o tipo de material já limita os preços; as palavras extras se aplicam pelo filtro.
+    todos.forEach((x,i)=>{ if(x.estimado) PZ.off.add(i); });
     $('#pzFiltroBox').classList.toggle('hidden',!todos.length);
     pzTabela(); pzFontesInfo();
     const marc=todos.length-PZ.off.size;
-    PZ.msg=todos.length?`${todos.length} preço(s) nas 3 fontes, ${ab.texto} (LicitaCon: órgãos de referência), últimos ${meses} meses; ${marc} marcado(s) para o cálculo. Os desmarcados são valores só estimados ou do Compras.gov.br sem todas as palavras na descrição.`
+    PZ.msg=todos.length?`${todos.length} preço(s) nas 3 fontes, ${ab.texto} (LicitaCon: órgãos de referência), últimos ${meses} meses; ${marc} marcado(s) para o cálculo${marc<todos.length?' (os riscados são valores só estimados do edital)':''}.`
       :`Nenhum preço para "${t}" nas 3 fontes. Tente menos palavras, ampliar a abrangência ou o período.`;
     pzInfoFiltro();
   }catch(e){ $('#pzInfo').textContent='Erro: '+e.message; }
