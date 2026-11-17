@@ -505,6 +505,16 @@
       <div class="tblwrap"><table class="cli-tbl"><thead><tr><th>Nº</th><th>Nome</th><th>CNPJ</th><th>Município / UF</th><th>Sistema de origem</th><th>Situação</th><th></th></tr></thead><tbody id="cliBody"></tbody></table></div>
       <datalist id="listaSistemas"><option value="Abase"><option value="Betha"><option value="Delta"><option value="Dueto (Pronim)"><option value="GovBR"><option value="Governança Brasil"><option value="IPM"><option value="Tecnosweb"><option value="Thema"><option value="Outro"></datalist>
     </div>
+    <div class="card hidden" id="cardDemo">
+      <h2>Base de demonstração</h2>
+      <p class="sub">Este cliente é usado em demonstrações e testes. Depois de uma apresentação, ou quando quem testou alterou os dados, use "Restaurar demonstração" para voltar tudo ao ponto de partida: bens, levantamento, reavaliação, valores por tipo, sobras, avisos, configuração e histórico. Usuários, senhas e prazos de teste não mudam. Se você ajustar a base e quiser que o novo estado seja o ponto de partida, use "Guardar como ponto de partida".</p>
+      <div id="demoInfo" style="font-size:14px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="btnDemoRestaurar">Restaurar demonstração</button>
+        <button class="btn-2" id="btnDemoGuardar">Guardar como ponto de partida</button>
+      </div>
+      <div id="demoRes" style="font-size:14px;margin-top:12px"></div>
+    </div>
     <div class="card" id="cardCopia">
       <h2>Cópia de segurança</h2>
       <p class="sub">O plano gratuito do banco não guarda cópias. Baixe aqui um arquivo .zip com todos os dados deste cliente (bens, levantamento, reavaliação, laudos, configuração, histórico, sobras) e, se quiser, as fotos e os laudos em PDF. Guarde o arquivo fora do computador também (Google Drive, pen drive). Para voltar os dados, use "Restaurar": o que está na cópia é incluído ou corrigido, e nada que existe hoje é apagado.</p>
@@ -830,7 +840,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-22'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-23'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1028,12 +1038,14 @@ async function carregarCliente(){
     try{ const {data:pz}=await sb.rpc('meu_prazo'); if(pz&&pz.vencido) m='O período de teste de '+(USER.email||'')+' terminou em '+dataPrazo(pz.acesso_ate)+'. Para continuar, fale com quem liberou o seu acesso.'; }catch(_){}
     $('#blockMsg').textContent=m; tela('blockScreen'); return false;
   }
-  CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true};
+  CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true,demonstracao:data.demonstracao===true};
   $('#hdrCliente').textContent=CLIENTE.nome||'Levantamento patrimonial';
   if(data.acesso_ate){ const pz=document.createElement('span'); pz.className='pill p-pend'; pz.style.marginLeft='8px'; pz.title='Acesso de teste';
     pz.textContent='teste até '+dataPrazo(data.acesso_ate); $('#hdrCliente').appendChild(pz); }
   document.title=(CLIENTE.nome?CLIENTE.nome+' · ':'')+'Administração';
   $('#cardClientes').classList.toggle('hidden',!CLIENTE.geral);
+  $('#cardDemo').classList.toggle('hidden',!(CLIENTE.geral&&CLIENTE.demonstracao));
+  if(CLIENTE.geral&&CLIENTE.demonstracao) renderDemo();
   if(CLIENTE.geral) await carregarClientes(); else $('#cliSel').classList.add('hidden');
   return true;
 }
@@ -2555,6 +2567,35 @@ $('#btnCopiaTodos').addEventListener('click',async()=>{
   const {error}=await sb.rpc('escolher_cliente',{p_id:original});
   if(error) $('#copiaRes').innerHTML+='<br><span class="neg">Atenção: não foi possível voltar ao cliente original. Recarregue a página.</span>';
   copiaBotoes(true); renderCopia();
+});
+
+/* ---------- base de demonstração ---------- */
+async function renderDemo(){
+  const el=$('#demoInfo');
+  const {data,error}=await sb.rpc('demo_info');
+  if(error){ el.innerHTML='<span class="neg">'+(/demo_info/.test(error.message||'')?'Execute antes o script supabase/demonstracao.sql no Supabase.':esc(error.message))+'</span>'; return; }
+  if(!data||!data.guardado_em){ el.innerHTML='<span class="pill p-pend">Ponto de partida ainda não guardado</span>'; $('#btnDemoRestaurar').disabled=true; return; }
+  $('#btnDemoRestaurar').disabled=false;
+  el.innerHTML=`<span class="pill p-ok">Ponto de partida guardado</span> <span style="color:var(--muted)">${esc(dataHoraBR(data.guardado_em))}${data.guardado_por?' por '+esc(data.guardado_por):''} · ${(data.bens||0).toLocaleString('pt-BR')} bens, ${(data.levantamento||0).toLocaleString('pt-BR')} levantados</span>`;
+}
+function demoBotoes(on){ ['#btnDemoRestaurar','#btnDemoGuardar'].forEach(b=>$(b).disabled=!on); }
+$('#btnDemoRestaurar').addEventListener('click',async()=>{
+  if(!confirm(`Restaurar "${CLIENTE.nome}" ao ponto de partida?\n\nTudo o que foi feito depois (levantamentos, reavaliações, sobras, alterações de bens e configuração) é apagado e a base volta a ficar como estava quando o ponto de partida foi guardado.\n\nUsuários, senhas e prazos de teste não mudam.`)) return;
+  demoBotoes(false); $('#demoRes').textContent='Restaurando... não feche esta página.';
+  const {data,error}=await sb.rpc('demo_restaurar');
+  demoBotoes(true);
+  if(error){ $('#demoRes').innerHTML='<span class="neg">Não foi possível restaurar: '+esc(error.message)+'</span>'; return; }
+  $('#demoRes').textContent=`✓ Demonstração restaurada: ${(data.bens||0).toLocaleString('pt-BR')} bens, ${(data.levantamento||0).toLocaleString('pt-BR')} levantados, ${(data.reavaliacao||0).toLocaleString('pt-BR')} reavaliados. Recarregando...`;
+  setTimeout(()=>location.reload(),1500);
+});
+$('#btnDemoGuardar').addEventListener('click',async()=>{
+  if(!confirm(`Guardar o estado atual de "${CLIENTE.nome}" como novo ponto de partida?\n\nO ponto de partida anterior é substituído. A partir de agora, "Restaurar demonstração" volta para o que está na base neste momento.`)) return;
+  demoBotoes(false);
+  const {data,error}=await sb.rpc('demo_guardar');
+  demoBotoes(true);
+  if(error){ $('#demoRes').innerHTML='<span class="neg">Não foi possível guardar: '+esc(error.message)+'</span>'; return; }
+  $('#demoRes').textContent=`✓ Ponto de partida guardado: ${(data.bens||0).toLocaleString('pt-BR')} bens, ${(data.levantamento||0).toLocaleString('pt-BR')} levantados.`;
+  renderDemo();
 });
 
 /* ---------- restaurar ---------- */
