@@ -726,7 +726,7 @@ const CFG_PADRAO = {
   //   No banco, reavaliacao.pub guarda os anos já utilizados e reavaliacao.pvu os anos restantes.
   // metodoFator 'anos' (anterior): Fator = (pesoEc × EC + pesoPvu × anos restantes − pesoPub × anos de uso) ÷ 100
   metodoFator:'pontos',
-  pesoEc:4, pesoPvu:6, pesoPub:3, residualPct:10, fatorMin:0,
+  pesoEc:4, pesoPvu:6, pesoPub:3, residualPct:10, fatorMin:0.1,
   ec:{'1':10,'2':8,'3':5,'4':2},
   tabUso:[10,10,9,8,7,6,5,4,3,3,3],        // pontos por anos já utilizados: menos de 1, 1, 2 ... 9, 10 ou mais
   tabRest:[8,8,8,7,6,5,4,3,2,1],           // pontos por anos restantes: 1 (ou menos), 2 ... 9, 10 ou mais
@@ -1036,8 +1036,8 @@ async function carregar(){
       if(c.error) throw c.error;
       const dd=(c.data&&c.data.dados)||{};
       CFG=Object.assign(structuredClone(CFG_PADRAO), dd);
-      // configuração salva antes das tabelas de pontos: passa para o método novo, sem fator mínimo
-      if(!dd.metodoFator){ CFG.metodoFator='pontos'; CFG.fatorMin=0; }
+      // configuração salva antes das tabelas de pontos: passa para o método novo
+      if(!dd.metodoFator) CFG.metodoFator='pontos';
       CFG.ec=Object.assign({},CFG_PADRAO.ec,CFG.ec||{});
       CFG.pctRest=Object.assign({},CFG_PADRAO.pctRest,CFG.pctRest||{});
     }catch(e){ if(tabelaAusente(e)) schemaOk=false; else throw e; }
@@ -2541,7 +2541,7 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     membros:n.map((el,i)=>({nome:el.value.trim(),cargo:c[i].value.trim()})),
     rtNome:$('#cRtNome').value.trim(), rtTitulo:$('#cRtTitulo').value.trim(), rtRegistro:$('#cRtRegistro').value.trim(),
     metodoFator:$('#cMetodoFator').value==='anos'?'anos':'pontos',
-    pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0),
+    pesoEc:nv('#cPesoEc',4), pesoPvu:nv('#cPesoPvu',6), pesoPub:nv('#cPesoPub',3), residualPct:nv('#cResidual',10), fatorMin:nv('#cFatorMin',0.1),
     vidaPadrao:nv('#cVidaPadrao',10),
     ec:Object.fromEntries([...document.querySelectorAll('.cEcN')].map(el=>[el.dataset.k,num(el.value)??CFG_PADRAO.ec[el.dataset.k]])),
     pctRest:Object.fromEntries([...document.querySelectorAll('.cPct')].map(el=>[el.dataset.k,num(el.value)??CFG_PADRAO.pctRest[el.dataset.k]])),
