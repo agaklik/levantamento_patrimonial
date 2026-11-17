@@ -422,6 +422,23 @@
       <div class="tblwrap"><table class="cli-tbl"><thead><tr><th>Nº</th><th>Nome</th><th>CNPJ</th><th>Município / UF</th><th>Sistema de origem</th><th>Situação</th><th></th></tr></thead><tbody id="cliBody"></tbody></table></div>
       <datalist id="listaSistemas"><option value="Abase"><option value="Betha"><option value="Delta"><option value="Dueto (Pronim)"><option value="GovBR"><option value="Governança Brasil"><option value="IPM"><option value="Tecnosweb"><option value="Thema"><option value="Outro"></datalist>
     </div>
+    <div class="card" id="cardCopia">
+      <h2>Cópia de segurança</h2>
+      <p class="sub">O plano gratuito do banco não guarda cópias. Baixe aqui um arquivo .zip com todos os dados deste cliente (bens, levantamento, reavaliação, laudos, configuração, histórico, sobras) e, se quiser, as fotos e os laudos em PDF. Guarde o arquivo fora do computador também (Google Drive, pen drive). Para voltar os dados, use "Restaurar": o que está na cópia é incluído ou corrigido, e nada que existe hoje é apagado.</p>
+      <div id="copiaUltima" style="font-size:14px;margin-bottom:14px"></div>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:500;margin-bottom:14px;cursor:pointer"><input type="checkbox" id="copiaFotos" checked style="width:auto"> Incluir fotos e laudos em PDF (o arquivo fica maior e demora mais)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="btnCopiaBaixar">Baixar cópia deste cliente</button>
+        <button class="btn-2 hidden" id="btnCopiaTodos">Baixar cópia de todos os clientes</button>
+        <button class="btn-2" id="btnCopiaRestaurar">Restaurar a partir de uma cópia</button>
+        <input type="file" id="fileCopia" accept=".zip,.json,application/zip,application/json" class="hidden">
+      </div>
+      <div id="copiaProg" class="hidden" style="margin-top:14px">
+        <div style="font-size:14px;margin-bottom:6px" id="copiaMsg"></div>
+        <div class="bar" style="height:8px"><div id="copiaBar" style="width:0;transition:width .2s"></div></div>
+      </div>
+      <div id="copiaRes" style="font-size:14px;margin-top:12px"></div>
+    </div>
     <div class="card">
       <h2>Dados do órgão e do trabalho</h2>
       <p class="sub">Usados no cabeçalho e nas assinaturas dos documentos.</p>
@@ -704,7 +721,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-10'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-11'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -946,7 +963,7 @@ $('#btnNovoCliente').addEventListener('click',async()=>{
 });
 // se o cliente foi trocado em outra aba, recarrega para não gravar no cliente errado
 document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState!=='visible'||CLIENTE.id==null||!USER) return;
+  if(document.visibilityState!=='visible'||CLIENTE.id==null||!USER||copiaRodando) return;
   const {data}=await sb.rpc('meu_cliente');
   if(data&&data.id!==CLIENTE.id){ toast('O cliente foi trocado em outra aba. Recarregando...',3000); setTimeout(()=>location.reload(),1200); }
 });
@@ -1065,7 +1082,7 @@ async function carregar(){
     $('#concMsg').classList.toggle('hidden',concOk);
     $('#fStatus').value=concOk?'liberados':'pendentes';
     $('#schemaMsg').classList.toggle('hidden',schemaOk);
-    preencherFiltros(); preencherCfg(); preencherModo(); renderPainel(); aplicarFiltro();
+    preencherFiltros(); preencherCfg(); preencherModo(); renderCopia(); renderPainel(); aplicarFiltro();
     $('#loading').classList.add('hidden');
     mostrarAba(abaAtual);
   }catch(e){ $('#loading').textContent='Erro ao carregar: '+(e.message||e); }
@@ -2116,6 +2133,273 @@ $('#fileCampo').addEventListener('change',async e=>{
   }
   msg.innerHTML=`<b>${ok}</b> item(ns) gravados, <b>${fotos}</b> foto(s) novas`+(mantidos?`, ${mantidos} mantidos por já terem registro mais recente`:'')+(erros.length?`. <span class="neg">${erros.length} com erro: ${esc(erros.slice(0,3).join('; '))}</span>`:'.');
   await carregar();
+});
+
+/* ====================== CÓPIA DE SEGURANÇA ====================== */
+// Arquivo .zip com copia.json (todas as tabelas do cliente) e fotos/ (fotos, fotos das sobras e laudos).
+// A cópia de todos os clientes tem uma pasta cliente-<nº>/ para cada um.
+// Restaurar inclui ou corrige os registros da cópia no cliente em uso; nada é apagado.
+const COPIA_TIPO='levantamento-patrimonial-copia';
+// [tabela, chave, nome, restaura?] na ordem em que são gravadas (bens antes do levantamento)
+const COPIA_TABELAS=[
+  ['localizacoes','cod','localizações',true],['motivos','cod','motivos',true],['comissoes','cod','comissões',true],
+  ['configuracao','id','configuração',true],['bens','codigo','bens',true],['levantamento','codigo','levantamento',true],
+  ['reavaliacao','codigo','reavaliações',true],['referencias','chave','referências de preço',true],
+  ['localizacoes_concluidas','cod','localizações concluídas',true],['sobras','id','bens sem cadastro',true],
+  ['historico','id','histórico',false],['usuarios','user_id','usuários',false]];
+let copiaRodando=false;
+addEventListener('beforeunload',e=>{ if(copiaRodando){ e.preventDefault(); e.returnValue=''; } });
+
+const CRC_TAB=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC_TAB[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+// zip sem compressão (fotos e PDF já são comprimidos); nomes em UTF-8
+async function montarZip(arquivos){
+  if(arquivos.length>65000) throw new Error('São arquivos demais para uma cópia só. Baixe um cliente por vez.');
+  const enc=new TextEncoder(), partes=[], central=[]; let pos=0;
+  const d=new Date(), hora=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dia=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  for(const a of arquivos){
+    const dados=a.dados instanceof Uint8Array?a.dados:new Uint8Array(await a.dados.arrayBuffer());
+    const nome=enc.encode(a.nome), crc=crc32(dados);
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint16(8,0,true);
+    h.setUint16(10,hora,true); h.setUint16(12,dia,true); h.setUint32(14,crc,true); h.setUint32(18,dados.length,true); h.setUint32(22,dados.length,true);
+    h.setUint16(26,nome.length,true); h.setUint16(28,0,true);
+    const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true); c.setUint16(10,0,true);
+    c.setUint16(12,hora,true); c.setUint16(14,dia,true); c.setUint32(16,crc,true); c.setUint32(20,dados.length,true); c.setUint32(24,dados.length,true);
+    c.setUint16(28,nome.length,true); c.setUint32(42,pos,true);
+    partes.push(h,nome,dados); central.push(c,nome);
+    pos+=30+nome.length+dados.length;
+    if(pos>4.2e9) throw new Error('A cópia passou de 4 GB. Baixe um cliente por vez.');
+  }
+  const tamCentral=central.reduce((s,x)=>s+x.byteLength,0);
+  const e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true); e.setUint16(8,arquivos.length,true); e.setUint16(10,arquivos.length,true);
+  e.setUint32(12,tamCentral,true); e.setUint32(16,pos,true);
+  return new Blob([...partes,...central,e],{type:'application/zip'});
+}
+// lê um .zip sem carregar o arquivo inteiro na memória
+async function lerZip(file){
+  const tam=file.size, ini=Math.max(0,tam-65557);
+  const fim=new DataView(await file.slice(ini).arrayBuffer());
+  let p=-1; for(let i=fim.byteLength-22;i>=0;i--) if(fim.getUint32(i,true)===0x06054b50){ p=i; break; }
+  if(p<0) throw new Error('O arquivo não é um .zip válido.');
+  const n=fim.getUint16(p+10,true), tc=fim.getUint32(p+12,true), oc=fim.getUint32(p+16,true);
+  const cd=new DataView(await file.slice(oc,oc+tc).arrayBuffer()), dec=new TextDecoder();
+  const itens=new Map(); let q=0;
+  for(let i=0;i<n;i++){
+    if(cd.getUint32(q,true)!==0x02014b50) throw new Error('O arquivo .zip está danificado.');
+    const metodo=cd.getUint16(q+10,true), tamC=cd.getUint32(q+20,true), nl=cd.getUint16(q+28,true), el=cd.getUint16(q+30,true), cl=cd.getUint16(q+32,true), off=cd.getUint32(q+42,true);
+    const nome=dec.decode(new Uint8Array(cd.buffer,q+46,nl));
+    q+=46+nl+el+cl;
+    if(nome.endsWith('/')) continue;
+    itens.set(nome,{metodo,blob:async()=>{
+      const lh=new DataView(await file.slice(off,off+30).arrayBuffer());
+      const ini2=off+30+lh.getUint16(26,true)+lh.getUint16(28,true);
+      const b=file.slice(ini2,ini2+tamC);
+      if(metodo===0) return b;
+      if(metodo===8&&typeof DecompressionStream!=='undefined') return await new Response(b.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+      throw new Error('Formato de compressão não aceito em '+nome+'.');
+    }});
+  }
+  return itens;
+}
+async function emParalelo(lista,n,fn){ let i=0; await Promise.all(Array.from({length:Math.min(n,lista.length)},async()=>{ while(i<lista.length){ const k=i++; await fn(lista[k],k); } })); }
+// todos os arquivos do bucket na pasta do cliente (caminhos relativos à pasta)
+async function listarArquivos(pasta,prog){
+  const arquivos=[]; let nivel=[''];
+  while(nivel.length){
+    const prox=[];
+    await emParalelo(nivel,6,async rel=>{
+      const dir=(pasta+rel).replace(/\/$/,'');
+      for(let off=0;;off+=1000){
+        const {data,error}=await sb.storage.from(FOTOS_BUCKET).list(dir,{limit:1000,offset:off,sortBy:{column:'name',order:'asc'}});
+        if(error) throw new Error('Não foi possível listar as fotos: '+error.message);
+        for(const it of (data||[])){
+          if(it.name==='.emptyFolderPlaceholder') continue;
+          if(it.id==null){ if(!(pasta===''&&rel===''&&/^c\d+$/.test(it.name))) prox.push(rel+it.name+'/'); }
+          else arquivos.push(rel+it.name);
+        }
+        if(!data||data.length<1000) break;
+      }
+    });
+    nivel=prox; prog('Procurando fotos e laudos: '+arquivos.length+' encontrados...');
+  }
+  return arquivos;
+}
+// junta os dados (e as fotos) do cliente em que o usuário está agora
+async function coletarCopia(ctx,comFotos,prog){
+  const dados={}, contagem={}, ausentes=[];
+  for(let i=0;i<COPIA_TABELAS.length;i++){
+    const [t,k,nome]=COPIA_TABELAS[i];
+    prog(`${ctx.nome?ctx.nome+': ':''}lendo ${nome}...`,i/COPIA_TABELAS.length*(comFotos?0.15:0.9));
+    try{ dados[t]=await lerTudo(t,'*',k); contagem[t]=dados[t].length; }
+    catch(e){ if(tabelaAusente(e)){ ausentes.push(t); continue; } throw new Error('Erro ao ler '+nome+': '+(e.message||e)); }
+  }
+  const fotos=[], falhas=[];
+  if(comFotos){
+    const lista=await listarArquivos(ctx.pasta||'',m=>prog((ctx.nome?ctx.nome+': ':'')+m,0.17));
+    let feitos=0;
+    await emParalelo(lista,6,async rel=>{
+      const {data,error}=await sb.storage.from(FOTOS_BUCKET).download((ctx.pasta||'')+rel);
+      if(error||!data) falhas.push(rel); else fotos.push({rel,blob:data});
+      feitos++; if(feitos%10===0||feitos===lista.length) prog(`${ctx.nome?ctx.nome+': ':''}baixando fotos e laudos ${feitos} de ${lista.length}...`,0.2+0.7*feitos/lista.length);
+    });
+  }
+  const copia={tipo:COPIA_TIPO,versao:1,app:APP_VERSION,gerado_em:new Date().toISOString(),gerado_por:(USER&&USER.email)||'',
+    cliente:{id:ctx.id,nome:ctx.nome||'',pasta:ctx.pasta||''},com_fotos:!!comFotos,contagem,fotos:fotos.length,
+    fotos_com_erro:falhas,tabelas_ausentes:ausentes,dados};
+  return {copia,fotos};
+}
+function arquivosDaCopia(c,prefixo){
+  const enc=new TextEncoder();
+  return [{nome:prefixo+'copia.json',dados:enc.encode(JSON.stringify(c.copia))},...c.fotos.map(f=>({nome:prefixo+'fotos/'+f.rel,dados:f.blob}))];
+}
+// anota na configuração do cliente quando foi feita a última cópia
+async function marcarCopia(c){
+  if(c.copia.tabelas_ausentes.includes('configuracao')) return;
+  const linha=(c.copia.dados.configuracao||[]).find(r=>String(r.id)==='1');
+  const ult={em:c.copia.gerado_em,por:c.copia.gerado_por,fotos:c.copia.com_fotos};
+  const dados=Object.assign({},(linha&&linha.dados)||{},{ultimaCopia:ult});
+  const cid=c.copia.cliente.id, reg={id:1,dados,atualizado_em:new Date().toISOString()};
+  if(cid!=null) reg.cliente_id=cid;   // na cópia de todos, o cliente da vez (não o do painel)
+  const {error}=await sb.from('configuracao').upsert(reg,{onConflict:cid!=null?'cliente_id,id':'id'});
+  if(!error&&cid===CLIENTE.id) CFG.ultimaCopia=ult;
+}
+const nomeArq=s=>semAcento(s||'cliente').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'cliente';
+function carimboArq(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function baixarBlob(nome,blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),60000); }
+function copiaProg(m,f){ ultimoUso=Date.now(); $('#copiaProg').classList.remove('hidden'); $('#copiaMsg').textContent=m; if(f!=null) $('#copiaBar').style.width=Math.round(Math.min(1,f)*100)+'%'; }
+function copiaBotoes(on){ ['#btnCopiaBaixar','#btnCopiaTodos','#btnCopiaRestaurar'].forEach(b=>$(b).disabled=!on); copiaRodando=!on; }
+const tamanhoTxt=b=>b>1048576?(b/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(b/1024))+' KB';
+function renderCopia(){
+  $('#btnCopiaTodos').classList.toggle('hidden',!(CLIENTE.geral&&CLIENTES.length>1));
+  const u=CFG.ultimaCopia, el=$('#copiaUltima');
+  if(!u||!u.em){ el.innerHTML='<span class="pill p-pend">Nenhuma cópia baixada ainda</span>'; return; }
+  const dias=Math.floor((Date.now()-new Date(u.em))/86400000);
+  const quando=dias<=0?'hoje':dias===1?'ontem':'há '+dias+' dias';
+  el.innerHTML=`<span class="pill ${dias>7?'p-pend':'p-ok'}">Última cópia ${quando}</span> <span style="color:var(--muted)">${esc(dataHoraBR(u.em))}${u.por?' por '+esc(u.por):''}${u.fotos?', com fotos':', sem fotos'}${dias>7?'. Recomendado: uma cópia por semana durante o levantamento.':''}</span>`;
+}
+$('#btnCopiaBaixar').addEventListener('click',async()=>{
+  const comFotos=$('#copiaFotos').checked; copiaBotoes(false); $('#copiaRes').textContent='';
+  try{
+    const c=await coletarCopia({id:CLIENTE.id,nome:CLIENTE.nome,pasta:pastaCliente()},comFotos,copiaProg);
+    copiaProg('Montando o arquivo...',0.95);
+    const blob=await montarZip(arquivosDaCopia(c,''));
+    baixarBlob(`copia-seguranca_${nomeArq(CLIENTE.nome)}_${carimboArq()}.zip`,blob);
+    await marcarCopia(c); renderCopia();
+    copiaProg('Cópia baixada.',1);
+    const n=c.copia.contagem;
+    $('#copiaRes').innerHTML=`✓ Cópia baixada (${tamanhoTxt(blob.size)}): ${(n.bens||0).toLocaleString('pt-BR')} bens, ${(n.levantamento||0).toLocaleString('pt-BR')} levantados, ${(n.reavaliacao||0).toLocaleString('pt-BR')} reavaliações`+(comFotos?`, ${c.fotos.length.toLocaleString('pt-BR')} fotos e laudos`:'')+'.'+(c.copia.fotos_com_erro.length?` <span class="neg">${c.copia.fotos_com_erro.length} foto(s) não puderam ser baixadas.</span>`:'');
+  }catch(e){ $('#copiaRes').innerHTML='<span class="neg">Não foi possível fazer a cópia: '+esc(e.message||e)+'</span>'; }
+  copiaBotoes(true);
+});
+$('#btnCopiaTodos').addEventListener('click',async()=>{
+  const comFotos=$('#copiaFotos').checked;
+  if(!confirm(`Baixar a cópia dos ${CLIENTES.length} clientes${comFotos?', com fotos':''}?\n\nO painel passa por cada cliente e volta para "${CLIENTE.nome}" no fim. Não feche esta página enquanto a cópia é feita.`)) return;
+  copiaBotoes(false); $('#copiaRes').textContent='';
+  const original=CLIENTE.id, arquivos=[], resumo=[];
+  try{
+    for(const cli of CLIENTES){
+      const {error}=await sb.rpc('escolher_cliente',{p_id:cli.id}); if(error) throw new Error('troca para '+cli.nome+': '+error.message);
+      const c=await coletarCopia({id:cli.id,nome:cli.nome,pasta:cli.pasta||''},comFotos,copiaProg);
+      arquivos.push(...arquivosDaCopia(c,`cliente-${cli.id}_${nomeArq(cli.nome)}/`));
+      await marcarCopia(c);
+      resumo.push(`${esc(cli.nome)}: ${(c.copia.contagem.bens||0).toLocaleString('pt-BR')} bens`+(comFotos?`, ${c.fotos.length} fotos`:''));
+    }
+    copiaProg('Montando o arquivo...',0.97);
+    const blob=await montarZip(arquivos);
+    baixarBlob(`copia-seguranca_todos-os-clientes_${carimboArq()}.zip`,blob);
+    copiaProg('Cópia baixada.',1);
+    $('#copiaRes').innerHTML=`✓ Cópia de todos os clientes baixada (${tamanhoTxt(blob.size)}).<br>`+resumo.join('<br>');
+  }catch(e){ $('#copiaRes').innerHTML='<span class="neg">Não foi possível fazer a cópia: '+esc(e.message||e)+'</span>'; }
+  const {error}=await sb.rpc('escolher_cliente',{p_id:original});
+  if(error) $('#copiaRes').innerHTML+='<br><span class="neg">Atenção: não foi possível voltar ao cliente original. Recarregue a página.</span>';
+  copiaBotoes(true); renderCopia();
+});
+
+/* ---------- restaurar ---------- */
+$('#btnCopiaRestaurar').addEventListener('click',()=>{ $('#fileCopia').value=''; $('#fileCopia').click(); });
+$('#fileCopia').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const res=$('#copiaRes'); res.textContent='';
+  let copia, fotos=[];
+  try{
+    if(/\.json$/i.test(f.name)) copia=JSON.parse(await f.text());
+    else{
+      const zip=await lerZip(f);
+      const opcoes=[...zip.keys()].filter(n=>/(^|\/)copia\.json$/.test(n)).sort();
+      if(!opcoes.length) throw new Error('não há copia.json dentro do arquivo.');
+      let esc1=opcoes[0];
+      if(opcoes.length>1){
+        const nomes=[]; for(const o of opcoes){ try{ const j=JSON.parse(await (await zip.get(o).blob()).text()); nomes.push(j.cliente&&j.cliente.nome||o); }catch(_){ nomes.push(o); } }
+        const r=prompt('Esta cópia tem vários clientes. Digite o número do que quer restaurar em "'+CLIENTE.nome+'":\n\n'+nomes.map((x,i)=>(i+1)+' - '+x).join('\n'),'');
+        if(r==null) return; const i=parseInt(r,10)-1; if(!(i>=0&&i<opcoes.length)){ toast('Número inválido.'); return; }
+        esc1=opcoes[i];
+      }
+      copia=JSON.parse(await (await zip.get(esc1).blob()).text());
+      const base=esc1.slice(0,-'copia.json'.length)+'fotos/';
+      fotos=[...zip.keys()].filter(n=>n.startsWith(base)).map(n=>({rel:n.slice(base.length),item:zip.get(n)}));
+    }
+    if(!copia||copia.tipo!==COPIA_TIPO||!copia.dados) throw new Error('não é uma cópia de segurança deste sistema.');
+  }catch(err){ res.innerHTML='<span class="neg">Não foi possível ler o arquivo: '+esc(err.message||err)+'</span>'; return; }
+  const origem=copia.cliente||{}, outro=CLIENTE.id!=null&&origem.id!=null&&origem.id!==CLIENTE.id;
+  const n=copia.contagem||{};
+  if(!confirm(`Restaurar a cópia de "${origem.nome||'cliente'}" feita em ${new Date(copia.gerado_em).toLocaleString('pt-BR')}?\n\n${(n.bens||0).toLocaleString('pt-BR')} bens, ${(n.levantamento||0).toLocaleString('pt-BR')} levantados, ${(n.reavaliacao||0).toLocaleString('pt-BR')} reavaliações, ${fotos.length} fotos e laudos.\n\nDestino: "${CLIENTE.nome||'cliente atual'}". Os registros da cópia são incluídos ou voltam ao que eram na cópia. Nada que existe hoje é apagado.\n\nAntes de começar, o painel baixa uma cópia (só dados) da situação atual, por segurança.`)) return;
+  if(outro&&!confirm(`ATENÇÃO: a cópia é de OUTRO cliente ("${origem.nome}") e você está em "${CLIENTE.nome}".\n\nOs dados serão copiados para "${CLIENTE.nome}". Use isto só para montar uma base parecida (por exemplo, a de demonstração). Continuar?`)) return;
+  copiaBotoes(false);
+  try{
+    // 1) cópia da situação atual
+    const antes=await coletarCopia({id:CLIENTE.id,nome:CLIENTE.nome,pasta:pastaCliente()},false,(m,x)=>copiaProg('Cópia da situação atual: '+m,x*0.1));
+    baixarBlob(`antes-de-restaurar_${nomeArq(CLIENTE.nome)}_${carimboArq()}.zip`,await montarZip(arquivosDaCopia(antes,'')));
+    // 2) tabelas
+    const novoId={};   // sobras levadas para outro cliente ganham identificação nova
+    if(outro) (copia.dados.sobras||[]).forEach(s=>novoId[s.id]=crypto.randomUUID());
+    const iguais=x=>JSON.stringify(x===undefined?null:x);
+    const tabelas=COPIA_TABELAS.filter(t=>t[3]&&Array.isArray(copia.dados[t[0]])&&copia.dados[t[0]].length);
+    const result=[], erros=[];
+    for(let ti=0;ti<tabelas.length;ti++){
+      const [t,k,nome]=tabelas[ti];
+      copiaProg(`Conferindo ${nome}...`,0.1+0.5*ti/tabelas.length);
+      let atuais=[]; try{ atuais=await lerTudo(t,'*',k); }catch(err){ erros.push(nome+': '+(err.message||err)); continue; }
+      const mapa=new Map(atuais.map(r=>[String(r[k]),r]));
+      const gravar=[];
+      for(const r0 of copia.dados[t]){
+        const r=Object.assign({},r0); delete r.cliente_id; if(k!=='id') delete r.id;
+        if(t==='sobras'&&outro) r.id=novoId[r0.id];
+        const cur=mapa.get(String(r[k]));
+        if(cur&&Object.keys(r).every(c=>iguais(r[c])===iguais(cur[c]))) continue;   // já está igual
+        gravar.push(comCliente(r));
+      }
+      const chave=(t==='sobras'||CLIENTE.id==null)?k:conflito(k);
+      let ok=0;
+      for(let i=0;i<gravar.length;i+=500){
+        copiaProg(`Gravando ${nome}: ${Math.min(i+500,gravar.length)} de ${gravar.length}...`,0.1+0.5*(ti+i/gravar.length)/tabelas.length);
+        const {error}=await sb.from(t).upsert(gravar.slice(i,i+500),{onConflict:chave});
+        if(error){ erros.push(nome+': '+error.message); break; } ok+=Math.min(500,gravar.length-i);
+      }
+      result.push(`${nome}: ${ok.toLocaleString('pt-BR')} gravado(s)${copia.dados[t].length-gravar.length?', '+(copia.dados[t].length-gravar.length).toLocaleString('pt-BR')+' já estavam iguais':''}`);
+    }
+    // 3) fotos e laudos (os que já existem ficam como estão)
+    let fNovas=0, fExist=0; const fErros=[];
+    await emParalelo(fotos,4,async(f,i)=>{
+      let rel=f.rel;
+      if(outro) rel=rel.replace(/^sobras\/([^/]+)\//,(m,id)=>'sobras/'+(novoId[id]||id)+'/');
+      const ext=(rel.match(/\.([a-z0-9]+)$/i)||[])[1]||'', tipo={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',pdf:'application/pdf'}[ext.toLowerCase()]||'image/jpeg';
+      try{
+        const {error}=await sb.storage.from(FOTOS_BUCKET).upload(pastaCliente()+rel,await f.item.blob(),{contentType:tipo,upsert:false});
+        if(!error) fNovas++; else if(/exist|duplicate/i.test(error.message||'')||String(error.statusCode)==='409') fExist++; else fErros.push(rel);
+      }catch(_){ fErros.push(rel); }
+      if(i%10===0) copiaProg(`Enviando fotos e laudos ${i+1} de ${fotos.length}...`,0.6+0.4*i/fotos.length);
+    });
+    if(fotos.length) result.push(`fotos e laudos: ${fNovas} enviado(s)${fExist?', '+fExist+' já existiam':''}`);
+    copiaProg('Restauração concluída.',1);
+    res.innerHTML=(erros.length||fErros.length?'<b>Restauração concluída com avisos.</b>':'<b>✓ Restauração concluída.</b>')+'<br>'+result.map(esc).join('<br>')+
+      (erros.length?'<br><span class="neg">'+esc(erros.join('; '))+'</span>':'')+(fErros.length?`<br><span class="neg">${fErros.length} arquivo(s) não enviados.</span>`:'')+
+      '<br><span style="color:var(--muted)">O histórico de alterações e os usuários ficam só no arquivo, para consulta: não são regravados.</span>';
+    copiaBotoes(true);
+    await carregar();
+  }catch(err){ res.innerHTML='<span class="neg">A restauração parou: '+esc(err.message||err)+'</span>'; copiaBotoes(true); }
 });
 
 /* ====================== ATUALIZA.csv (layout de importação do sistema de patrimônio) ====================== */

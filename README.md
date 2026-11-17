@@ -458,3 +458,14 @@ Um único projeto do Supabase atende vários clientes (prefeituras, câmaras, au
 - O celular guarda os bens de um cliente só: se o usuário passa a outro cliente, a base local é baixada de novo. Arquivo exportado pelo app de campo só é importado no painel do mesmo cliente.
 
 Requer `supabase/clientes.sql` (rodar depois de todos os outros) e a função `usuarios` atualizada. As telas funcionam com ou sem o script: sem ele, tudo segue como um cliente só.
+
+## Cópia de segurança (backup)
+
+O plano gratuito do Supabase não guarda cópias do banco. Em **admin > Configuração > Cópia de segurança**:
+
+- **Baixar cópia deste cliente**: gera um `.zip` com `copia.json` (bens, levantamento, localizações, motivos, comissões, configuração, reavaliações, referências, localizações concluídas, sobras, histórico e lista de usuários) e, se marcado, a pasta `fotos/` com as fotos dos bens, das sobras e os laudos em PDF.
+- **Baixar cópia de todos os clientes** (só equipe da empresa): o painel passa por cada cliente e junta tudo num `.zip`, uma pasta `cliente-<nº>_<nome>/` por cliente; no fim volta ao cliente em uso.
+- **Restaurar a partir de uma cópia** (`.zip` ou `copia.json`): grava no cliente em uso só o que está diferente da cópia (inclui o que sumiu e volta o que mudou); nada é apagado e fotos que já existem ficam como estão. Antes de começar, baixa uma cópia (só dados) da situação atual. Histórico e usuários ficam só no arquivo, para consulta. Uma cópia de outro cliente pode ser restaurada em um cliente diferente (por exemplo, para montar a base de demonstração): as sobras ganham identificação nova.
+- A data da última cópia fica em `configuracao.dados.ultimaCopia` e aparece no cartão; passa de 7 dias, fica em amarelo.
+
+Não precisa de SQL nem de função nova: tudo usa as permissões do administrador do cliente.

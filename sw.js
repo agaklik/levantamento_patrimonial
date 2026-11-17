@@ -1,6 +1,6 @@
 // Service Worker - Levantamento Patrimonial
 // Cache simples para permitir instalação como app e abertura offline da casca.
-const CACHE = 'levpat-v27';
+const CACHE = 'levpat-v28';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './vendor/archivo.woff2'];
 
 self.addEventListener('install', (e) => {
