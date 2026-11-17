@@ -819,7 +819,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-20'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-21'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1664,7 +1664,7 @@ async function pzBuscarPncp(){
   try{
     const d=await buscarPncp(t,ab.ufs,meses);
     PZ.item={tipo:'pncp',codigo:'',nome:t};
-    PZ.itens=d.itens||[]; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
+    PZ.itens=pzSemServico(d.itens); PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
     // valor estimado (sem resultado homologado) entra desmarcado
     PZ.itens.forEach((x,i)=>{ if(x.estimado) PZ.off.add(i); });
     $('#pzFiltroBox').classList.toggle('hidden',!PZ.itens.length);
@@ -1822,7 +1822,7 @@ async function pzBuscarLicitacon(){
   try{
     const d=await chamarPrecos({acao:'licitacon',texto:t,orgaos:orgs.map(o=>o.cd_orgao),meses});
     PZ.item={tipo:'licitacon',codigo:'',nome:t};
-    PZ.itens=d.itens||[]; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
+    PZ.itens=pzSemServico(d.itens); PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
     $('#pzFiltroBox').classList.toggle('hidden',!PZ.itens.length);
     pzTabela();
     PZ.msg=PZ.itens.length?`${PZ.itens.length} preço(s) homologado(s) ${ab.texto}, nos últimos ${meses} meses${PZ.itens.length>=1500?' (mostrando os 1.500 mais recentes; use mais palavras)':''}.`
@@ -1915,6 +1915,13 @@ function pzCombina(desc,extras){
 /* ---------- as três fontes de uma vez ---------- */
 const FONTE_NOME={compras:'Compras.gov.br',pncp:'PNCP',licitacon:'LicitaCon'};
 // pdm: tipo de material escolhido na lista (refaz só o Compras.gov.br)
+// serviços (mão de obra, conserto, manutenção, locação...) não são preço de bem: saem do resultado
+const PZ_SERVICO_INICIO=/^[^a-z0-9]*(servico|servicos|prestacao|contratacao de (empresa|servico)|mao de obra|conserto|manutencao|reparo|recarga|instalacao|montagem|desmontagem|locacao|aluguel|limpeza|higienizacao|troca|substituicao|revisao|calibracao|assistencia tecnica|recuperacao|reforma)\b/;
+const PZ_SERVICO_MEIO=/(mao de obra|prestacao de servic|contratacao de empresa)/;
+function pzSemServico(lista){
+  const fica=(lista||[]).filter(x=>{ const d=semAc(x.descricao||''); return !(PZ_SERVICO_INICIO.test(d)||PZ_SERVICO_MEIO.test(d)); });
+  PZ.servicos=(lista||[]).length-fica.length; return fica;
+}
 async function pzBuscarTodas(pdm){
   const t=$('#pzTexto').value.trim();
   if(t.length<3){ toast('Digite ao menos 3 letras.'); return; }
@@ -1943,11 +1950,11 @@ async function pzBuscarTodas(pdm){
     const val=r=>r.status==='fulfilled'?r.value:{itens:[],erro:(r.reason&&r.reason.message)||String(r.reason)};
     PZ.res={texto:t,meses,abr:ab.rotulo,compras:val(rc),pncp:val(rp),licitacon:val(rl),orgs:orgs.map(o=>o.nome)};
     // junta tudo, do mais recente para o mais antigo
-    const todos=[];
+    let todos=[];
     for(const f of ['compras','pncp','licitacon']) (PZ.res[f].itens||[]).forEach(x=>todos.push({...x,fonte_nome:FONTE_NOME[f],_f:f}));
     todos.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
     PZ.item={tipo:'todas',codigo:PZ.res.compras.pdm?PZ.res.compras.pdm.codigo:'',nome:t};
-    PZ.itens=todos; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:new Date().toISOString()};
+    PZ.itens=todos=pzSemServico(todos); PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:new Date().toISOString()};
     // entram desmarcados: valores só estimados (PNCP) e, no Compras.gov.br, os itens que não citam
     // as palavras da descrição que vão além do tipo de material (ex.: "bancada"), aceitando sinônimos do catálogo
     const extras=pzPalavrasExtras(t,PZ.res.compras.pdm);
@@ -1982,7 +1989,7 @@ async function pzBuscarPrecos(){
   $('#pzInfo').textContent=`Consultando preços ${ab.texto}... pode levar alguns segundos.`;
   try{
     const d=await chamarPrecos({acao:'precos',tipo:PZ.item.tipo,codigo:PZ.item.codigo,ufs:ab.ufs,meses});
-    PZ.itens=d.itens||[]; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
+    PZ.itens=pzSemServico(d.itens); PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
     $('#pzFiltroBox').classList.toggle('hidden',!PZ.itens.length);
     pzTabela();
     PZ.msg=PZ.itens.length
@@ -2000,7 +2007,7 @@ function pzVisivel(x){
 }
 function pzInfoFiltro(){
   const vis=PZ.itens.filter(pzVisivel).length;
-  $('#pzInfo').textContent=(PZ.msg||'')+(vis<PZ.itens.length?` Filtro: ${vis} de ${PZ.itens.length} com essas palavras.`:' Use o filtro para ficar só com bens iguais ao avaliado e desmarque valores fora da realidade.');
+  $('#pzInfo').textContent=(PZ.msg||'')+(PZ.servicos?` ${PZ.servicos} serviço(s) (mão de obra, conserto, manutenção...) retirado(s) da lista.`:'')+(vis<PZ.itens.length?` Filtro: ${vis} de ${PZ.itens.length} com essas palavras.`:' Use o filtro para ficar só com bens iguais ao avaliado e desmarque valores fora da realidade.');
 }
 function pzTabela(){
   $('#pzTblBox').classList.toggle('hidden',!PZ.itens.length);
