@@ -1775,24 +1775,38 @@ function estat(v){
   const o=[...v].sort((a,b)=>a-b), m=o.length>>1;
   return {n:o.length,media:r2(o.reduce((s,x)=>s+x,0)/o.length),mediana:r2(o.length%2?o[m]:(o[m-1]+o[m])/2),menor:o[0],maior:o[o.length-1]};
 }
+// A média e a mediana usam no máximo PZ_MAX preços: os mais próximos da média (ou da mediana) de todos os marcados.
+// Quando há mais de uma fonte, cada fonte entra com pelo menos o seu preço mais próximo.
+const PZ_MAX=10;
+function pzMaisProximos(sel,criterio){
+  if(criterio==='menor'||sel.length<=PZ_MAX) return sel;
+  const c=estat(sel.map(x=>x.valor))[criterio];
+  const ord=[...sel].sort((a,b)=>Math.abs(a.valor-c)-Math.abs(b.valor-c));
+  const fontes=[...new Set(sel.map(x=>x.fonte_nome||''))], pick=[];
+  if(fontes.length>1) fontes.slice(0,PZ_MAX).forEach(f=>pick.push(ord.find(x=>(x.fonte_nome||'')===f)));
+  ord.forEach(x=>{ if(pick.length<PZ_MAX&&!pick.includes(x)) pick.push(x); });
+  return pick;
+}
 function pzStats(){
-  const e=estat(pzMarcados().map(x=>x.valor));
-  $('#pzStats').innerHTML=e?`<span>Marcados <b>${e.n}</b></span><span>Média <b>${brl(e.media)}</b></span><span>Mediana <b>${brl(e.mediana)}</b></span><span>Menor <b>${brl(e.menor)}</b></span><span>Maior <b>${brl(e.maior)}</b></span>`:'';
+  const sel=pzMarcados(), e=estat(sel.map(x=>x.valor));
+  if(e&&e.n>PZ_MAX){ e.media=estat(pzMaisProximos(sel,'media').map(x=>x.valor)).media; e.mediana=estat(pzMaisProximos(sel,'mediana').map(x=>x.valor)).mediana; }
+  $('#pzStats').innerHTML=e?`<span>Marcados <b>${e.n}</b></span><span>Média <b>${brl(e.media)}</b></span><span>Mediana <b>${brl(e.mediana)}</b></span><span>Menor <b>${brl(e.menor)}</b></span><span>Maior <b>${brl(e.maior)}</b></span>${e.n>PZ_MAX?`<span style="flex-basis:100%;font-size:12px">Média e mediana calculadas com os ${PZ_MAX} preços mais próximos, com pelo menos um de cada fonte.</span>`:''}`:'';
   ['#pzUsarMenor','#pzUsarMedia','#pzUsarMediana'].forEach(s=>$(s).disabled=!e);
 }
 function pzUsar(criterio){
-  const sel=pzMarcados(), e=estat(sel.map(x=>x.valor)); if(!e) return;
+  const marcados=pzMarcados(), sel=pzMaisProximos(marcados,criterio), e=estat(sel.map(x=>x.valor)); if(!e) return;
+  const corte=marcados.length>sel.length, deN=corte?`${e.n} preço(s), os mais próximos entre ${marcados.length} pesquisados,`:`${e.n} preço(s)`;
   const valor=e[criterio], b=PZ.busca, hoje=new Date(b.consultado_em).toLocaleDateString('pt-BR');
   const nome={media:'média',mediana:'mediana',menor:'menor preço'}[criterio];
   const pn=PZ.item.tipo==='pncp', lc=PZ.item.tipo==='licitacon', td=PZ.item.tipo==='todas';
   const porFonte=td?Object.entries(sel.reduce((m,x)=>(m[x.fonte_nome]=(m[x.fonte_nome]||0)+1,m),{})).map(([f,q])=>`${f}: ${q}`).join('; '):'';
   const precos={fonte:td?'Compras.gov.br, PNCP e LicitaCon (TCE-RS) – dados abertos':lc?'LicitaCon – TCE-RS (dados abertos)':pn?'PNCP – Portal Nacional de Contratações Públicas':'Compras.gov.br – Pesquisa de Preços (dados abertos)',tipo:PZ.item.tipo,catmat:PZ.item.codigo,descricao_catmat:PZ.item.nome,filtro:$('#pzFiltro').value.trim(),
-    abrangencia:b.rotulo,abrangencia_texto:b.texto,meses:b.meses,criterio:nome,valor,consultado_em:b.consultado_em,
+    abrangencia:b.rotulo,abrangencia_texto:b.texto,meses:b.meses,criterio:nome,valor,consultado_em:b.consultado_em,pesquisados:marcados.length,
     itens:sel.map(x=>({catmat:x.catmat,esfera:x.esfera,data:x.data,orgao:x.orgao,uasg:x.uasg,codigo_uasg:x.codigo_uasg,municipio:x.municipio,uf:x.uf,id_compra:x.id_compra,item:x.item,descricao:(x.descricao||'').slice(0,200),fornecedor:x.fornecedor,marca:x.marca,unidade:x.unidade,quantidade:x.quantidade,valor:x.valor,estimado:x.estimado||undefined,link:x.link||undefined,fonte:x.fonte_nome||undefined}))};
-  const fonte=td?`Pesquisa de preços em compras públicas (Compras.gov.br, PNCP e LicitaCon/TCE-RS): ${nome} de ${e.n} preço(s) (${porFonte}) para a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto} e órgãos de referência do RS, últimos ${b.meses} meses, consultado em ${hoje}`
-    :lc?`LicitaCon (TCE-RS, dados abertos): ${nome} de ${e.n} preço(s) homologado(s) em licitações com a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`
-    :pn?`PNCP (Portal Nacional de Contratações Públicas): ${nome} de ${e.n} preço(s) de licitações com a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`
-    :`Compras.gov.br, Pesquisa de Preços: ${nome} de ${e.n} preço(s) do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
+  const fonte=td?`Pesquisa de preços em compras públicas (Compras.gov.br, PNCP e LicitaCon/TCE-RS): ${nome} de ${deN} (${porFonte}) para a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto} e órgãos de referência do RS, últimos ${b.meses} meses, consultado em ${hoje}`
+    :lc?`LicitaCon (TCE-RS, dados abertos): ${nome} de ${deN} homologado(s) em licitações com a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`
+    :pn?`PNCP (Portal Nacional de Contratações Públicas): ${nome} de ${deN} de licitações com a descrição "${PZ.item.nome}"${$('#pzFiltro').value.trim()?` (filtro "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`
+    :`Compras.gov.br, Pesquisa de Preços: ${nome} de ${deN} do ${rotuloItem(PZ.item)} – ${PZ.item.nome}${$('#pzFiltro').value.trim()?` (descrição com "${$('#pzFiltro').value.trim()}")`:''}, ${b.texto}, últimos ${b.meses} meses, consultado em ${hoje}`;
   if(PZ.aoUsar){ const f=PZ.aoUsar; PZ.aoUsar=null; $('#dlgPrecos').close(); f(valor,fonte,precos); return; }
   PRECOS_SEL=precos; PRECOS_MUDOU=true;
   $('#rRef').value=dec(valor); $('#rFonte').value=fonte;
@@ -2621,7 +2635,7 @@ function tabelaPrecosLaudo(p){
   mostra.sort((a,b)=>ordemF.indexOf(a.fonte||'')-ordemF.indexOf(b.fonte||'')||String(b.data||'').localeCompare(String(a.data||'')));
   const linhas=mostra.map(x=>`<tr><td>${dataBR(x.data)}</td>${comFonte?`<td>${esc(x.fonte||'')}</td>`:''}<td>${esc(x.orgao||x.uasg||'')}</td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/'))}</td><td>${esc(x.unidade||'')}</td><td class="n">${brl(x.valor)}</td></tr>`).join('');
   return `<p style="margin-bottom:4px"><b>Preços considerados</b> (${esc(p.fonte)}, ${esc(p.tipo?rotuloItem({tipo:p.tipo,codigo:p.catmat,nome:p.descricao_catmat}):'item CATMAT '+p.catmat)}${p.descricao_catmat&&p.tipo!=='pncp'&&p.tipo!=='licitacon'&&p.tipo!=='todas'?' – '+esc(p.descricao_catmat):''}; ${esc(p.abrangencia)}, últimos ${p.meses} meses; critério: ${esc(p.criterio)} = ${brl(p.valor)}):</p>
-    <table><tr><th>Data</th>${comFonte?'<th>Fonte</th>':''}<th>Órgão comprador</th><th>Local</th><th>Unid.</th><th>Valor unitário</th></tr>${linhas}</table>${p.itens.length>mostra.length?`<p style="font-size:11px">Mais ${p.itens.length-mostra.length} preço(s) considerados no cálculo.</p>`:''}`;
+    <table><tr><th>Data</th>${comFonte?'<th>Fonte</th>':''}<th>Órgão comprador</th><th>Local</th><th>Unid.</th><th>Valor unitário</th></tr>${linhas}</table>${p.itens.length>mostra.length?`<p style="font-size:11px">Mais ${p.itens.length-mostra.length} preço(s) considerados no cálculo.</p>`:''}${p.pesquisados>p.itens.length?`<p style="font-size:11px">Foram pesquisados ${p.pesquisados} preços; o cálculo usou os ${p.itens.length} mais próximos da ${esc(p.criterio)}, com pelo menos um de cada fonte.</p>`:''}`;
 }
 function paginaLaudo(b,fotos){
   const r=reav(b), ano=(r.data_avaliacao||hojeISO()).slice(0,4);
