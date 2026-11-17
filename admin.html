@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://wrhtisnejlpjsliplloz.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://wrhtisnejlpjsliplloz.supabase.co wss://wrhtisnejlpjsliplloz.supabase.co; worker-src 'self' blob:; frame-src 'self' blob: https://wrhtisnejlpjsliplloz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://wrhtisnejlpjsliplloz.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://wrhtisnejlpjsliplloz.supabase.co wss://wrhtisnejlpjsliplloz.supabase.co https://pncp.gov.br; worker-src 'self' blob:; frame-src 'self' blob: https://wrhtisnejlpjsliplloz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>Administração · Levantamento Patrimonial</title>
 <link rel="icon" href="icon-192.png">
@@ -1354,7 +1354,7 @@ async function pzBuscarPncp(){
   const btn=$('#pzBuscar'); btn.disabled=true; btn.textContent='Buscando...';
   $('#pzInfo').textContent=`Consultando licitações no PNCP ${ab.texto}... pode levar até um minuto.`;
   try{
-    const d=await chamarPrecos({acao:'pncp',texto:t,ufs:ab.ufs,meses});
+    const d=await buscarPncp(t,ab.ufs,meses);
     PZ.item={tipo:'pncp',codigo:'',nome:t};
     PZ.itens=d.itens||[]; PZ.off=new Set(); PZ.busca={...ab,meses,consultado_em:d.consultado_em||new Date().toISOString()};
     // valor estimado (sem resultado homologado) entra desmarcado
@@ -1431,6 +1431,59 @@ async function pzBuscarLicitacon(){
 $('#pzLcProcurar').onclick=pzLcProcurar;
 $('#pzLcTexto').addEventListener('keydown',e=>{ if(e.key==='Enter') pzLcProcurar(); });
 
+
+/* ---------- PNCP direto do navegador ----------
+   O PNCP recusa conexões vindas de servidores de nuvem (o Supabase recebe "connection reset"),
+   mas aceita o navegador (CORS liberado). Por isso a busca é feita aqui; se falhar, tenta pela função. */
+const PNCP_URL='https://pncp.gov.br';
+async function pncpGet(caminho,params){
+  const u=new URL(PNCP_URL+caminho); Object.entries(params||{}).forEach(([k,v])=>u.searchParams.set(k,String(v)));
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),25000);
+  try{
+    const r=await fetch(u,{headers:{accept:'application/json'},signal:ctl.signal});
+    if(r.status===204||r.status===404) return null;
+    if(!r.ok) throw new Error('O PNCP respondeu '+r.status);
+    const tx=await r.text(); return tx?JSON.parse(tx):null;
+  }finally{ clearTimeout(t); }
+}
+async function emParaleloJs(lista,n,f){ const out=new Array(lista.length); let i=0; await Promise.all(Array.from({length:Math.min(n,lista.length)},async()=>{ while(i<lista.length){ const k=i++; out[k]=await f(lista[k]); } })); return out; }
+async function pncpNoNavegador(texto,ufs,meses){
+  const raizJs=w=>w.length>4?w.replace(/(oes|aes|ais|eis|es|s)$/,''):w;
+  const vazias=new Set(['de','da','do','das','dos','com','sem','para','por','em','e','ou','tipo','uso']);
+  const palavras=[...new Set(semAc(texto).split(/[^a-z0-9]+/).filter(w=>w.length>=3&&!vazias.has(w)).map(raizJs))];
+  if(!palavras.length) throw new Error('Digite ao menos uma palavra com 3 letras.');
+  const desde=new Date(); desde.setMonth(desde.getMonth()-meses); const desdeTxt=desde.toISOString().slice(0,10);
+  const f={q:semAc(texto),tipos_documento:'edital',ordenacao:'-data',pagina:1,tam_pagina:50,status:'encerradas'};
+  if(ufs.length) f.ufs=ufs.join('|');
+  const busca=await pncpGet('/api/search/',f);
+  const d10=v=>{ const m=String(v||'').match(/^(\d{4}-\d{2}-\d{2})/); return m?m[1]:null; };
+  const nums=v=>{ const n=Number(v); return v==null||v===''||!isFinite(n)?null:n; };
+  const compras=(busca&&busca.items||[]).filter(h=>h.tem_resultado===true&&h.cancelado!==true&&h.orgao_cnpj&&h.ano&&h.numero_sequencial&&(d10(h.data_publicacao_pncp)||'9999')>=desdeTxt).slice(0,15);
+  const cand=[];
+  await emParaleloJs(compras,5,async h=>{ try{
+    const its=await pncpGet(`/api/pncp/v1/orgaos/${h.orgao_cnpj}/compras/${h.ano}/${h.numero_sequencial}/itens`,{pagina:1,tamanhoPagina:100});
+    (Array.isArray(its)?its:[]).forEach(it=>{ const d=semAc(it.descricao||''); if(palavras.every(w=>d.includes(w))) cand.push({h,it}); });
+  }catch(_){} });
+  let comRes=0;
+  const itens=(await emParaleloJs(cand,6,async({h,it})=>{
+    let valor=nums(it.valorUnitarioEstimado), qtd=nums(it.quantidade), fornecedor='', quando=d10(h.data_publicacao_pncp), estimado=true;
+    if(it.temResultado===true&&comRes<40){ comRes++; try{
+      const rs=await pncpGet(`/api/pncp/v1/orgaos/${h.orgao_cnpj}/compras/${h.ano}/${h.numero_sequencial}/itens/${it.numeroItem}/resultados`);
+      const r=(Array.isArray(rs)?rs:[]).filter(x=>!x.dataCancelamento&&nums(x.valorUnitarioHomologado)).sort((a,b)=>(Number(a.ordemClassificacaoSrp)||1)-(Number(b.ordemClassificacaoSrp)||1))[0];
+      if(r){ valor=nums(r.valorUnitarioHomologado); qtd=nums(r.quantidadeHomologada)??qtd; fornecedor=r.nomeRazaoSocialFornecedor||''; quando=d10(r.dataResultado)||quando; estimado=false; }
+    }catch(_){} }
+    if(valor==null||valor<=0) return null;
+    return {id_compra:h.numero_controle_pncp||'',item:String(it.numeroItem??''),catmat:String(it.catalogoCodigoItem??''),descricao:String(it.descricao||'').slice(0,400),valor,quantidade:qtd,unidade:it.unidadeMedida||'',data:quando,
+      orgao:h.orgao_nome||'',uasg:h.unidade_nome||'',codigo_uasg:h.unidade_codigo||'',municipio:h.municipio_nome||'',uf:String(h.uf||'').toUpperCase(),esfera:h.esfera_nome||'',fornecedor,marca:'',objeto:String(h.description||'').slice(0,200),
+      estimado,fonte:'PNCP',link:`${PNCP_URL}/app/editais/${h.orgao_cnpj}/${h.ano}/${h.numero_sequencial}`};
+  })).filter(Boolean).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  return {itens,encontrados:itens.length,compras_lidas:compras.length,compras_na_fonte:Number(busca&&busca.total)||0,consultado_em:new Date().toISOString()};
+}
+async function buscarPncp(texto,ufs,meses){
+  try{ return await pncpNoNavegador(texto,ufs,meses); }
+  catch(e){ try{ return await chamarPrecos({acao:'pncp',texto,ufs,meses}); }catch(e2){ throw new Error('o PNCP não respondeu ('+(e.message||e)+'). Tente de novo em instantes.'); } }
+}
+
 /* ---------- as três fontes de uma vez ---------- */
 const FONTE_NOME={compras:'Compras.gov.br',pncp:'PNCP',licitacon:'LicitaCon'};
 // pdm: tipo de material escolhido na lista (refaz só o Compras.gov.br)
@@ -1456,7 +1509,7 @@ async function pzBuscarTodas(pdm){
       const d=await chamarPrecos({acao:'precos',tipo:esc.tipo,codigo:esc.codigo,ufs:ab.ufs,meses});
       return {itens:d.itens||[],alts,pdm:esc,total:d.total_na_fonte};
     })();
-    const pncp=so?Promise.resolve(PZ.res.pncp):chamarPrecos({acao:'pncp',texto:t,ufs:ab.ufs,meses});
+    const pncp=so?Promise.resolve(PZ.res.pncp):buscarPncp(t,ab.ufs,meses);
     const lic=so?Promise.resolve(PZ.res.licitacon):orgs.length?chamarPrecos({acao:'licitacon',texto:t,orgaos:orgs.map(o=>o.cd_orgao),meses}):Promise.resolve({itens:[],semOrgaos:true});
     const [rc,rp,rl]=await Promise.allSettled([compras,pncp,lic]);
     const val=r=>r.status==='fulfilled'?r.value:{itens:[],erro:(r.reason&&r.reason.message)||String(r.reason)};
