@@ -66,9 +66,9 @@
   .g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
   /* faixa de indicadores: uma régua só, dividida, em vez de cartões soltos */
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
-  .kpi{padding:16px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
+  .kpi{container-type:inline-size;min-width:0;padding:16px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
   .kpi .l{font-size:13px;font-weight:500;color:var(--muted)}
-  .kpi .v{font-size:26px;font-weight:700;font-stretch:88%;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .kpi .v{font-size:min(26px,10.5cqi);white-space:nowrap;font-weight:700;font-stretch:88%;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
   .kpi .d{font-size:12.5px;color:var(--muted);margin-top:2px}
   .bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:10px;box-shadow:inset 0 0 0 1px var(--line)}
   .bar>div{height:100%;background:var(--accent)}
@@ -119,6 +119,15 @@
   #tblUsu td{vertical-align:middle}
   #tblUsu .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
   #tblUsu .acts button{padding:6px 11px;font-size:13px}
+  #tblUsu .acts{flex-wrap:nowrap;align-items:center}
+  #tblUsu .acts>button,#tblUsu .uMais{padding:6px 11px;font-size:13px;white-space:nowrap}
+  #tblUsu .umenu{position:relative}
+  #tblUsu .umenu-lista{display:none;position:fixed;z-index:60;min-width:210px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18)}
+  #tblUsu .umenu-lista.show{display:block}
+  #tblUsu .umenu-lista button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;font:inherit;font-size:13.5px;font-weight:500;color:var(--text,inherit);cursor:pointer}
+  #tblUsu .umenu-lista button:hover,#tblUsu .umenu-lista button:focus-visible{background:var(--surface2,rgba(0,0,0,.05));outline:none}
+  #tblUsu .umenu-lista button.perigo{color:#C0362C}
+  #tblUsu .umenu-lista hr{border:0;border-top:1px solid var(--line,var(--border));margin:5px 4px}
   .opt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:14px}
   .opt-cards label{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;font-weight:400;margin:0}
   .opt-cards label:has(input:checked){border-color:var(--accent);background:#F2F5FB}
@@ -840,7 +849,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-23'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-24'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -2792,19 +2801,26 @@ function renderUsuarios(){
     <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}${u.senha_bloqueada_ate?` <span class="pill p-pend" title="Errou a senha 3 vezes">${new Date(u.senha_bloqueada_ate)-Date.now()>86400000?'senha bloqueada: use Liberar acesso':'senha bloqueada até '+new Date(u.senha_bloqueada_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`:''}</td>
     <td>${(()=>{ const p=textoPrazo(u.acesso_ate); return p?`<span class="pill ${p.cls}">${p.txt}</span>`:'<span style="color:var(--muted)">sem prazo</span>'; })()}</td>
     <td style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(u.ultimo_acesso)}</td>
-    <td><div class="acts"><button class="btn-2 uEditar">Editar</button>${USU_PRAZO&&u.id!==USER.id&&!u.geral&&!u.protegido?`<button class="btn-2 uPrazo">${u.acesso_ate?'Prazo':'Dar prazo'}</button>`:''}${u.id===USER.id||(u.protegido&&u.ativo)?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button>${u.senha_bloqueada_ate?'<button class="btn-2 uLiberar">Liberar acesso</button>':''}${u.id===USER.id||u.protegido?'':'<button class="btn-2 uExcluir" title="Apaga o acesso de quem foi cadastrado errado">Excluir</button>'}</div></td></tr>`).join('')
+    <td><div class="acts"><button class="btn-2 uEditar">Editar</button><div class="umenu"><button class="btn-2 uMais" aria-haspopup="true" aria-expanded="false" title="Mais ações">Mais ▾</button><div class="umenu-lista" role="menu">${u.senha_bloqueada_ate?'<button role="menuitem" class="uLiberar">Liberar acesso</button>':''}<button role="menuitem" class="uSenha">Nova senha</button>${USU_PRAZO&&u.id!==USER.id&&!u.geral&&!u.protegido?`<button role="menuitem" class="uPrazo">${u.acesso_ate?'Alterar prazo de teste':'Dar prazo de teste'}</button>`:''}${u.id===USER.id||(u.protegido&&u.ativo)?'':`<button role="menuitem" class="uAtivo">${u.ativo?'Bloquear acesso':'Reativar acesso'}</button>`}${u.id===USER.id||u.protegido?'':'<hr><button role="menuitem" class="uExcluir perigo" title="Apaga o acesso de quem foi cadastrado errado">Excluir usuário</button>'}</div></div></div></td></tr>`).join('')
     :'<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
   document.querySelectorAll('#usuBody tr[data-id]').forEach(tr=>{
     const u=USUARIOS.find(x=>x.id===tr.dataset.id);
     const sel=tr.querySelector('.uPerfil'); if(sel) sel.onchange=()=>atualizarUsuario(u,{perfil:sel.value});
     const ba=tr.querySelector('.uAtivo'); if(ba) ba.onclick=()=>{ if(u.ativo&&!confirm(`Bloquear ${u.email}? A pessoa não consegue mais entrar até ser reativada.`)) return; atualizarUsuario(u,{ativo:!u.ativo}); };
     tr.querySelector('.uEditar').onclick=()=>abrirEditar(u);
+    const mb=tr.querySelector('.uMais'), ml=tr.querySelector('.umenu-lista');
+    mb.onclick=ev=>{ ev.stopPropagation(); const aberto=ml.classList.contains('show'); fecharMenusUsu(); if(!aberto){ ml.classList.add('show'); mb.setAttribute('aria-expanded','true'); const r=mb.getBoundingClientRect(), h=ml.offsetHeight, w=ml.offsetWidth; ml.style.left=Math.max(8,r.right-w)+'px'; ml.style.top=(window.innerHeight-r.bottom<h+16?Math.max(8,r.top-h-6):r.bottom+6)+'px'; } };
+    ml.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>fecharMenusUsu()));
     tr.querySelector('.uSenha').onclick=()=>abrirSenha(u);
     const bp=tr.querySelector('.uPrazo'); if(bp) bp.onclick=()=>abrirPrazo(u);
     const bx=tr.querySelector('.uExcluir'); if(bx) bx.onclick=()=>abrirExcluir(u);
     const bl=tr.querySelector('.uLiberar'); if(bl) bl.onclick=async()=>{ try{ await chamarUsuarios({acao:'desbloquear',id:u.id}); u.senha_bloqueada_ate=null; renderUsuarios(); toast('Acesso liberado'); }catch(e){ toast('Erro: '+e.message,5000); } };
   });
 }
+function fecharMenusUsu(){ document.querySelectorAll('#tblUsu .umenu-lista.show').forEach(m=>{ m.classList.remove('show'); const b=m.parentNode.querySelector('.uMais'); if(b) b.setAttribute('aria-expanded','false'); }); }
+document.addEventListener('click',ev=>{ if(!ev.target.closest('#tblUsu .umenu')) fecharMenusUsu(); });
+document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') fecharMenusUsu(); });
+window.addEventListener('scroll',()=>fecharMenusUsu(),true); window.addEventListener('resize',()=>fecharMenusUsu());
 async function atualizarUsuario(u,mud){
   try{ await chamarUsuarios(Object.assign({acao:'atualizar',id:u.id},mud)); Object.assign(u,mud); renderUsuarios(); toast('Usuário atualizado'); return true; }
   catch(e){ toast('Erro: '+e.message,5000); renderUsuarios(); return false; }
