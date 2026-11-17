@@ -9,13 +9,27 @@
 //
 // Ações (corpo JSON):
 //   { acao: 'entrar', login, senha }                   (sem login; login = e-mail ou nome de usuário;
-//                                                       3 senhas erradas seguidas bloqueiam por 15 minutos)
+//                                                       3 senhas erradas seguidas: equipe de campo fica bloqueada até
+//                                                       o administrador liberar; administrador, 15 minutos)
 //   { acao: 'recuperar', login, redirect }             (sem login; login = e-mail ou nome de usuário)
 //   { acao: 'listar' }                                 (administrador)
-//   { acao: 'criar', nome, usuario?, email, senha, perfil: 'campo'|'admin' }
+//   { acao: 'criar', nome, usuario?, email, senha, perfil: 'campo'|'admin', enviar_email?, link? }
 //   { acao: 'atualizar', id, nome?, usuario?, perfil?, ativo? }
-//   { acao: 'senha', id, senha }
+//   { acao: 'senha', id, senha, enviar_email?, link? }
 //   { acao: 'desbloquear', id }                        (libera quem errou a senha 3 vezes)
+//   { acao: 'resumo', id }                             (o que a pessoa já registrou, antes de excluir)
+//   { acao: 'excluir', id }                            (apaga o acesso; o que ela registrou continua)
+//
+// Senha definida pelo administrador (cadastro ou "Nova senha") é provisória: fica marcada
+// em user_metadata.trocar_senha, e o app e o painel pedem uma senha nova no primeiro acesso.
+// Com enviar_email, a pessoa recebe por e-mail o link do app, o login e a senha provisória.
+// O envio usa o Gmail (SMTP) informado nos segredos da função, em Edge Functions > Secrets:
+//   SMTP_USER = conta do Gmail que envia; SMTP_PASS = senha de app dessa conta (16 letras);
+//   opcionais: SMTP_HOST (smtp.gmail.com), SMTP_PORT (465), SMTP_NOME (nome do remetente).
+//
+// Exclusão (supabase/excluir-usuario.sql): ninguém exclui a si mesmo nem uma conta
+// "protegida" (a do dono), que também não pode ser bloqueada nem perder o perfil de
+// administrador. Os registros feitos pela pessoa ficam, com o nome dela gravado.
 //
 // Acesso de teste (supabase/acesso-teste.sql): em 'criar' e 'atualizar', o campo
 // acesso_ate ('AAAA-MM-DD' = vale até 23:59 desse dia, horário de Brasília; null =
@@ -26,6 +40,7 @@
 // do cliente em que está; quem ele cadastra entra nesse mesmo cliente. Usuário "da
 // empresa" (geral) só é visto e alterado por outro usuário da empresa.
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import nodemailer from 'npm:nodemailer@6.9.16';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +63,51 @@ function prazoDe(v: unknown): string | null | undefined {
   const dias = Math.round((dia.getTime() - new Date(hojeBR + 'T00:00:00Z').getTime()) / 86400000);
   if (dias < 0 || dias > PRAZO_MAX_DIAS) return undefined;
   return new Date(t + 'T23:59:59-03:00').toISOString();
+}
+
+// ---------- e-mail de acesso (senha provisória) ----------
+const escH = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+function linkValido(v: unknown): string {
+  const t = String(v ?? '').trim();
+  try { const u = new URL(t); return u.protocol === 'https:' && t.length <= 300 ? u.href : ''; } catch { return ''; }
+}
+// devolve '' quando enviou, ou o motivo de não ter enviado
+async function enviarAcesso(o: { para: string; nome: string; usuario: string; senha: string; link: string; novo: boolean }): Promise<string> {
+  const user = Deno.env.get('SMTP_USER'), pass = Deno.env.get('SMTP_PASS');
+  if (!user || !pass) return 'o envio de e-mail ainda não foi configurado (segredos SMTP_USER e SMTP_PASS da função)';
+  const port = Number(Deno.env.get('SMTP_PORT') || 465);
+  const remetente = Deno.env.get('SMTP_NOME') || 'Levantamento Patrimonial';
+  const primeiro = o.nome.split(' ')[0] || o.nome;
+  const assunto = o.novo ? 'Seu acesso ao Levantamento Patrimonial' : 'Nova senha provisória do Levantamento Patrimonial';
+  const intro = o.novo ? 'Você foi cadastrado(a) no Levantamento Patrimonial.' : 'O administrador definiu uma nova senha provisória para você.';
+  const login = o.usuario ? `${o.para} ou ${o.usuario}` : o.para;
+  const texto = `Olá, ${primeiro}!\n\n${intro}\n\nEndereço: ${o.link}\nE-mail ou usuário: ${login}\nSenha provisória: ${o.senha}\n\n` +
+    'No primeiro acesso, o sistema pede para você criar uma senha sua. Não compartilhe esta senha com ninguém.\n' +
+    'Depois de 3 senhas erradas seguidas o acesso fica bloqueado.\n\nSe você não esperava este e-mail, ignore-o.';
+  const linha = (r: string, v: string, mono = false) =>
+    `<tr><td style="padding:6px 0;color:#5B6675;font-size:13px;width:150px">${r}</td><td style="padding:6px 0;font-size:15px;color:#18212B;${mono ? "font-family:Consolas,'Courier New',monospace;font-weight:700;letter-spacing:.5px" : ''}">${escH(v)}</td></tr>`;
+  const html = `<!doctype html><html><body style="margin:0;background:#EEF1F5;font-family:Arial,Helvetica,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF1F5;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:12px;overflow:hidden">
+<tr><td style="background:#18212B;padding:18px 24px;color:#fff;font-size:17px;font-weight:700">Levantamento Patrimonial<div style="height:3px;width:44px;background:#F5C518;margin-top:8px"></div></td></tr>
+<tr><td style="padding:24px">
+<p style="margin:0 0 12px;font-size:16px;color:#18212B">Olá, ${escH(primeiro)}!</p>
+<p style="margin:0 0 18px;font-size:15px;color:#18212B;line-height:1.5">${escH(intro)} Use os dados abaixo para entrar.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #E3E7ED;border-bottom:1px solid #E3E7ED;margin-bottom:20px">
+${linha('E-mail ou usuário', login)}${linha('Senha provisória', o.senha, true)}</table>
+<p style="margin:0 0 22px;text-align:center"><a href="${escH(o.link)}" style="display:inline-block;background:#2347A8;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 26px;border-radius:8px">Abrir o aplicativo</a></p>
+<p style="margin:0 0 10px;font-size:13.5px;color:#18212B;line-height:1.5">No primeiro acesso, o sistema pede para você criar uma senha sua. Não compartilhe esta senha com ninguém. Depois de 3 senhas erradas seguidas, o acesso fica bloqueado.</p>
+<p style="margin:0;font-size:12.5px;color:#5B6675;line-height:1.5">Se o botão não abrir, copie este endereço no navegador: ${escH(o.link)}<br>Se você não esperava este e-mail, ignore-o.</p>
+</td></tr></table></td></tr></table></body></html>`;
+  try {
+    const t = nodemailer.createTransport({
+      host: Deno.env.get('SMTP_HOST') || 'smtp.gmail.com', port, secure: port === 465, auth: { user, pass },
+    });
+    await t.sendMail({ from: { name: remetente, address: user }, to: o.para, subject: assunto, text: texto, html });
+    return '';
+  } catch (e) {
+    return 'o e-mail não pôde ser enviado (' + ((e as Error).message ?? String(e)).slice(0, 160) + ')';
+  }
 }
 
 // ---------- regras de cadastro (as mesmas do navegador) ----------
@@ -105,7 +165,9 @@ Deno.serve(async (req) => {
       const email = digitado.includes('@') ? (EMAIL.test(digitado) ? digitado : null) : await emailDoUsuario(digitado);
       // a contagem vale também para quem não tem cadastro, para não revelar quem tem
       const chave = email ?? digitado;
-      const bloqueado = (ate: string) => json({ v: V, bloqueado_ate: ate, erro: 'Acesso bloqueado por 15 minutos depois de 3 senhas erradas.' }, 429);
+      const bloqueado = (ate: string) => json({ v: V, bloqueado_ate: ate, erro: new Date(ate).getTime() - Date.now() > 86400000
+        ? 'Acesso bloqueado depois de 3 senhas erradas. Peça ao administrador para liberar.'
+        : 'Acesso bloqueado por 15 minutos depois de 3 senhas erradas.' }, 429);
       const { data: reg } = await adm.from('acessos_falhos').select('bloqueado_ate').eq('chave', chave).maybeSingle();
       if (reg?.bloqueado_ate && new Date(reg.bloqueado_ate) > new Date()) return bloqueado(reg.bloqueado_ate);
       if (email) {
@@ -174,6 +236,11 @@ Deno.serve(async (req) => {
         if (error) throw error;
       }
     };
+    // conta do dono (coluna criada pelo excluir-usuario.sql; sem a coluna, ninguém é protegido)
+    const protegido = async (id: string) => {
+      const { data, error } = await adm.from('usuarios').select('protegido').eq('user_id', id).maybeSingle();
+      return !error && data?.protegido === true;
+    };
     const usuarioLivre = async (usuario: string, id = '') => {
       const { data } = await adm.from('usuarios').select('user_id').eq('usuario', usuario);
       return !(data ?? []).some((r) => r.user_id !== id);
@@ -205,6 +272,7 @@ Deno.serve(async (req) => {
           ativo: !banido && p.ativo !== false,
           senha_bloqueada_ate: travado.get((u.email ?? '').toLowerCase()) ?? null,
           acesso_ate: p.acesso_ate ?? null,
+          protegido: p.protegido === true,
           ultimo_acesso: u.last_sign_in_at, criado_em: u.created_at,
         };
       }).sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email, 'pt-BR'));
@@ -230,7 +298,9 @@ Deno.serve(async (req) => {
         if (p === undefined) return json({ erro: `Prazo inválido: escolha uma data de hoje até ${PRAZO_MAX_DIAS} dias.` }, 400);
         prazo = p;
       }
-      const { data, error } = await adm.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome, usuario: usuario || null } });
+      const link = linkValido(b.link);
+      if (b.enviar_email && !link) return json({ erro: 'Endereço do app inválido para o e-mail.' }, 400);
+      const { data, error } = await adm.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome, usuario: usuario || null, trocar_senha: true } });
       if (error) return json({ erro: /already|registered|exists/i.test(error.message) ? 'Já existe um usuário com este e-mail.' : error.message }, 400);
       const id = data.user.id;
       const linha: Record<string, unknown> = { user_id: id, nome, usuario: usuario || null, perfil, ativo: true };
@@ -239,7 +309,8 @@ Deno.serve(async (req) => {
       const { error: e2 } = await adm.from('usuarios').upsert(linha);
       if (e2) throw e2;
       await definirPerfil(id, perfil);
-      return json({ ok: true, id });
+      const falhaEmail = b.enviar_email ? await enviarAcesso({ para: email, nome, usuario, senha, link, novo: true }) : null;
+      return json({ ok: true, id, email_enviado: falhaEmail === '', aviso_email: falhaEmail || null });
     }
 
     if (b.acao === 'atualizar') {
@@ -247,6 +318,8 @@ Deno.serve(async (req) => {
       if (!id) return json({ erro: 'Usuário não informado.' }, 400);
       if (!(await podeMexer(id))) return negado();
       if (id === user.id && (b.ativo === false || b.perfil === 'campo')) return json({ erro: 'Você não pode bloquear nem tirar o próprio acesso de administrador.' }, 400);
+      if ((b.ativo === false || b.perfil === 'campo' || b.geral === false || (b.acesso_ate !== undefined && b.acesso_ate !== null && b.acesso_ate !== '')) && (await protegido(id)))
+        return json({ erro: 'Esta conta é protegida: não pode ser bloqueada, ter prazo nem perder o acesso de administrador.' }, 400);
       const mud: Record<string, unknown> = { user_id: id, atualizado_em: new Date().toISOString() };
       if (b.nome !== undefined) {
         const nome = limparNome(b.nome); const eN = erroNome(nome); if (eN) return json({ erro: eN }, 400);
@@ -312,10 +385,17 @@ Deno.serve(async (req) => {
       if (!alvo?.user) return json({ erro: 'Usuário não encontrado.' }, 400);
       const eS = erroSenha(String(b.senha ?? ''), alvo.user.email ?? '', String(alvo.user.user_metadata?.usuario ?? ''));
       if (eS) return json({ erro: eS }, 400);
-      const { error } = await adm.auth.admin.updateUserById(id, { password: String(b.senha) });
+      const link = linkValido(b.link);
+      if (b.enviar_email && !link) return json({ erro: 'Endereço do app inválido para o e-mail.' }, 400);
+      // senha definida pelo administrador é provisória: a pessoa cria a dela no próximo acesso
+      const meta = { ...(alvo.user.user_metadata ?? {}), trocar_senha: id !== user.id };
+      const { error } = await adm.auth.admin.updateUserById(id, { password: String(b.senha), user_metadata: meta });
       if (error) throw error;
       await adm.from('acessos_falhos').delete().eq('chave', (alvo.user.email ?? '').toLowerCase());
-      return json({ ok: true });
+      const falhaEmail = b.enviar_email
+        ? await enviarAcesso({ para: alvo.user.email ?? '', nome: String(meta.nome ?? ''), usuario: String(meta.usuario ?? ''), senha: String(b.senha), link, novo: false })
+        : null;
+      return json({ ok: true, email_enviado: falhaEmail === '', aviso_email: falhaEmail || null });
     }
 
     if (b.acao === 'desbloquear') {
@@ -324,6 +404,60 @@ Deno.serve(async (req) => {
       if (!alvo?.user?.email) return json({ erro: 'Usuário não encontrado.' }, 400);
       const { error } = await adm.from('acessos_falhos').delete().eq('chave', alvo.user.email.toLowerCase());
       if (error) throw error;
+      return json({ ok: true });
+    }
+
+    if (b.acao === 'resumo' || b.acao === 'excluir') {
+      const id = String(b.id ?? '');
+      if (!id) return json({ erro: 'Usuário não informado.' }, 400);
+      if (!(await podeMexer(id))) return negado();
+      if (id === user.id) return json({ erro: 'Você não pode excluir a própria conta.' }, 400);
+      if (await protegido(id)) return json({ erro: 'Esta conta é protegida e não pode ser excluída.' }, 400);
+      const { data: alvo } = await adm.auth.admin.getUserById(id);
+      if (!alvo?.user) return json({ erro: 'Usuário não encontrado. Atualize a lista.' }, 400);
+      const { data: perfil } = await adm.from('usuarios').select('*').eq('user_id', id).maybeSingle();
+
+      if (b.acao === 'resumo') {
+        // quantos registros a pessoa já fez (tabela ausente conta 0)
+        const contar = async (tabela: string, coluna: string) => {
+          const { count, error } = await adm.from(tabela).select('*', { count: 'exact', head: true }).eq(coluna, id);
+          return error ? 0 : (count ?? 0);
+        };
+        const [levantamentos, reavaliacoes, sobras] = await Promise.all([
+          contar('levantamento', 'usuario'), contar('reavaliacao', 'atualizado_por'), contar('sobras', 'usuario'),
+        ]);
+        return json({ levantamentos, reavaliacoes, sobras, ultimo_acesso: alvo.user.last_sign_in_at ?? null });
+      }
+
+      // não deixa o cliente sem nenhum administrador ativo
+      const { data: admins } = await adm.from('admins').select('user_id');
+      const ids = (admins ?? []).map((a) => a.user_id);
+      if (ids.includes(id)) {
+        let q = adm.from('usuarios').select('user_id').in('user_id', ids.filter((x) => x !== id)).neq('ativo', false);
+        if (multi && perfil?.cliente_id != null && !perfil?.geral) q = q.or(`cliente_id.eq.${perfil.cliente_id},geral.is.true`);
+        const { data: outros } = await q;
+        if (!(outros ?? []).length) return json({ erro: 'Este é o último administrador ativo. Cadastre outro antes de excluir.' }, 400);
+      }
+
+      const { error } = await adm.auth.admin.deleteUser(id);
+      if (error) {
+        const m = error.message ?? '';
+        if (/protegida/i.test(m)) return json({ erro: 'Esta conta é protegida e não pode ser excluída.' }, 400);
+        return json({ erro: 'Não foi possível excluir: ' + m + '. Se preferir, use "Bloquear".' }, 400);
+      }
+      // sobra do cadastro, se algo não estiver ligado por "on delete cascade"
+      await adm.from('admins').delete().eq('user_id', id);
+      await adm.from('usuarios').delete().eq('user_id', id);
+      await adm.from('acessos_falhos').delete().eq('chave', (alvo.user.email ?? '').toLowerCase());
+      // registra no histórico quem excluiu (falha aqui não desfaz a exclusão)
+      const { data: meuPerfil } = await adm.from('usuarios').select('nome').eq('user_id', user.id).maybeSingle();
+      const linha: Record<string, unknown> = {
+        tabela: 'usuarios', codigo: alvo.user.email, acao: 'excluiu',
+        antes: { nome: perfil?.nome ?? alvo.user.user_metadata?.nome ?? null, email: alvo.user.email, perfil: ids.includes(id) ? 'administrador' : 'equipe de campo' },
+        usuario: user.id, usuario_nome: meuPerfil?.nome || user.email,
+      };
+      if (multi) linha.cliente_id = perfil?.geral ? meuCliente : (perfil?.cliente_id ?? meuCliente);
+      await adm.from('historico').insert(linha);
       return json({ ok: true });
     }
 

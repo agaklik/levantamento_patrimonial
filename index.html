@@ -368,7 +368,7 @@
       <button type="button" class="link-btn" id="btnVoltarLogin">Voltar para entrar</button>
     </div>
     <div id="painelNovaSenha" class="hidden">
-      <p class="sub">Crie uma nova senha para a sua conta.</p>
+      <p class="sub" id="novaSenhaTxt">Crie uma nova senha para a sua conta.</p>
       <label for="novaSenha">Nova senha</label>
       <input type="password" id="novaSenha" autocomplete="new-password">
       <label for="novaSenha2">Repita a nova senha</label>
@@ -685,7 +685,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-21'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-22'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -734,7 +734,15 @@ async function initAuth(){
 }
 function showLogin(){ $('#loginScreen').classList.remove('hidden'); $('#appScreen').classList.add('hidden'); }
 let _entrando=false;
+// senha provisória (definida pelo administrador): pede a senha própria antes de entrar
+function precisaTrocarSenha(session){
+  if(!(session&&session.user&&session.user.user_metadata&&session.user.user_metadata.trocar_senha===true)) return false;
+  mostrarPainel('painelNovaSenha'); showLogin();
+  $('#novaSenhaTxt').textContent='Primeiro acesso: a senha que você recebeu é provisória. Crie agora uma senha só sua.';
+  return true;
+}
 async function enterApp(session){
+  if(precisaTrocarSenha(session)) return;
   $('#loginScreen').classList.add('hidden'); $('#appScreen').classList.remove('hidden');
   if(session&&session.user) USUARIO_EMAIL=session.user.email||USUARIO_EMAIL;
   if(_entrando) return; _entrando=true;
@@ -901,6 +909,7 @@ async function entrarPeloServidor(login, senha){
   if(data&&data.session){ const r=await sb.auth.setSession(data.session); return r.error?r.error.message:''; }
   j=j||data||{};
   if(!j.v&&login.includes('@')) return await direto();   // função antiga no servidor: entra como antes
+  if(j.bloqueado_ate&&new Date(j.bloqueado_ate)-Date.now()>86400000) return 'Acesso bloqueado depois de 3 senhas erradas. Peça ao administrador para liberar o seu acesso.';
   if(j.bloqueado_ate){ const h=new Date(j.bloqueado_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     return 'Acesso bloqueado depois de 3 senhas erradas. Tente de novo às '+h+' ou peça ao administrador para liberar.'; }
   let m=j.erro||'E-mail, usuário ou senha incorretos.';
@@ -956,10 +965,10 @@ $('#btnSalvarSenha').addEventListener('click',async()=>{
   if(!senhaForte(s)){ $('#loginMsg').innerHTML='<span class="err">A senha ainda não atende a todas as regras.</span>'; return; }
   if(s!==s2){ $('#loginMsg').innerHTML='<span class="err">As duas senhas não são iguais.</span>'; return; }
   const btn=$('#btnSalvarSenha'); btn.disabled=true;
-  const {data,error}=await sb.auth.updateUser({password:s});
+  const {data,error}=await sb.auth.updateUser({password:s,data:{trocar_senha:false}});
   btn.disabled=false;
   if(error){ $('#loginMsg').innerHTML='<span class="err">'+esc(/same|different/i.test(error.message)?'A nova senha precisa ser diferente da anterior.':/weak|characters/i.test(error.message)?'Senha fraca: '+error.message:error.message)+'</span>'; return; }
-  $('#novaSenha').value=$('#novaSenha2').value=''; mostrarPainel('painelEntrar'); toast('Senha alterada');
+  $('#novaSenha').value=$('#novaSenha2').value=''; $('#novaSenhaTxt').textContent='Crie uma nova senha para a sua conta.'; mostrarPainel('painelEntrar'); toast('Senha alterada');
   const {data:{session}}=await sb.auth.getSession(); if(session) enterApp(session);
 });
 $('#btnLogout').addEventListener('click',async()=>{
