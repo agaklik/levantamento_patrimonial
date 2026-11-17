@@ -261,6 +261,53 @@
   .login-card{background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
     box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(255,255,255,.4),0 24px 60px rgba(0,0,0,.35)}
   #loginScreen{background:radial-gradient(70vmax 50vmax at 100% 0%,rgba(35,71,168,.55),transparent 60%),radial-gradient(60vmax 40vmax at 0% 100%,rgba(245,197,24,.25),transparent 60%),var(--txt)}
+  /* ---------- folhas (menu e instalação) em vidro ---------- */
+  #btnMenu{position:relative}
+  body.sem-rolar{overflow:hidden}
+  .sheet-fundo{position:fixed;inset:0;z-index:200;background:rgba(24,33,43,.42);display:flex;align-items:flex-end;justify-content:center;animation:fundoEntra .18s ease-out}
+  .sheet-fundo.hidden{display:none}
+  .sheet{position:relative;width:100%;max-width:520px;max-height:90vh;max-height:90dvh;overflow:auto;margin:8px;margin-bottom:max(8px,env(safe-area-inset-bottom));border-radius:28px;padding:20px 18px 18px;color:var(--txt);
+    background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(246,248,250,.84));
+    -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+    box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(255,255,255,.5),0 24px 60px rgba(0,0,0,.32);animation:folhaSobe .22s cubic-bezier(.2,.8,.2,1)}
+  .sheet::before{content:'';display:block;width:40px;height:5px;border-radius:3px;background:rgba(24,33,43,.18);margin:-8px auto 14px}
+  .sheet h3{margin:0 0 4px;font-size:19px;font-stretch:92%}
+  .sheet .sub{margin:0 0 14px;color:var(--muted);font-size:14.5px;overflow-wrap:anywhere}
+  @keyframes folhaSobe{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes fundoEntra{from{opacity:0}to{opacity:1}}
+  .menu-item{width:100%;justify-content:flex-start;gap:14px;background:rgba(255,255,255,.7);border:1px solid rgba(24,33,43,.08);border-radius:16px;padding:12px 14px;margin-bottom:8px;text-align:left;font-weight:600;min-height:56px}
+  .menu-item:active{background:rgba(24,33,43,.06)}
+  .menu-item.hidden{display:none}
+  .menu-item svg{width:22px;height:22px;flex:none;color:var(--accent)}
+  .menu-item span{flex:1;display:flex;flex-direction:column}
+  .menu-item small{font-weight:500;color:var(--muted);font-size:13px}
+  .menu-item b.cont{flex:none;min-width:24px;height:24px;border-radius:12px;background:var(--signal);color:var(--signal-ink);font-size:13px;line-height:24px;text-align:center;padding:0 7px}
+  .menu-item b.cont.hidden{display:none}
+  .menu-item.sair svg{color:var(--danger)}
+  .inst-icone{display:flex;align-items:center;gap:14px;margin:0 0 14px}
+  .inst-icone img{width:56px;height:56px;border-radius:14px;box-shadow:0 4px 14px rgba(24,33,43,.22);flex:none}
+  .inst-vant{list-style:none;padding:0;margin:0 0 16px;display:grid;gap:6px;font-size:14.5px}
+  .inst-vant li::before{content:'✓';color:var(--ok);font-weight:800;margin-right:8px}
+  .inst-passos{list-style:none;padding:0;margin:0 0 12px;display:grid;gap:10px}
+  .inst-passos li{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.75);border:1px solid rgba(24,33,43,.08);border-radius:16px;padding:12px;font-size:15px;line-height:1.5}
+  .inst-n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .inst-ico{display:inline-flex;vertical-align:middle;width:26px;height:26px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);align-items:center;justify-content:center;color:var(--accent);margin:0 2px}
+  .inst-ico svg{width:17px;height:17px}
+  .inst-url{font-weight:700;word-break:break-all;background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:14px}
+  .inst-ok{color:var(--ok);font-weight:600}
+  .inst-acoes{display:flex;gap:8px;margin-top:6px}
+  .inst-acoes button{flex:1}
+  .inst-acoes .hidden{display:none}
+  /* ---------- avisos ---------- */
+  .av-lista{display:grid;gap:10px;margin-bottom:6px}
+  .av{border:1px solid var(--border);border-radius:14px;padding:12px 14px;background:var(--surface)}
+  .av.novo{border-color:var(--signal);box-shadow:inset 4px 0 0 var(--signal)}
+  .av-cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .av-cab small{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .av-de{color:var(--muted);font-size:12.5px}
+  .av p{margin:6px 0;font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+  #avisosCard .checkrow{margin-top:10px;font-size:15px}
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .sheet{background:var(--surface)} }
   @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
     header{background:var(--txt)} .actions,.seg{background:var(--surface)} .modo-band{background:#FFF7E6} .login-card{background:var(--surface)}
   }
@@ -277,6 +324,13 @@
   <symbol id="i-cloud" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.1 4.7 4.7 0 0 0 7 18.5zM12 16v-6m-2.5 2.5L12 10l2.5 2.5"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-painel" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5zM8 21h8M12 17v4M7 13V10m4 3V8m4 5v-2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M7.5 2.5h9A1.5 1.5 0 0 1 18 4v16a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V4a1.5 1.5 0 0 1 1.5-1.5zM10.5 18.5h3"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 7v6m-2.5-2.5L12 13l2.5-2.5"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 8.5v7M8.5 12h7"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></g></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5"/></symbol>
   <symbol id="i-exit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M10 8l-4 4 4 4M6 12h10"/></symbol>
 </svg>
 
@@ -310,6 +364,7 @@
       <button class="btn btn-block" id="btnSalvarSenha">Salvar nova senha</button>
     </div>
     <div id="loginMsg" style="margin-top:12px;font-size:14px"></div>
+    <button type="button" class="link-btn" id="btnInstalarLogin" style="margin-top:2px">Instalar o app no celular</button>
     <div id="appVersion" class="app-version"></div>
   </div>
 </div>
@@ -332,7 +387,7 @@
   </div>
   <a id="btnPainel" class="hdr-icon hidden" href="admin.html" title="Painel administrativo" aria-label="Painel administrativo"><svg><use href="#i-painel"/></svg></a>
   <button id="btnEnvio" class="hdr-icon" title="Envio dos dados" aria-label="Envio dos dados"><svg><use href="#i-cloud"/></svg><span class="badge hidden" id="filaBadge">0</span></button>
-  <button id="btnLogout" class="hdr-icon" title="Sair" aria-label="Sair"><svg><use href="#i-exit"/></svg></button>
+  <button id="btnMenu" class="hdr-icon" title="Menu" aria-label="Menu" aria-haspopup="dialog"><svg><use href="#i-menu"/></svg><span class="badge hidden" id="menuBadge">0</span></button>
 </header>
 <button id="modoBand" class="modo-band hidden" type="button"></button>
 
@@ -429,6 +484,20 @@
     <button class="btn-ghost btn-block" id="btnFecharEnvio" style="margin-top:16px">Voltar à busca</button>
   </div>
 
+  <!-- AVISOS E NOTIFICAÇÕES -->
+  <div class="card hidden" id="avisosCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><h3 style="margin:0">Avisos</h3><button class="btn-ghost" id="btnFecharAvisosTopo" style="flex:none">‹ Voltar</button></div>
+    <div class="av-lista" id="avLista"></div>
+    <div class="section-title" id="avNotifTitulo">Notificações no celular</div>
+    <div class="note note-info" id="avNotifStatus" style="margin-bottom:10px;font-size:14.5px"></div>
+    <button class="btn btn-block" id="btnNotif">Ligar notificações neste aparelho</button>
+    <label class="checkrow" for="avPrefAdmin"><input type="checkbox" id="avPrefAdmin"><span>Receber as mensagens do administrador</span></label>
+    <label class="checkrow" for="avPrefSistema"><input type="checkbox" id="avPrefSistema"><span>Receber os avisos automáticos <small style="display:block;font-weight:500;color:var(--muted);font-size:13px">Prazo do acesso, localização reaberta, itens parados no celular</small></span></label>
+    <p class="hint" style="margin-top:10px">Desmarcando, o aviso deixa de aparecer na tela do celular, mas continua nesta lista.</p>
+    <div id="avMsg" style="font-size:14px"></div>
+    <button class="btn-ghost btn-block" id="btnFecharAvisos" style="margin-top:12px">Voltar à busca</button>
+  </div>
+
   <!-- DETALHE DO BEM -->
   <div class="card hidden" id="detailCard">
     <div class="tag-row">
@@ -523,6 +592,38 @@
 
 <canvas id="canvas" class="hidden"></canvas>
 <div class="toast" id="toast"></div>
+
+<!-- MENU -->
+<div class="sheet-fundo hidden" id="menuFundo" role="dialog" aria-modal="true" aria-labelledby="menuTitulo">
+  <div class="sheet">
+    <h3 id="menuTitulo">Menu</h3>
+    <p class="sub" id="menuQuem"></p>
+    <button class="menu-item" id="miAvisos"><svg><use href="#i-bell"/></svg><span>Avisos<small id="miAvisosTxt">Mensagens do administrador e do sistema</small></span><b class="cont hidden" id="miAvisosN">0</b></button>
+    <button class="menu-item" id="miNotif"><svg><use href="#i-bell"/></svg><span>Notificações<small id="miNotifTxt">Escolha o que quer receber</small></span></button>
+    <button class="menu-item" id="miInstalar"><svg><use href="#i-phone"/></svg><span>Instalar o app no celular<small id="miInstalarTxt">Passo a passo para este aparelho</small></span></button>
+    <button class="menu-item hidden" id="miTrocar"><svg><use href="#i-swap"/></svg><span>Trocar de órgão<small>Equipe da empresa</small></span></button>
+    <button class="menu-item sair" id="btnLogout"><svg><use href="#i-exit"/></svg><span>Sair<small>Encerrar a sessão neste aparelho</small></span></button>
+    <button class="btn-ghost btn-block" id="btnFecharMenu" style="margin-top:4px">Fechar</button>
+  </div>
+</div>
+
+<!-- INSTALAR NO CELULAR -->
+<div class="sheet-fundo hidden" id="instFundo" role="dialog" aria-modal="true" aria-labelledby="instTitulo">
+  <div class="sheet">
+    <div class="inst-icone"><img src="icon-192.png" alt=""><div><h3 id="instTitulo">Instale o app no celular</h3><div class="hint" style="margin:0">Fica com o ícone <b>Patrimônio</b> na tela, como um aplicativo.</div></div></div>
+    <ul class="inst-vant">
+      <li>Abre em tela cheia, sem a barra do navegador</li>
+      <li>Funciona sem internet no modo offline</li>
+      <li>Recebe os avisos como notificação</li>
+    </ul>
+    <div id="instPassos"></div>
+    <div class="inst-acoes">
+      <button class="btn-ghost" id="btnInstDepois">Agora não</button>
+      <button class="btn-2" id="btnJaInstalei">Já instalei</button>
+    </div>
+  </div>
+</div>
+
 <script>/* supabase-js UMD */
 var supabase=(function(e){function t(e,t){var n={};for(var r in e)Object.prototype.hasOwnProperty.call(e,r)&&t.indexOf(r)<0&&(n[r]=e[r]);if(e!=null&&typeof Object.getOwnPropertySymbols==`function`)for(var i=0,r=Object.getOwnPropertySymbols(e);i<r.length;i++)t.indexOf(r[i])<0&&Object.prototype.propertyIsEnumerable.call(e,r[i])&&(n[r[i]]=e[r[i]]);return n}function n(e,t,n,r){function i(e){return e instanceof n?e:new n(function(t){t(e)})}return new(n||=Promise)(function(n,a){function o(e){try{c(r.next(e))}catch(e){a(e)}}function s(e){try{c(r.throw(e))}catch(e){a(e)}}function c(e){e.done?n(e.value):i(e.value).then(o,s)}c((r=r.apply(e,t||[])).next())})}let r=e=>e?(...t)=>e(...t):(...e)=>fetch(...e);var i=class extends Error{constructor(e,t=`FunctionsError`,n){super(e),this.name=t,this.context=n}toJSON(){return{name:this.name,message:this.message,context:this.context}}},a=class extends i{constructor(e){super(`Failed to send a request to the Edge Function`,`FunctionsFetchError`,e)}},o=class extends i{constructor(e){super(`Relay Error invoking the Edge Function`,`FunctionsRelayError`,e)}},s=class extends i{constructor(e){super(`Edge Function returned a non-2xx status code`,`FunctionsHttpError`,e)}},c;(function(e){e.Any=`any`,e.ApNortheast1=`ap-northeast-1`,e.ApNortheast2=`ap-northeast-2`,e.ApSouth1=`ap-south-1`,e.ApSoutheast1=`ap-southeast-1`,e.ApSoutheast2=`ap-southeast-2`,e.CaCentral1=`ca-central-1`,e.EuCentral1=`eu-central-1`,e.EuWest1=`eu-west-1`,e.EuWest2=`eu-west-2`,e.EuWest3=`eu-west-3`,e.SaEast1=`sa-east-1`,e.UsEast1=`us-east-1`,e.UsWest1=`us-west-1`,e.UsWest2=`us-west-2`})(c||={});var l=class{constructor(e,{headers:t={},customFetch:n,region:i=c.Any}={}){this.url=e,this.headers=t,this.region=i,this.fetch=r(n)}setAuth(e){this.headers.Authorization=`Bearer ${e}`}invoke(e){return n(this,arguments,void 0,function*(e,t={}){let n,r;try{let{headers:i,method:c,body:l,signal:u,timeout:d}=t,f={},{region:p}=t;p||=this.region;let m=new URL(`${this.url}/${e}`);p&&p!==`any`&&(f[`x-region`]=p,m.searchParams.set(`forceFunctionRegion`,p));let h;l&&(i&&!Object.prototype.hasOwnProperty.call(i,`Content-Type`)||!i)?typeof Blob<`u`&&l instanceof Blob||l instanceof ArrayBuffer?(f[`Content-Type`]=`application/octet-stream`,h=l):typeof l==`string`?(f[`Content-Type`]=`text/plain`,h=l):typeof FormData<`u`&&l instanceof FormData?h=l:(f[`Content-Type`]=`application/json`,h=JSON.stringify(l)):h=l&&typeof l!=`string`&&!(typeof Blob<`u`&&l instanceof Blob)&&!(l instanceof ArrayBuffer)&&!(typeof FormData<`u`&&l instanceof FormData)?JSON.stringify(l):l;let ee=u;d&&(r=new AbortController,n=setTimeout(()=>r.abort(),d),u?(ee=r.signal,u.addEventListener(`abort`,()=>r.abort())):ee=r.signal);let g=yield this.fetch(m.toString(),{method:c||`POST`,headers:Object.assign(Object.assign(Object.assign({},f),this.headers),i),body:h,signal:ee}).catch(e=>{throw new a(e)}),te=g.headers.get(`x-relay-error`);if(te&&te===`true`)throw new o(g);if(!g.ok)throw new s(g);let _=(g.headers.get(`Content-Type`)??`text/plain`).split(`;`)[0].trim(),ne;return ne=_===`application/json`?yield g.json():_===`application/octet-stream`||_===`application/pdf`?yield g.blob():_===`text/event-stream`?g:_===`multipart/form-data`?yield g.formData():yield g.text(),{data:ne,error:null,response:g}}catch(e){return{data:null,error:e,response:e instanceof s||e instanceof o?e.context:void 0}}finally{n&&clearTimeout(n)}})}};let u=e=>Math.min(1e3*2**e,3e4),d=[520,503],f=[`GET`,`HEAD`,`OPTIONS`];var p=class extends Error{constructor(e){super(e.message),this.name=`PostgrestError`,this.details=e.details,this.hint=e.hint,this.code=e.code}toJSON(){return{name:this.name,message:this.message,details:this.details,hint:this.hint,code:this.code}}};function m(e,t){return new Promise(n=>{if(t?.aborted){n();return}let r=setTimeout(()=>{t?.removeEventListener(`abort`,i),n()},e);function i(){clearTimeout(r),n()}t?.addEventListener(`abort`,i)})}function h(e,t,n,r){return!(!r||n>=3||!f.includes(e)||!d.includes(t))}var ee=class{constructor(e){this.shouldThrowOnError=!1,this.retryEnabled=!0,this.method=e.method,this.url=e.url,this.headers=new Headers(e.headers),this.schema=e.schema,this.body=e.body,this.shouldThrowOnError=e.shouldThrowOnError??!1,this.signal=e.signal,this.isMaybeSingle=e.isMaybeSingle??!1,this.shouldStripNulls=e.shouldStripNulls??!1,this.urlLengthLimit=e.urlLengthLimit??8e3,this.retryEnabled=e.retry??!0,e.fetch?this.fetch=e.fetch:this.fetch=fetch}throwOnError(){return this.shouldThrowOnError=!0,this}stripNulls(){if(this.headers.get(`Accept`)===`text/csv`)throw Error(`stripNulls() cannot be used with csv()`);return this.shouldStripNulls=!0,this}setHeader(e,t){return this.headers=new Headers(this.headers),this.headers.set(e,t),this}retry(e){return this.retryEnabled=e,this}then(e,t){var n=this;if(this.schema===void 0||([`GET`,`HEAD`].includes(this.method)?this.headers.set(`Accept-Profile`,this.schema):this.headers.set(`Content-Profile`,this.schema)),this.method!==`GET`&&this.method!==`HEAD`&&this.headers.set(`Content-Type`,`application/json`),this.shouldStripNulls){let e=this.headers.get(`Accept`);e===`application/vnd.pgrst.object+json`?this.headers.set(`Accept`,`application/vnd.pgrst.object+json;nulls=stripped`):(!e||e===`application/json`)&&this.headers.set(`Accept`,`application/vnd.pgrst.array+json;nulls=stripped`)}let r=this.fetch,i=(async()=>{let e=0;for(;;){let t={};n.headers.forEach((e,n)=>{t[n]=e}),e>0&&(t[`X-Retry-Count`]=String(e));let i;try{i=await r(n.url.toString(),{method:n.method,headers:t,body:JSON.stringify(n.body,(e,t)=>typeof t==`bigint`?t.toString():t),signal:n.signal})}catch(t){if(t?.name===`AbortError`||t?.code===`ABORT_ERR`||!f.includes(n.method))throw t;if(n.retryEnabled&&e<3){let t=u(e);e++,await m(t,n.signal);continue}throw t}if(h(n.method,i.status,e,n.retryEnabled)){let t=i.headers?.get(`Retry-After`)??null,r=t===null?u(e):Math.max(0,parseInt(t,10)||0)*1e3;await i.text(),e++,await m(r,n.signal);continue}return await n.processResponse(i)}})();return this.shouldThrowOnError||(i=i.catch(e=>{let t=``,n=``,r=``,i=e?.cause;if(i){let n=i?.message??``,r=i?.code??``;t=`${e?.name??`FetchError`}: ${e?.message}`,t+=`\n\nCaused by: ${i?.name??`Error`}: ${n}`,r&&(t+=` (${r})`),i?.stack&&(t+=`\n${i.stack}`)}else t=e?.stack??``;let a=this.url.toString().length;return e?.name===`AbortError`||e?.code===`ABORT_ERR`?(r=``,n=`Request was aborted (timeout or manual cancellation)`,a>this.urlLengthLimit&&(n+=`. Note: Your request URL is ${a} characters, which may exceed server limits. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [many IDs])), consider using an RPC function to pass values server-side.`)):(i?.name===`HeadersOverflowError`||i?.code===`UND_ERR_HEADERS_OVERFLOW`)&&(r=``,n=`HTTP headers exceeded server limits (typically 16KB)`,a>this.urlLengthLimit&&(n+=`. Your request URL is ${a} characters. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [200+ IDs])), consider using an RPC function instead.`)),{success:!1,error:{message:`${e?.name??`FetchError`}: ${e?.message}`,details:t,hint:n,code:r},data:null,count:null,status:0,statusText:``}})),i.then(e,t)}async processResponse(e){var t=this;let n=null,r=null,i=null,a=e.status,o=e.statusText;if(e.ok){if(t.method!==`HEAD`){let i=await e.text();if(i!==``)if(t.headers.get(`Accept`)===`text/csv`)r=i;else if(t.headers.get(`Accept`)&&t.headers.get(`Accept`)?.includes(`application/vnd.pgrst.plan+text`))r=i;else try{r=JSON.parse(i)}catch{if(n={message:i},r=null,t.shouldThrowOnError)throw new p({message:i,details:``,hint:``,code:``})}}let s=t.headers.get(`Prefer`)?.match(/count=(exact|planned|estimated)/),c=e.headers.get(`content-range`)?.split(`/`);s&&c&&c.length>1&&(i=parseInt(c[1])),t.isMaybeSingle&&Array.isArray(r)&&(r.length>1?(n={code:`PGRST116`,details:`Results contain ${r.length} rows, application/vnd.pgrst.object+json requires 1 row`,hint:null,message:`JSON object requested, multiple (or no) rows returned`},r=null,i=null,a=406,o=`Not Acceptable`):r=r.length===1?r[0]:null)}else{let i=await e.text();try{n=JSON.parse(i),Array.isArray(n)&&e.status===404&&(r=[],n=null,a=200,o=`OK`)}catch{e.status===404&&i===``?(a=204,o=`No Content`):n={message:i}}if(n&&t.shouldThrowOnError)throw new p(n)}return{success:n===null,error:n,data:r,count:i,status:a,statusText:o}}returns(){return this}overrideTypes(){return this}},g=class extends ee{throwOnError(){return super.throwOnError()}select(e){let t=!1,n=(e??`*`).split(``).map(e=>/\s/.test(e)&&!t?``:(e===`"`&&(t=!t),e)).join(``);return this.url.searchParams.set(`select`,n),this.headers.append(`Prefer`,`return=representation`),this}order(e,{ascending:t=!0,nullsFirst:n,foreignTable:r,referencedTable:i=r}={}){let a=i?`${i}.order`:`order`,o=this.url.searchParams.get(a);return this.url.searchParams.set(a,`${o?`${o},`:``}${e}.${t?`asc`:`desc`}${n===void 0?``:n?`.nullsfirst`:`.nullslast`}`),this}limit(e,{foreignTable:t,referencedTable:n=t}={}){let r=n===void 0?`limit`:`${n}.limit`;return this.url.searchParams.set(r,`${e}`),this}range(e,t,{foreignTable:n,referencedTable:r=n}={}){let i=r===void 0?`offset`:`${r}.offset`,a=r===void 0?`limit`:`${r}.limit`;return this.url.searchParams.set(i,`${e}`),this.url.searchParams.set(a,`${t-e+1}`),this}abortSignal(e){return this.signal=e,this}single(){return this.headers.set(`Accept`,`application/vnd.pgrst.object+json`),this}maybeSingle(){return this.isMaybeSingle=!0,this}csv(){return this.headers.set(`Accept`,`text/csv`),this}geojson(){return this.headers.set(`Accept`,`application/geo+json`),this}explain({analyze:e=!1,verbose:t=!1,settings:n=!1,buffers:r=!1,wal:i=!1,format:a=`text`}={}){let o=[e?`analyze`:null,t?`verbose`:null,n?`settings`:null,r?`buffers`:null,i?`wal`:null].filter(Boolean).join(`|`),s=this.headers.get(`Accept`)??`application/json`;return this.headers.set(`Accept`,`application/vnd.pgrst.plan+${a}; for="${s}"; options=${o};`),this}rollback(){return this.headers.append(`Prefer`,`tx=rollback`),this}returns(){return this}maxAffected(e){return this.headers.append(`Prefer`,`handling=strict`),this.headers.append(`Prefer`,`max-affected=${e}`),this}};let te=RegExp(`[,()]`);var _=class extends g{throwOnError(){return super.throwOnError()}eq(e,t){return this.url.searchParams.append(e,`eq.${t}`),this}neq(e,t){return this.url.searchParams.append(e,`neq.${t}`),this}gt(e,t){return this.url.searchParams.append(e,`gt.${t}`),this}gte(e,t){return this.url.searchParams.append(e,`gte.${t}`),this}lt(e,t){return this.url.searchParams.append(e,`lt.${t}`),this}lte(e,t){return this.url.searchParams.append(e,`lte.${t}`),this}like(e,t){return this.url.searchParams.append(e,`like.${t}`),this}likeAllOf(e,t){return this.url.searchParams.append(e,`like(all).{${t.join(`,`)}}`),this}likeAnyOf(e,t){return this.url.searchParams.append(e,`like(any).{${t.join(`,`)}}`),this}ilike(e,t){return this.url.searchParams.append(e,`ilike.${t}`),this}ilikeAllOf(e,t){return this.url.searchParams.append(e,`ilike(all).{${t.join(`,`)}}`),this}ilikeAnyOf(e,t){return this.url.searchParams.append(e,`ilike(any).{${t.join(`,`)}}`),this}regexMatch(e,t){return this.url.searchParams.append(e,`match.${t}`),this}regexIMatch(e,t){return this.url.searchParams.append(e,`imatch.${t}`),this}is(e,t){return this.url.searchParams.append(e,`is.${t}`),this}isDistinct(e,t){return this.url.searchParams.append(e,`isdistinct.${t}`),this}in(e,t){let n=Array.from(new Set(t)).map(e=>typeof e==`string`&&te.test(e)?`"${e}"`:`${e}`).join(`,`);return this.url.searchParams.append(e,`in.(${n})`),this}notIn(e,t){let n=Array.from(new Set(t)).map(e=>typeof e==`string`&&te.test(e)?`"${e}"`:`${e}`).join(`,`);return this.url.searchParams.append(e,`not.in.(${n})`),this}contains(e,t){return typeof t==`string`?this.url.searchParams.append(e,`cs.${t}`):Array.isArray(t)?this.url.searchParams.append(e,`cs.{${t.join(`,`)}}`):this.url.searchParams.append(e,`cs.${JSON.stringify(t)}`),this}containedBy(e,t){return typeof t==`string`?this.url.searchParams.append(e,`cd.${t}`):Array.isArray(t)?this.url.searchParams.append(e,`cd.{${t.join(`,`)}}`):this.url.searchParams.append(e,`cd.${JSON.stringify(t)}`),this}rangeGt(e,t){return this.url.searchParams.append(e,`sr.${t}`),this}rangeGte(e,t){return this.url.searchParams.append(e,`nxl.${t}`),this}rangeLt(e,t){return this.url.searchParams.append(e,`sl.${t}`),this}rangeLte(e,t){return this.url.searchParams.append(e,`nxr.${t}`),this}rangeAdjacent(e,t){return this.url.searchParams.append(e,`adj.${t}`),this}overlaps(e,t){return typeof t==`string`?this.url.searchParams.append(e,`ov.${t}`):this.url.searchParams.append(e,`ov.{${t.join(`,`)}}`),this}textSearch(e,t,{config:n,type:r}={}){let i=``;r===`plain`?i=`pl`:r===`phrase`?i=`ph`:r===`websearch`&&(i=`w`);let a=n===void 0?``:`(${n})`;return this.url.searchParams.append(e,`${i}fts${a}.${t}`),this}match(e){return Object.entries(e).filter(([e,t])=>t!==void 0).forEach(([e,t])=>{this.url.searchParams.append(e,`eq.${t}`)}),this}not(e,t,n){return this.url.searchParams.append(e,`not.${t}.${n}`),this}or(e,{foreignTable:t,referencedTable:n=t}={}){let r=n?`${n}.or`:`or`;return this.url.searchParams.append(r,`(${e})`),this}filter(e,t,n){return this.url.searchParams.append(e,`${t}.${n}`),this}},ne=class{constructor(e,{headers:t={},schema:n,fetch:r,urlLengthLimit:i=8e3,retry:a}){this.url=e,this.headers=new Headers(t),this.schema=n,this.fetch=r,this.urlLengthLimit=i,this.retry=a}cloneRequestState(){return{url:new URL(this.url.toString()),headers:new Headers(this.headers)}}select(e,t){let{head:n=!1,count:r}=t??{},i=n?`HEAD`:`GET`,a=!1,o=(e??`*`).split(``).map(e=>/\s/.test(e)&&!a?``:(e===`"`&&(a=!a),e)).join(``),{url:s,headers:c}=this.cloneRequestState();return s.searchParams.set(`select`,o),r&&c.append(`Prefer`,`count=${r}`),new _({method:i,url:s,headers:c,schema:this.schema,fetch:this.fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}insert(e,{count:t,defaultToNull:n=!0}={}){let{url:r,headers:i}=this.cloneRequestState();if(t&&i.append(`Prefer`,`count=${t}`),n||i.append(`Prefer`,`missing=default`),Array.isArray(e)){let t=e.reduce((e,t)=>e.concat(Object.keys(t)),[]);if(t.length>0){let e=[...new Set(t)].map(e=>`"${e}"`);r.searchParams.set(`columns`,e.join(`,`))}}return new _({method:`POST`,url:r,headers:i,schema:this.schema,body:e,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}upsert(e,{onConflict:t,ignoreDuplicates:n=!1,count:r,defaultToNull:i=!0}={}){let{url:a,headers:o}=this.cloneRequestState();if(o.append(`Prefer`,`resolution=${n?`ignore`:`merge`}-duplicates`),t!==void 0&&a.searchParams.set(`on_conflict`,t),r&&o.append(`Prefer`,`count=${r}`),i||o.append(`Prefer`,`missing=default`),Array.isArray(e)){let t=e.reduce((e,t)=>e.concat(Object.keys(t)),[]);if(t.length>0){let e=[...new Set(t)].map(e=>`"${e}"`);a.searchParams.set(`columns`,e.join(`,`))}}return new _({method:`POST`,url:a,headers:o,schema:this.schema,body:e,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}update(e,{count:t}={}){let{url:n,headers:r}=this.cloneRequestState();return t&&r.append(`Prefer`,`count=${t}`),new _({method:`PATCH`,url:n,headers:r,schema:this.schema,body:e,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}delete({count:e}={}){let{url:t,headers:n}=this.cloneRequestState();return e&&n.append(`Prefer`,`count=${e}`),new _({method:`DELETE`,url:t,headers:n,schema:this.schema,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}};function re(e){"@babel/helpers - typeof";return re=typeof Symbol==`function`&&typeof Symbol.iterator==`symbol`?function(e){return typeof e}:function(e){return e&&typeof Symbol==`function`&&e.constructor===Symbol&&e!==Symbol.prototype?`symbol`:typeof e},re(e)}function ie(e,t){if(re(e)!=`object`||!e)return e;var n=e[Symbol.toPrimitive];if(n!==void 0){var r=n.call(e,t||`default`);if(re(r)!=`object`)return r;throw TypeError(`@@toPrimitive must return a primitive value.`)}return(t===`string`?String:Number)(e)}function ae(e){var t=ie(e,`string`);return re(t)==`symbol`?t:t+``}function oe(e,t,n){return(t=ae(t))in e?Object.defineProperty(e,t,{value:n,enumerable:!0,configurable:!0,writable:!0}):e[t]=n,e}function se(e,t){var n=Object.keys(e);if(Object.getOwnPropertySymbols){var r=Object.getOwnPropertySymbols(e);t&&(r=r.filter(function(t){return Object.getOwnPropertyDescriptor(e,t).enumerable})),n.push.apply(n,r)}return n}function ce(e){for(var t=1;t<arguments.length;t++){var n=arguments[t]==null?{}:arguments[t];t%2?se(Object(n),!0).forEach(function(t){oe(e,t,n[t])}):Object.getOwnPropertyDescriptors?Object.defineProperties(e,Object.getOwnPropertyDescriptors(n)):se(Object(n)).forEach(function(t){Object.defineProperty(e,t,Object.getOwnPropertyDescriptor(n,t))})}return e}var le=class e{constructor(e,{headers:t={},schema:n,fetch:r,timeout:i,urlLengthLimit:a=8e3,retry:o}={}){this.url=e,this.headers=new Headers(t),this.schemaName=n,this.urlLengthLimit=a;let s=r??globalThis.fetch;i!==void 0&&i>0?this.fetch=(e,t)=>{let n=new AbortController,r=setTimeout(()=>n.abort(),i),a=t?.signal;if(a){if(a.aborted)return clearTimeout(r),s(e,t);let i=()=>{clearTimeout(r),n.abort()};return a.addEventListener(`abort`,i,{once:!0}),s(e,ce(ce({},t),{},{signal:n.signal})).finally(()=>{clearTimeout(r),a.removeEventListener(`abort`,i)})}return s(e,ce(ce({},t),{},{signal:n.signal})).finally(()=>clearTimeout(r))}:this.fetch=s,this.retry=o}from(e){if(!e||typeof e!=`string`||e.trim()===``)throw Error(`Invalid relation name: relation must be a non-empty string.`);return new ne(new URL(`${this.url}/${e}`),{headers:new Headers(this.headers),schema:this.schemaName,fetch:this.fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}schema(t){return new e(this.url,{headers:this.headers,schema:t,fetch:this.fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}rpc(e,t={},{head:n=!1,get:r=!1,count:i}={}){let a,o=new URL(`${this.url}/rpc/${e}`),s,c=e=>typeof e==`object`&&!!e&&(!Array.isArray(e)||e.some(c)),l=n&&Object.values(t).some(c);l?(a=`POST`,s=t):n||r?(a=n?`HEAD`:`GET`,Object.entries(t).filter(([e,t])=>t!==void 0).map(([e,t])=>[e,Array.isArray(t)?`{${t.join(`,`)}}`:`${t}`]).forEach(([e,t])=>{o.searchParams.append(e,t)})):(a=`POST`,s=t);let u=new Headers(this.headers);return l?u.set(`Prefer`,i?`count=${i},return=minimal`:`return=minimal`):i&&u.set(`Prefer`,`count=${i}`),new _({method:a,url:o,headers:u,schema:this.schemaName,body:s,fetch:this.fetch??fetch,urlLengthLimit:this.urlLengthLimit,retry:this.retry})}},ue=class{constructor(){}static detectEnvironment(){if(typeof WebSocket<`u`)return{type:`native`,wsConstructor:WebSocket};let e=globalThis;if(typeof globalThis<`u`&&e.WebSocket!==void 0)return{type:`native`,wsConstructor:e.WebSocket};let t=typeof global<`u`?global:void 0;if(t&&t.WebSocket!==void 0)return{type:`native`,wsConstructor:t.WebSocket};if(typeof globalThis<`u`&&e.WebSocketPair!==void 0&&globalThis.WebSocket===void 0)return{type:`cloudflare`,error:`Cloudflare Workers detected. WebSocket clients are not supported in Cloudflare Workers.`,workaround:`Use Cloudflare Workers WebSocket API for server-side WebSocket handling, or deploy to a different runtime.`};if(typeof globalThis<`u`&&e.EdgeRuntime||typeof navigator<`u`&&navigator.userAgent?.includes(`Vercel-Edge`))return{type:`unsupported`,error:`Edge runtime detected (Vercel Edge/Netlify Edge). WebSockets are not supported in edge functions.`,workaround:`Use serverless functions or a different deployment target for WebSocket functionality.`};let n=globalThis.process;if(n){let e=n.versions;if(e&&e.node){let t=e.node,n=parseInt(t.replace(/^v/,``).split(`.`)[0]);return n>=22?globalThis.WebSocket===void 0?{type:`unsupported`,error:`Node.js ${n} detected but native WebSocket not found.`,workaround:`Provide a WebSocket implementation via the transport option.`}:{type:`native`,wsConstructor:globalThis.WebSocket}:{type:`unsupported`,error:`Node.js ${n} detected without native WebSocket support.`,workaround:`For Node.js < 22, install "ws" package and provide it via the transport option:
 import ws from "ws"
@@ -571,7 +672,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-12'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-13'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -639,6 +740,7 @@ async function enterApp(session){
       try{ await baixarBase(); toast('Bens guardados no celular'); }catch(e){ toast('Não foi possível baixar os bens: '+(e.message||e),4000); }
     }
     await refreshStats();
+    aposEntrar(session);
   }finally{ _entrando=false; }
 }
 /* ====================== PERFIL (administrador) ====================== */
@@ -850,7 +952,9 @@ $('#btnSalvarSenha').addEventListener('click',async()=>{
 $('#btnLogout').addEventListener('click',async()=>{
   let n=0; try{ n=(await idbAll('fila')).length; }catch(_){}
   if(n && !confirm(`Há ${n} item(ns) guardados neste celular que ainda não foram enviados. Eles continuam guardados. Sair mesmo assim?`)) return;
+  await esquecerAparelho();
   SEM_SESSAO=false; try{ await sb.auth.signOut(); }catch(_){} showLogin(); toast('Sessão encerrada');
+  MEU_ID=null; AVISOS=[]; AV_LIDOS=new Set(); marcarNaoLidos();
   try{ localStorage.removeItem('lev_cliente'); }catch(_){} CLIENTE={id:null,nome:'',pasta:''}; mostrarCliente();
   try{ localStorage.removeItem('lev_brasao'); }catch(_){} mostrarBrasao('');
 });
@@ -1514,6 +1618,7 @@ async function carregarModoEnvio(){
   try{
     const {data,error}=await sb.from('configuracao').select('dados').eq('id',1).maybeSingle();
     if(!error && data && data.dados){ MODO_ENVIO=data.dados.modoEnvio==='offline'?'offline':'online'; try{ localStorage.setItem('lev_modo',MODO_ENVIO); }catch(_){} }
+    if(!error){ AVISOS_AUTO=(data&&data.dados&&data.dados.avisosAuto)||{}; try{ localStorage.setItem('lev_avisos_auto',JSON.stringify(AVISOS_AUTO)); }catch(_){} }
     if(!error){ const br=(data&&data.dados&&data.dados.brasao)||''; mostrarBrasao(br); try{ br?localStorage.setItem('lev_brasao',br):localStorage.removeItem('lev_brasao'); }catch(_){} }
   }catch(_){ /* sem internet: mantém o último modo conhecido */ }
 }
@@ -1823,6 +1928,283 @@ async function lerColuna(tabela, coluna){ return (await lerTudo(tabela, coluna))
 
 /* O arquivo ATUALIZA.csv para o sistema de patrimônio é gerado na página de administração. */
 
+/* ====================== INSTALAR NO CELULAR ====================== */
+// Android (Chrome, Edge, Samsung): o navegador oferece o pedido de instalação (beforeinstallprompt).
+// iPhone e iPad: só pelo Safari, em Compartilhar > Adicionar à Tela de Início (não há pedido automático).
+// A folha aparece sozinha ao abrir pelo navegador do celular, uma vez a cada abertura, até ser instalado.
+const UA_TXT=navigator.userAgent||'';
+const EH_IOS=/iphone|ipad|ipod/i.test(UA_TXT)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const EH_ANDROID=/android/i.test(UA_TXT);
+const IOS_OUTRO_NAV=EH_IOS&&/crios|fxios|edgios|opios|gsa\//i.test(UA_TXT);
+const APP_URL_PUB=location.origin+location.pathname.replace(/[^/]*$/,'');
+const INSTALADO=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true; }catch(_){ return false; } };
+let pedidoInstalar=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); pedidoInstalar=e; if(!$('#instFundo').classList.contains('hidden')) desenharInstalacao(); });
+window.addEventListener('appinstalled',()=>{
+  pedidoInstalar=null; try{ localStorage.setItem('lev_instalado','1'); }catch(_){}
+  fecharFolha('instFundo'); toast('App instalado. Abra pelo ícone “Patrimônio” na tela do aparelho.',5000);
+});
+function abrirFolha(id){ document.querySelectorAll('.sheet-fundo').forEach(f=>f.classList.add('hidden')); $('#'+id).classList.remove('hidden'); document.body.classList.add('sem-rolar'); }
+function fecharFolha(id){ $('#'+id).classList.add('hidden'); if(!document.querySelector('.sheet-fundo:not(.hidden)')) document.body.classList.remove('sem-rolar'); }
+document.querySelectorAll('.sheet-fundo').forEach(f=>f.addEventListener('click',e=>{ if(e.target===f) fecharFolha(f.id); }));
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.sheet-fundo:not(.hidden)').forEach(f=>fecharFolha(f.id)); });
+const passo=(n,html)=>`<li><span class="inst-n">${n}</span><div>${html}</div></li>`;
+const icone=id=>`<span class="inst-ico"><svg><use href="#${id}"/></svg></span>`;
+function desenharInstalacao(){
+  let h='';
+  if(INSTALADO()){
+    h='<p class="inst-ok">✓ O app já está instalado e você está usando por ele.</p>';
+  }else if(EH_IOS){
+    h='<ol class="inst-passos">'
+      +passo(1,`Toque em <b>Compartilhar</b> ${icone('i-share')} ${IOS_OUTRO_NAV?'no alto da tela, ao lado do endereço.':'na barra do Safari (embaixo no iPhone, no alto no iPad).'}`)
+      +passo(2,`Role a lista e toque em <b>Adicionar à Tela de Início</b> ${icone('i-plus')}.`)
+      +passo(3,'Toque em <b>Adicionar</b>. Depois, abra sempre pelo ícone <b>Patrimônio</b> na tela.')
+      +'</ol>'
+      +(IOS_OUTRO_NAV?'<p class="hint">Se a opção não aparecer, abra este endereço no <b>Safari</b> e repita os passos.</p>':'')
+      +'<p class="hint">No iPhone e no iPad, as notificações só funcionam com o app instalado (iOS 16.4 ou mais novo).</p>';
+  }else if(pedidoInstalar){
+    h='<button class="btn btn-block" id="btnInstalarAgora"><svg><use href="#i-download"/></svg>Instalar agora</button>'
+      +'<p class="hint" style="text-align:center;margin-top:8px">Confirme em <b>Instalar</b> na janela que abrir.</p>';
+  }else if(EH_ANDROID){
+    h='<ol class="inst-passos">'
+      +passo(1,`Toque no menu ${icone('i-dots')} do navegador, no alto à direita.`)
+      +passo(2,'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.')
+      +passo(3,'Confirme em <b>Instalar</b>. Depois, abra sempre pelo ícone <b>Patrimônio</b>.')
+      +'</ol><p class="hint">Se a opção não aparecer, abra este endereço no <b>Chrome</b>.</p>';
+  }else{
+    h=`<p style="margin:0 0 8px;font-size:15px">Para usar no celular ou tablet, abra este endereço no aparelho:</p><p class="inst-url">${esc(APP_URL_PUB)}</p>`
+      +'<p class="hint">Ou abra a <a href="instalar.html" target="_blank" rel="noopener">página de instalação</a> e aponte a câmera do celular para o QR code. No computador, o Chrome e o Edge também instalam pelo ícone de instalar na barra de endereço.</p>';
+  }
+  $('#instPassos').innerHTML=h;
+  const b=$('#btnInstalarAgora');
+  if(b) b.onclick=async()=>{
+    const p=pedidoInstalar; if(!p) return;
+    p.prompt(); const r=await p.userChoice.catch(()=>null); pedidoInstalar=null;
+    if(r&&r.outcome==='accepted'){ try{ localStorage.setItem('lev_instalado','1'); }catch(_){} fecharFolha('instFundo'); toast('Instalando. O ícone “Patrimônio” vai aparecer na tela.',5000); }
+    else desenharInstalacao();
+  };
+  $('#btnJaInstalei').classList.toggle('hidden',INSTALADO());
+  $('#btnInstDepois').textContent=INSTALADO()?'Fechar':'Agora não';
+}
+function mostrarInstalacao(){ desenharInstalacao(); abrirFolha('instFundo'); }
+function lembrarInstalacao(){
+  if(INSTALADO()){ try{ localStorage.setItem('lev_instalado','1'); }catch(_){} return; }
+  if(!EH_IOS&&!EH_ANDROID) return;     // no computador não insiste
+  let ja=false; try{ ja=localStorage.getItem('lev_instalado')==='1'||sessionStorage.getItem('lev_inst_visto')==='1'; }catch(_){}
+  if(ja) return;
+  try{ sessionStorage.setItem('lev_inst_visto','1'); }catch(_){}
+  setTimeout(()=>{ if(!document.querySelector('.sheet-fundo:not(.hidden)')) mostrarInstalacao(); },1200);
+}
+$('#btnInstDepois').addEventListener('click',()=>fecharFolha('instFundo'));
+$('#btnJaInstalei').addEventListener('click',()=>{ try{ localStorage.setItem('lev_instalado','1'); }catch(_){} fecharFolha('instFundo'); toast('Certo. Abra pelo ícone “Patrimônio”. O passo a passo continua no menu.',4500); });
+$('#btnInstalarLogin').addEventListener('click',mostrarInstalacao);
+
+/* ====================== MENU ====================== */
+$('#btnMenu').addEventListener('click',()=>{ desenharMenu(); abrirFolha('menuFundo'); });
+$('#btnFecharMenu').addEventListener('click',()=>fecharFolha('menuFundo'));
+function desenharMenu(){
+  $('#menuQuem').textContent=[USUARIO_EMAIL,CLIENTE&&CLIENTE.nome].filter(Boolean).join(' · ');
+  $('#miTrocar').classList.toggle('hidden',!(CLIENTE&&CLIENTE.geral&&!SEM_SESSAO));
+  $('#miInstalarTxt').textContent=INSTALADO()?'Já instalado neste aparelho':'Passo a passo para este aparelho';
+  const n=naoLidos();
+  $('#miAvisosN').textContent=n; $('#miAvisosN').classList.toggle('hidden',!n);
+  $('#miAvisosTxt').textContent=!AVISOS_OK?'Ainda não ativados no servidor':n?(n===1?'1 aviso novo':n+' avisos novos'):'Mensagens do administrador e do sistema';
+  estadoNotif().then(e=>{ $('#miNotifTxt').textContent=e.st==='ligado'?'Ligadas neste aparelho':'Desligadas neste aparelho'; }).catch(()=>{});
+}
+$('#miAvisos').addEventListener('click',()=>{ fecharFolha('menuFundo'); abrirAvisos(false); });
+$('#miNotif').addEventListener('click',()=>{ fecharFolha('menuFundo'); abrirAvisos(true); });
+$('#miInstalar').addEventListener('click',mostrarInstalacao);
+$('#miTrocar').addEventListener('click',()=>{ fecharFolha('menuFundo'); mostrarEscolhaCliente(true); });
+$('#btnLogout').addEventListener('click',()=>fecharFolha('menuFundo'),true);
+
+/* ====================== AVISOS E NOTIFICAÇÕES ====================== */
+// Os avisos ficam no banco (supabase/avisos.sql); a função "avisos" manda a notificação aos aparelhos.
+let AVISOS=[], AV_LIDOS=new Set(), AVISOS_OK=true, MEU_ID=null, PREF={admin:true,sistema:true}, AVISOS_AUTO={};
+try{ AVISOS_AUTO=JSON.parse(localStorage.getItem('lev_avisos_auto')||'{}')||{}; }catch(_){}
+const CARTOES=['searchCard','detailCard','syncCard','locCard','sobraCard','cliCard','avisosCard'];
+const naoLidos=()=>AVISOS.filter(a=>!AV_LIDOS.has(a.id)).length;
+const tabelaFalta=e=>/PGRST205|PGRST202|42P01|42883|does not exist|could not find/i.test(((e&&e.code)||'')+' '+((e&&e.message)||''));
+function marcarNaoLidos(){
+  const n=naoLidos(), b=$('#menuBadge');
+  b.textContent=n>99?'99+':n; b.classList.toggle('hidden',!n);
+  try{ if(navigator.setAppBadge){ n?navigator.setAppBadge(n):navigator.clearAppBadge(); } }catch(_){}
+}
+async function carregarAvisos(){
+  if(SEM_SESSAO||!navigator.onLine||!MEU_ID) return;
+  try{
+    const {data,error}=await sb.from('avisos').select('id,titulo,texto,tipo,criado_em,criado_nome,para')
+      .or('para.is.null,para.eq.'+MEU_ID).order('criado_em',{ascending:false}).limit(60);
+    if(error) throw error;
+    let lidos=[]; const ids=(data||[]).map(a=>a.id);
+    if(ids.length){ const r=await sb.from('avisos_lidos').select('aviso_id').eq('user_id',MEU_ID).in('aviso_id',ids); if(!r.error) lidos=r.data||[]; }
+    AVISOS=data||[]; AV_LIDOS=new Set(lidos.map(l=>l.aviso_id)); AVISOS_OK=true;
+  }catch(e){ if(tabelaFalta(e)) AVISOS_OK=false; }
+  marcarNaoLidos();
+  if(!$('#avisosCard').classList.contains('hidden')) desenharAvisos(false);
+}
+async function carregarPref(){
+  if(SEM_SESSAO||!MEU_ID) return;
+  try{ const {data,error}=await sb.from('avisos_pref').select('admin,sistema').eq('user_id',MEU_ID).maybeSingle(); if(!error) PREF={admin:!data||data.admin!==false,sistema:!data||data.sistema!==false}; }catch(_){}
+  try{ localStorage.setItem('lev_pref_avisos',JSON.stringify(PREF)); }catch(_){}
+}
+try{ PREF=Object.assign(PREF,JSON.parse(localStorage.getItem('lev_pref_avisos')||'{}')); }catch(_){}
+function desenharAvisos(novosDestacados){
+  const box=$('#avLista');
+  if(!AVISOS_OK){ box.innerHTML='<p class="hint" style="margin:0">Os avisos ainda não foram ativados no servidor. Fale com o administrador.</p>'; return; }
+  if(SEM_SESSAO||!navigator.onLine){ if(!AVISOS.length){ box.innerHTML='<p class="hint" style="margin:0">Sem internet agora. Os avisos aparecem quando a conexão voltar.</p>'; return; } }
+  box.innerHTML=AVISOS.length?AVISOS.map(a=>{
+    const novo=novosDestacados&&novosDestacados.has(a.id);
+    return `<div class="av${novo?' novo':''}"><div class="av-cab"><b>${esc(a.titulo)}</b><small>${dataHoraBR(a.criado_em)}</small></div><p>${esc(a.texto)}</p><div class="av-de">${a.tipo==='sistema'?'Aviso automático':'De '+esc(a.criado_nome||'administrador')}${a.para?' · só para você':''}${novo?' · <b style="color:var(--accent-2)">novo</b>':''}</div></div>`;
+  }).join(''):'<p class="hint" style="margin:0">Nenhum aviso por enquanto.</p>';
+}
+async function abrirAvisos(focoNotif){
+  try{ stopScan(); }catch(_){}
+  CARTOES.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+  $('#avisosCard').classList.remove('hidden'); $('#avMsg').innerHTML='';
+  const novos=new Set(AVISOS.filter(a=>!AV_LIDOS.has(a.id)).map(a=>a.id));
+  desenharAvisos(novos); desenharPref(); desenharNotif();
+  if(focoNotif) setTimeout(()=>$('#avNotifTitulo').scrollIntoView({behavior:'smooth',block:'start'}),50); else window.scrollTo({top:0});
+  await carregarAvisos();
+  const agora=new Set(AVISOS.filter(a=>!AV_LIDOS.has(a.id)).map(a=>a.id)); agora.forEach(id=>novos.add(id));
+  desenharAvisos(novos);
+  // marca como lidos
+  if(agora.size&&MEU_ID){
+    const {error}=await sb.from('avisos_lidos').upsert([...agora].map(id=>({aviso_id:id,user_id:MEU_ID})),{onConflict:'aviso_id,user_id',ignoreDuplicates:true});
+    if(!error){ agora.forEach(id=>AV_LIDOS.add(id)); marcarNaoLidos(); }
+  }
+}
+function fecharAvisos(){ $('#avisosCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); }
+$('#btnFecharAvisos').addEventListener('click',fecharAvisos);
+$('#btnFecharAvisosTopo').addEventListener('click',fecharAvisos);
+function desenharPref(){
+  $('#avPrefAdmin').checked=PREF.admin!==false; $('#avPrefSistema').checked=PREF.sistema!==false;
+  const off=SEM_SESSAO||!AVISOS_OK; $('#avPrefAdmin').disabled=off; $('#avPrefSistema').disabled=off;
+}
+async function salvarPref(){
+  const novo={admin:$('#avPrefAdmin').checked,sistema:$('#avPrefSistema').checked};
+  const {error}=await sb.from('avisos_pref').upsert({user_id:MEU_ID,admin:novo.admin,sistema:novo.sistema,atualizado_em:new Date().toISOString()},{onConflict:'user_id'});
+  if(error){ $('#avMsg').innerHTML='<span class="err">Não foi possível salvar: '+esc(ehErroDeRede(error)?'sem internet.':error.message)+'</span>'; desenharPref(); return; }
+  PREF=novo; try{ localStorage.setItem('lev_pref_avisos',JSON.stringify(PREF)); }catch(_){}
+  toast('Preferência salva');
+}
+$('#avPrefAdmin').addEventListener('change',salvarPref);
+$('#avPrefSistema').addEventListener('change',salvarPref);
+
+// ---- notificações (Web Push) neste aparelho ----
+function swPronto(){ return Promise.race([navigator.serviceWorker.ready,new Promise((_,erro)=>setTimeout(()=>erro(new Error('O app ainda está sendo preparado. Feche e abra de novo.')),5000))]); }
+function deB64u(s){ const t=s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4); const b=atob(t), o=new Uint8Array(b.length); for(let i=0;i<b.length;i++) o[i]=b.charCodeAt(i); return o; }
+function mesmaChave(sub,pub){
+  try{ const k=sub.options&&sub.options.applicationServerKey; if(!k) return true; const a=new Uint8Array(k), b=deB64u(pub); return a.length===b.length&&a.every((x,i)=>x===b[i]); }catch(_){ return true; }
+}
+function nomeAparelho(){
+  const m=/iPad/.test(UA_TXT)||(EH_IOS&&!/iPhone|iPod/.test(UA_TXT))?'iPad':EH_IOS?'iPhone':EH_ANDROID?((/;\s*([^;)]+?)\s+Build\//.exec(UA_TXT)||[])[1]||'Android'):'Computador';
+  return (m+(INSTALADO()?' (app)':' (navegador)')).slice(0,80);
+}
+async function estadoNotif(){
+  const temPush='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+  if(!temPush){
+    if(EH_IOS&&!INSTALADO()) return {st:'ios',msg:'No iPhone e no iPad, as notificações só funcionam com o app instalado na Tela de Início (iOS 16.4 ou mais novo).'};
+    return {st:'sem',msg:'Este navegador não recebe notificações. Os avisos continuam aparecendo aqui no app.'};
+  }
+  if(Notification.permission==='denied') return {st:'negado',msg:'As notificações estão bloqueadas para este app. Libere em Configurações do aparelho > Notificações (ou nas permissões do site no navegador) e volte aqui.'};
+  let sub=null; try{ const reg=await swPronto(); sub=await reg.pushManager.getSubscription(); }catch(_){}
+  if(sub&&Notification.permission==='granted') return {st:'ligado',sub,msg:'Ligadas neste aparelho. Os avisos aparecem na tela mesmo com o app fechado.'};
+  return {st:'desligado',msg:'Desligadas neste aparelho. Ligue para ver os avisos na tela mesmo com o app fechado.'};
+}
+async function desenharNotif(){
+  const e=await estadoNotif(), b=$('#btnNotif');
+  $('#avNotifStatus').textContent=e.msg;
+  b.textContent=e.st==='ios'?'Como instalar o app':e.st==='ligado'?'Desligar notificações neste aparelho':'Ligar notificações neste aparelho';
+  b.className=(e.st==='ligado'?'btn-ghost btn-block':'btn btn-block')+(e.st==='sem'||e.st==='negado'?' hidden':'');
+  b.dataset.st=e.st;
+  b.disabled=(SEM_SESSAO||!AVISOS_OK)&&e.st!=='ios';
+}
+async function chamarAvisos(body){
+  const {data,error}=await sb.functions.invoke('avisos',{body});
+  if(error){ let m=error.message||String(error); try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){} throw new Error(/not found|404|failed to send|FunctionsFetchError|FunctionsRelayError/i.test((error.name||'')+' '+m)?'O envio de notificações ainda não foi ativado no servidor.':m); }
+  return data;
+}
+async function gravarAparelho(sub){
+  const j=sub.toJSON();
+  const {error}=await sb.rpc('registrar_aparelho',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_aparelho:nomeAparelho()});
+  if(error) throw error;
+}
+async function ligarNotif(){
+  const b=$('#btnNotif'), msg=$('#avMsg'); b.disabled=true; msg.innerHTML='';
+  try{
+    if(!navigator.onLine) throw new Error('Sem internet. Ligue as notificações quando a conexão voltar.');
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted') throw new Error(perm==='denied'?'As notificações foram recusadas. Para ligar depois, libere nas configurações do aparelho.':'Permissão não concedida.');
+    const {publica}=await chamarAvisos({acao:'chave'});
+    const reg=await swPronto();
+    let sub=await reg.pushManager.getSubscription();
+    if(sub&&!mesmaChave(sub,publica)){ await sub.unsubscribe().catch(()=>{}); sub=null; }
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:deB64u(publica)});
+    await gravarAparelho(sub);
+    const r=await chamarAvisos({acao:'teste'}).catch(()=>null);
+    toast(r&&r.entregues?'Notificações ligadas. Chegou um aviso de teste.':'Notificações ligadas neste aparelho.',4500);
+  }catch(e){ msg.innerHTML='<span class="err">'+esc(e.message||e)+'</span>'; }
+  b.disabled=false; desenharNotif();
+}
+async function desligarNotif(){
+  const b=$('#btnNotif'); b.disabled=true;
+  try{
+    const reg=await swPronto(), sub=await reg.pushManager.getSubscription();
+    if(sub){ await sb.rpc('remover_aparelho',{p_endpoint:sub.endpoint}); await sub.unsubscribe().catch(()=>{}); }
+    toast('Notificações desligadas neste aparelho. Os avisos continuam no menu.',4000);
+  }catch(e){ $('#avMsg').innerHTML='<span class="err">'+esc(e.message||e)+'</span>'; }
+  b.disabled=false; desenharNotif();
+}
+$('#btnNotif').addEventListener('click',()=>{ const st=$('#btnNotif').dataset.st; if(st==='ios') mostrarInstalacao(); else if(st==='ligado') desligarNotif(); else ligarNotif(); });
+// ao sair, este aparelho deixa de receber os avisos da pessoa (volta a receber ao entrar de novo)
+async function esquecerAparelho(){
+  try{ if(!('serviceWorker' in navigator)||!navigator.onLine) return; const reg=await swPronto(), sub=await reg.pushManager.getSubscription(); if(sub) await sb.rpc('remover_aparelho',{p_endpoint:sub.endpoint}); }catch(_){}
+}
+// ao entrar: o aparelho que já tinha notificações passa a ser de quem entrou
+async function renovarAparelho(){
+  try{
+    if(!('PushManager' in window)||Notification.permission!=='granted') return;
+    const reg=await swPronto(), sub=await reg.pushManager.getSubscription(); if(sub) await gravarAparelho(sub);
+  }catch(_){}
+}
+// itens parados no celular há mais de 24 horas: aviso do próprio app (no máximo a cada 12 horas)
+async function conferirFilaParada(){
+  if(AVISOS_AUTO.fila===false||PREF.sistema===false) return;
+  let fila=[]; try{ fila=await idbAll('fila'); }catch(_){ return; }
+  const limite=Date.now()-24*3600e3;
+  const parados=fila.filter(f=>!(f.exportado_em&&f.exportado_em>=f.salvo_em)&&new Date(f.salvo_em).getTime()<limite);
+  if(!parados.length) return;
+  let ult=0; try{ ult=+localStorage.getItem('lev_fila_aviso')||0; }catch(_){}
+  if(Date.now()-ult<12*3600e3) return;
+  try{ localStorage.setItem('lev_fila_aviso',String(Date.now())); }catch(_){}
+  const n=parados.length, t='Itens guardados no celular';
+  const m=(n===1?'1 item está guardado':n+' itens estão guardados')+' neste celular há mais de 24 horas. Envie para a nuvem ou exporte o arquivo.';
+  toast(m,6000);
+  try{ if('Notification' in window&&Notification.permission==='granted'){ const reg=await swPronto(); await reg.showNotification(t,{body:m,icon:'icon-192.png',badge:'icon-192.png',tag:'fila-parada',data:{url:'./#envio'}}); } }catch(_){}
+}
+function abrirPeloEndereco(){
+  const h=location.hash;
+  if(h!=='#avisos'&&h!=='#envio') return;
+  history.replaceState(null,'',location.pathname+location.search);
+  if(h==='#avisos') abrirAvisos(false); else abrirEnvio();
+}
+function aposEntrar(session){
+  if(session&&session.user) MEU_ID=session.user.id;
+  carregarPref().then(()=>conferirFilaParada());
+  carregarAvisos();
+  renovarAparelho();
+  abrirPeloEndereco();
+}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message',e=>{
+    const d=e.data||{};
+    if(d.tipo==='aviso') carregarAvisos();
+    if(d.tipo==='abrir'){ if(/#avisos/.test(d.url||'')) abrirAvisos(false); else if(/#envio/.test(d.url||'')) abrirEnvio(); }
+  });
+}
+setInterval(()=>{ if(!$('#appScreen').classList.contains('hidden')){ conferirFilaParada(); carregarAvisos(); } },30*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&MEU_ID) carregarAvisos(); });
+
 /* ====================== INÍCIO ====================== */
 // registra o service worker (permite instalar como app)
 if('serviceWorker' in navigator){
@@ -1830,6 +2212,7 @@ if('serviceWorker' in navigator){
 }
 (function(){ ['appVersion','versaoTopo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='Versão '+APP_VERSION; }); })();
 initAuth();
+lembrarInstalacao();
 
 </script>
 </body>

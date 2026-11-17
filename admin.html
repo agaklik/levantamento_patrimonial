@@ -161,6 +161,10 @@
   #cliSel option{color:#18212B;background:#fff}
   .hdr-versao{font-size:11.5px!important;color:rgba(255,255,255,.45)!important;font-variant-numeric:tabular-nums}
   .cli-tbl input{min-width:0}
+  .av-cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:16px;align-items:start}
+  .av-cols .card{margin-bottom:16px}
+  @media(max-width:900px){.av-cols{grid-template-columns:1fr}}
+  .av-qr svg{width:180px;height:180px;display:block;border-radius:10px;border:1px solid var(--line)}
   .g5{display:grid;gap:12px;grid-template-columns:2fr 1.2fr 1.2fr 1.2fr auto}
   @media(max-width:900px){.g5{grid-template-columns:1fr 1fr}}
   .toast{border-radius:18px;background:linear-gradient(180deg,rgba(36,47,60,.84),rgba(24,33,43,.78));-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 28px rgba(24,33,43,.3)}
@@ -270,6 +274,7 @@
     <button data-tab="reav">Reavaliação</button>
     <button data-tab="docs">Documentos</button>
     <button data-tab="usu">Usuários</button>
+    <button data-tab="av">Avisos</button>
     <button data-tab="cfg">Configuração</button>
   </nav>
   <div class="hdr-right"><select id="cliSel" class="hidden" title="Cliente em que você está trabalhando" aria-label="Cliente"></select><a href="./">App de campo</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
@@ -409,6 +414,54 @@
         </div>
         <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Prazo</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
       </div>
+    </div>
+  </section>
+
+  <!-- AVISOS -->
+  <section id="tab-av" class="hidden">
+    <div id="avAviso" class="msg hidden"></div>
+    <div class="av-cols">
+      <div class="card">
+        <h2>Enviar aviso</h2>
+        <p class="sub">A mensagem aparece no app de campo (menu ☰ &gt; Avisos) e, para quem ligou as notificações, também na tela do celular, mesmo com o app fechado. Vai só para as pessoas do cliente atual.</p>
+        <label for="avPara">Para</label>
+        <select id="avPara"><option value="">Toda a equipe do cliente</option></select>
+        <label for="avTitulo" style="margin-top:12px">Título</label>
+        <input id="avTitulo" maxlength="80" placeholder="Ex.: Levantamento da Secretaria de Saúde amanhã">
+        <label for="avTexto" style="margin-top:12px">Mensagem</label>
+        <textarea id="avTexto" maxlength="600" rows="4" placeholder="Ex.: Amanhã às 8h começamos pela Unidade Básica do Centro. Levem o celular carregado."></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap">
+          <small id="avConta" style="color:var(--muted)">0 de 600</small>
+          <button class="btn" id="btnAvEnviar">Enviar aviso</button>
+        </div>
+        <div id="avRes" style="font-size:14px;margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2>Instalar o app no celular</h2>
+        <p class="sub">Mostre à equipe ou imprima. Pelo celular, a pessoa aponta a câmera para o código, entra no app e segue o passo a passo que aparece na tela.</p>
+        <div class="av-qr"><svg role="img" aria-label="QR code do app de campo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 35 35" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h35v35H0z"/><path stroke="#18212B" d="M1 1.5h7m3 0h3m3 0h1m1 0h3m2 0h1m2 0h7M1 2.5h1m5 0h1m8 0h1m2 0h1m1 0h3m1 0h1m1 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h2m4 0h1m1 0h1m3 0h3m3 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m1 0h1m1 0h2m3 0h1m2 0h1m3 0h3m1 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h1m1 0h3m1 0h3m3 0h1m2 0h1m2 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m1 0h3m6 0h3m1 0h1m4 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M9 8.5h1m1 0h3m1 0h1m1 0h1m1 0h5m1 0h1M1 9.5h1m1 0h5m2 0h6m1 0h5m1 0h3m1 0h5M1 10.5h2m2 0h2m3 0h3m1 0h1m2 0h5m2 0h1m2 0h2m1 0h2m1 0h1M7 11.5h1m1 0h1m2 0h1m1 0h5m4 0h1m2 0h2m1 0h1m1 0h2M1 12.5h1m1 0h1m4 0h1m4 0h2m1 0h4m2 0h6m1 0h4M3 13.5h2m1 0h3m1 0h2m3 0h3m2 0h1m2 0h4m3 0h1M2 14.5h4m2 0h1m2 0h1m4 0h1m1 0h2m4 0h1m1 0h2m2 0h1m1 0h2M1 15.5h2m1 0h11m1 0h3m2 0h1m3 0h3m1 0h4M3 16.5h1m1 0h1m2 0h1m1 0h1m2 0h2m1 0h1m2 0h9m1 0h3M1 17.5h1m2 0h1m2 0h1m1 0h1m6 0h1m1 0h1m1 0h1m4 0h2m1 0h2m3 0h1M3 18.5h2m3 0h1m2 0h1m1 0h1m3 0h1m1 0h3m2 0h1m2 0h2m1 0h2m1 0h1M1 19.5h1m1 0h1m1 0h3m1 0h1m2 0h2m1 0h2m2 0h1m3 0h1m4 0h2m1 0h2M2 20.5h1m1 0h1m4 0h2m1 0h1m3 0h2m3 0h2m2 0h1m2 0h4M2 21.5h3m2 0h1m1 0h1m2 0h3m4 0h1m3 0h1m2 0h1m1 0h3m1 0h1M1 22.5h1m1 0h4m2 0h3m2 0h1m1 0h3m1 0h1m3 0h1m2 0h1m2 0h2m1 0h1M1 23.5h1m4 0h3m3 0h2m1 0h1m3 0h1m3 0h1m1 0h1m2 0h1m1 0h3M1 24.5h1m2 0h1m4 0h6m2 0h1m3 0h2m3 0h1m3 0h4M1 25.5h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h1m1 0h2m2 0h1m1 0h2m1 0h1m1 0h5M9 26.5h1m1 0h1m1 0h2m2 0h5m3 0h1m3 0h1m1 0h3M1 27.5h7m2 0h2m1 0h1m2 0h3m2 0h2m1 0h2m1 0h1m1 0h1m1 0h2M1 28.5h1m5 0h1m1 0h3m1 0h2m2 0h3m2 0h4m3 0h3m1 0h1M1 29.5h1m1 0h3m1 0h1m1 0h1m3 0h3m1 0h1m2 0h1m2 0h1m1 0h6m1 0h2M1 30.5h1m1 0h3m1 0h1m1 0h3m2 0h1m1 0h1m1 0h5m1 0h1m1 0h1m2 0h2m1 0h2M1 31.5h1m1 0h3m1 0h1m1 0h6m1 0h3m2 0h1m1 0h3m1 0h2M1 32.5h1m5 0h1m2 0h1m1 0h1m3 0h1m5 0h3m4 0h3M1 33.5h7m1 0h2m1 0h5m1 0h2m3 0h4m1 0h1m1 0h1m1 0h1"/></svg></div>
+        <a class="btn-2" href="instalar.html" target="_blank" rel="noopener" style="display:inline-flex;text-decoration:none;margin-top:10px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);color:var(--txt);font-weight:600">Abrir a página de instalação</a>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Quem recebe no celular</h2>
+      <p class="sub">Cada pessoa liga as notificações no próprio app (menu ☰ &gt; Notificações) e escolhe o que quer receber. Quem não ligou vê os avisos só quando abre o app.</p>
+      <div class="tblwrap"><table><thead><tr><th>Pessoa</th><th>Notificações no aparelho</th><th>Mensagens do administrador</th><th>Avisos automáticos</th></tr></thead><tbody id="avDest"><tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">Carregando...</td></tr></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Avisos enviados</h2>
+      <p class="sub">Os 100 últimos avisos deste cliente, escritos aqui ou gerados pelo sistema.</p>
+      <div class="tblwrap" style="max-height:460px;overflow-y:auto"><table><thead><tr><th>Data e hora</th><th>Para</th><th>Aviso</th><th>Origem</th><th class="n">Notificações entregues</th><th class="n">Leram</th></tr></thead><tbody id="avHist"><tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Carregando...</td></tr></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Avisos automáticos</h2>
+      <p class="sub">Mensagens que o sistema manda sozinho. Cada pessoa ainda pode desligar os avisos automáticos no próprio app.</p>
+      <div class="opt-cards">
+        <label><input type="checkbox" id="aaPrazo"><div><b>Acesso de teste terminando</b><span>Avisa a pessoa 3 dias e 1 dia antes de o acesso de teste vencer.</span></div></label>
+        <label><input type="checkbox" id="aaReaberta"><div><b>Localização reaberta</b><span>Quando você reabre uma localização, quem tinha concluído é avisado para conferir de novo.</span></div></label>
+        <label><input type="checkbox" id="aaFila"><div><b>Itens parados no celular</b><span>O próprio app avisa quando há itens guardados no celular há mais de 24 horas sem envio.</span></div></label>
+      </div>
+      <button class="btn" id="btnSalvarAuto">Salvar avisos automáticos</button>
     </div>
   </section>
 
@@ -733,7 +786,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-12'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-13'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1120,7 +1173,7 @@ async function carregar(){
 let abaAtual='painel';
 function mostrarAba(t){
   abaAtual=t;
-  ['painel','reav','docs','usu','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
+  ['painel','reav','docs','usu','av','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
 }
 document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>mostrarAba(b.dataset.tab)));
@@ -1226,6 +1279,8 @@ async function reabrirLocal(x){
   const {error}=await sb.from('localizacoes_concluidas').delete().eq('cod',x.cod);
   if(error){ toast('Erro: '+error.message,4500); return; }
   delete CONC[x.cod]; toast('Localização reaberta'); renderConclusao(); aplicarFiltro(true);
+  // quem tinha concluído recebe o aviso automático (supabase/avisos.sql grava; a função "avisos" envia)
+  sb.functions.invoke('avisos',{body:{acao:'pendentes'}}).catch(()=>{});
 }
 $('#concBusca').addEventListener('input',()=>renderConclusao());
 $('#concFiltro').addEventListener('input',()=>renderConclusao());
@@ -2638,6 +2693,87 @@ $('#btnCriarUsu').addEventListener('click',async()=>{
 });
 document.querySelector('#nav button[data-tab=usu]').addEventListener('click',()=>{ if(!usuCarregado) carregarUsuarios(); });
 
+/* ====================== AVISOS (função "avisos" no Supabase) ====================== */
+let AV_DEST=[];
+async function chamarAvisos(body){
+  const {data,error}=await sb.functions.invoke('avisos',{body});
+  if(error){
+    let m=error.message||String(error);
+    try{ const j=await error.context.json(); if(j&&j.erro) m=j.erro; }catch(_){}
+    const e=new Error(m); e.semFuncao=/not found|404|failed to send|FunctionsFetchError|FunctionsRelayError/i.test((error.name||'')+' '+m); throw e;
+  }
+  return data;
+}
+function avAviso(m){ const el=$('#avAviso'); el.innerHTML=m||''; el.classList.toggle('hidden',!m); }
+async function carregarAvisosAdmin(){
+  avAviso('');
+  preencherAuto();
+  // quem recebe
+  try{
+    const d=await chamarAvisos({acao:'destinatarios'});
+    AV_DEST=d.usuarios||[];
+    const sel=$('#avPara'), atual=sel.value;
+    sel.innerHTML='<option value="">Toda a equipe do cliente ('+AV_DEST.length+(AV_DEST.length===1?' pessoa':' pessoas')+')</option>'
+      +AV_DEST.map(u=>`<option value="${esc(u.id)}">${esc(u.nome)}${u.aparelhos.length?'':' (sem notificação no celular)'}</option>`).join('');
+    sel.value=AV_DEST.some(u=>u.id===atual)?atual:'';
+    const sim='<span class="pill p-ok">Sim</span>', nao='<span class="pill p-mut">Não</span>';
+    $('#avDest').innerHTML=AV_DEST.length?AV_DEST.map(u=>`<tr style="cursor:default"><td>${esc(u.nome)}${u.geral?' <small style="color:var(--muted)">· empresa</small>':''}</td>
+      <td>${u.aparelhos.length?'<span class="pill p-ok">Ligadas</span> <small style="color:var(--muted)">'+esc(u.aparelhos.join(', '))+'</small>':'<span class="pill p-mut">Não ligou</span>'}</td>
+      <td>${u.admin?sim:nao}</td><td>${u.sistema?sim:nao}</td></tr>`).join('')
+      :'<tr style="cursor:default"><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Nenhum usuário ativo neste cliente.</td></tr>';
+  }catch(e){
+    $('#avDest').innerHTML='<tr style="cursor:default"><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">—</td></tr>';
+    avAviso(e.semFuncao||/avisos\.sql/.test(e.message)
+      ?'Para usar os avisos, rode o script supabase/avisos.sql no SQL Editor do Supabase e crie a Edge Function "avisos" (Verify JWT desligado). O passo a passo está no README.'
+      :'Não foi possível carregar os destinatários: '+esc(e.message));
+  }
+  // histórico
+  try{
+    const {data,error}=await sb.from('avisos').select('id,para,titulo,texto,tipo,categoria,criado_em,criado_nome,enviado_em,pessoas,sem_notificacao,entregues').order('criado_em',{ascending:false}).limit(100);
+    if(error) throw error;
+    const ids=(data||[]).map(a=>a.id); const lidos={};
+    for(let i=0;i<ids.length;i+=100){ const r=await sb.from('avisos_lidos').select('aviso_id').in('aviso_id',ids.slice(i,i+100)); (r.data||[]).forEach(l=>lidos[l.aviso_id]=(lidos[l.aviso_id]||0)+1); }
+    const nome=id=>{ const u=AV_DEST.find(x=>x.id===id); return u?u.nome:'1 pessoa'; };
+    $('#avHist').innerHTML=(data||[]).length?data.map(a=>`<tr style="cursor:default"><td style="white-space:nowrap">${dataHoraBR(a.criado_em)}</td>
+      <td>${a.para?esc(nome(a.para)):'Toda a equipe'}</td>
+      <td><b>${esc(a.titulo)}</b><small style="display:block;color:var(--muted);max-width:52ch;white-space:pre-wrap">${esc(a.texto)}</small></td>
+      <td>${a.tipo==='sistema'?'<span class="pill p-pend">Automático</span>':esc(a.criado_nome||'Administrador')}</td>
+      <td class="n">${a.enviado_em?(a.entregues||0):'<span class="pill p-mut">Na fila</span>'}</td>
+      <td class="n">${(lidos[a.id]||0)}${a.pessoas?' de '+a.pessoas:''}</td></tr>`).join('')
+      :'<tr style="cursor:default"><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nenhum aviso enviado ainda.</td></tr>';
+  }catch(e){
+    $('#avHist').innerHTML='<tr style="cursor:default"><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">'+(tabelaAusente(e)?'Os avisos ainda não foram instalados no banco (supabase/avisos.sql).':'Erro: '+esc(e.message))+'</td></tr>';
+  }
+}
+$('#avTexto').addEventListener('input',()=>{ $('#avConta').textContent=$('#avTexto').value.length+' de 600'; });
+$('#btnAvEnviar').addEventListener('click',async()=>{
+  const titulo=$('#avTitulo').value.trim(), texto=$('#avTexto').value.trim(), para=$('#avPara').value||null;
+  if(!titulo||!texto){ toast('Escreva o título e a mensagem.'); return; }
+  const quem=para?(AV_DEST.find(u=>u.id===para)||{}).nome:'toda a equipe do cliente';
+  if(!confirm(`Enviar este aviso para ${quem}?\n\n${titulo}\n${texto}`)) return;
+  const b=$('#btnAvEnviar'); b.disabled=true; $('#avRes').innerHTML='Enviando...';
+  try{
+    const r=await chamarAvisos({acao:'enviar',titulo,texto,para});
+    const partes=[`Aviso gravado para ${r.pessoas} ${r.pessoas===1?'pessoa':'pessoas'}.`];
+    partes.push(r.entregues?`Notificação entregue em ${r.entregues} ${r.entregues===1?'aparelho':'aparelhos'}.`:'Nenhum aparelho com notificação ligada recebeu agora.');
+    if(r.desligaram) partes.push(`${r.desligaram} ${r.desligaram===1?'pessoa desligou':'pessoas desligaram'} as mensagens do administrador e vai ver só no app.`);
+    $('#avRes').innerHTML='<span style="color:var(--ok);font-weight:600">✓ '+esc(partes.join(' '))+'</span>';
+    $('#avTitulo').value=''; $('#avTexto').value=''; $('#avConta').textContent='0 de 600';
+    carregarAvisosAdmin();
+  }catch(e){ $('#avRes').innerHTML='<span style="color:var(--danger);font-weight:600">'+esc(e.message)+'</span>'; }
+  finally{ b.disabled=false; }
+});
+function preencherAuto(){ const a=CFG.avisosAuto||{}; $('#aaPrazo').checked=a.prazo!==false; $('#aaReaberta').checked=a.reaberta!==false; $('#aaFila').checked=a.fila!==false; }
+$('#btnSalvarAuto').addEventListener('click',async()=>{
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
+  const avisosAuto={prazo:$('#aaPrazo').checked,reaberta:$('#aaReaberta').checked,fila:$('#aaFila').checked};
+  const dados=Object.assign({},CFG,{avisosAuto});
+  const {error}=await sb.from('configuracao').upsert(comCliente({id:1,dados,atualizado_em:new Date().toISOString()}),{onConflict:conflito('id')});
+  if(error){ toast('Erro ao salvar: '+error.message,5000); return; }
+  CFG=dados; toast('✓ Avisos automáticos salvos');
+});
+document.querySelector('#nav button[data-tab=av]').addEventListener('click',()=>carregarAvisosAdmin());
+
 /* ====================== COMISSÃO DO LEVANTAMENTO (única) ====================== */
 function preencherComissao(){
   const c=COMISSOES[0];
@@ -2984,7 +3120,7 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     tabUso:[...document.querySelectorAll('.cUso')].map((el,i)=>num(el.value)??CFG_PADRAO.tabUso[i]),
     tabRest:[...document.querySelectorAll('.cRest')].map((el,i)=>num(el.value)??CFG_PADRAO.tabRest[i]),
     fundamento:$('#cFundamento').value.trim(),
-    modoEnvio:CFG.modoEnvio||'online', brasao:CFG.brasao||''
+    modoEnvio:CFG.modoEnvio||'online', brasao:CFG.brasao||'', avisosAuto:CFG.avisosAuto||{}
   };
   const {error}=await sb.from('configuracao').upsert(comCliente({id:1,dados:novo,atualizado_em:new Date().toISOString()}),{onConflict:conflito('id')});
   if(error){ toast('Erro ao salvar: '+error.message); return; }

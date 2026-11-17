@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instalar o app de campo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#18212B">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  @font-face{font-family:'Archivo';src:url(vendor/archivo.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+  :root{--bg:#ECEFF2;--surface:#fff;--surface2:#F4F6F8;--border:#D3D9DF;--txt:#18212B;--muted:#5B6672;--accent:#2347A8;--signal:#F5C518;--ok:#1F7A4D}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--txt);line-height:1.45;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(60vmax 40vmax at 110% -10%,rgba(35,71,168,.16),transparent 60%),radial-gradient(50vmax 36vmax at -20% 30%,rgba(245,197,24,.14),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh}
+  main{max-width:980px;margin:0 auto;padding:28px 16px 40px}
+  .topo{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+  .topo img{width:64px;height:64px;border-radius:16px;box-shadow:0 6px 18px rgba(24,33,43,.22)}
+  h1{margin:0;font-size:clamp(24px,4vw,34px);font-stretch:90%;letter-spacing:-.01em;line-height:1.1}
+  .topo p{margin:4px 0 0;color:var(--muted)}
+  .grade{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:16px;align-items:start}
+  .card{background:rgba(255,255,255,.9);border-radius:22px;padding:20px;box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(24,33,43,.07),0 10px 28px rgba(24,33,43,.10)}
+  .qr{text-align:center}
+  .qr svg{width:100%;max-width:260px;height:auto;display:block;margin:0 auto 12px;border-radius:12px}
+  .url{font-weight:700;word-break:break-all;background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 18px;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;text-decoration:none;border:0;font:inherit;font-weight:700;cursor:pointer;width:100%}
+  .btn-2{background:var(--surface);color:var(--txt);border:1.5px solid var(--border)}
+  h2{font-size:18px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  h2 .tag{font-size:12px;font-weight:700;background:var(--signal);color:#3A2E00;border-radius:999px;padding:3px 10px}
+  ol{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+  li{display:flex;gap:12px;align-items:flex-start;background:var(--surface2);border-radius:14px;padding:12px;font-size:15px}
+  .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .so{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .hint{color:var(--muted);font-size:13.5px;margin:12px 0 0}
+  .vant{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;padding:0;list-style:none}
+  .vant li{background:rgba(31,122,77,.1);color:var(--ok);font-weight:600;font-size:13.5px;padding:6px 12px;border-radius:999px;display:block}
+  @media (max-width:760px){ .grade,.so{grid-template-columns:1fr} .qr svg{max-width:200px} }
+  @media print{ body{background:#fff} .card{box-shadow:none;border:1px solid #ccc} .naoimprime{display:none} }
+</style>
+</head>
+<body>
+<main>
+  <div class="topo"><img src="icon-192.png" alt=""><div><h1>Instalar o app de campo</h1><p>Levantamento patrimonial no celular ou tablet, com o ícone <b>Patrimônio</b> na tela.</p></div></div>
+  <ul class="vant"><li>Abre em tela cheia</li><li>Funciona sem internet no modo offline</li><li>Recebe os avisos como notificação</li></ul>
+  <div class="grade">
+    <div class="card qr">
+      <svg role="img" aria-label="QR code com o endereço do app" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 35 35" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h35v35H0z"/><path stroke="#18212B" d="M1 1.5h7m3 0h3m3 0h1m1 0h3m2 0h1m2 0h7M1 2.5h1m5 0h1m8 0h1m2 0h1m1 0h3m1 0h1m1 0h1m5 0h1M1 3.5h1m1 0h3m1 0h1m1 0h2m4 0h1m1 0h1m3 0h3m3 0h1m1 0h3m1 0h1M1 4.5h1m1 0h3m1 0h1m1 0h1m1 0h2m3 0h1m2 0h1m3 0h3m1 0h1m1 0h3m1 0h1M1 5.5h1m1 0h3m1 0h1m1 0h1m1 0h3m1 0h3m3 0h1m2 0h1m2 0h1m1 0h3m1 0h1M1 6.5h1m5 0h1m1 0h3m6 0h3m1 0h1m4 0h1m5 0h1M1 7.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M9 8.5h1m1 0h3m1 0h1m1 0h1m1 0h5m1 0h1M1 9.5h1m1 0h5m2 0h6m1 0h5m1 0h3m1 0h5M1 10.5h2m2 0h2m3 0h3m1 0h1m2 0h5m2 0h1m2 0h2m1 0h2m1 0h1M7 11.5h1m1 0h1m2 0h1m1 0h5m4 0h1m2 0h2m1 0h1m1 0h2M1 12.5h1m1 0h1m4 0h1m4 0h2m1 0h4m2 0h6m1 0h4M3 13.5h2m1 0h3m1 0h2m3 0h3m2 0h1m2 0h4m3 0h1M2 14.5h4m2 0h1m2 0h1m4 0h1m1 0h2m4 0h1m1 0h2m2 0h1m1 0h2M1 15.5h2m1 0h11m1 0h3m2 0h1m3 0h3m1 0h4M3 16.5h1m1 0h1m2 0h1m1 0h1m2 0h2m1 0h1m2 0h9m1 0h3M1 17.5h1m2 0h1m2 0h1m1 0h1m6 0h1m1 0h1m1 0h1m4 0h2m1 0h2m3 0h1M3 18.5h2m3 0h1m2 0h1m1 0h1m3 0h1m1 0h3m2 0h1m2 0h2m1 0h2m1 0h1M1 19.5h1m1 0h1m1 0h3m1 0h1m2 0h2m1 0h2m2 0h1m3 0h1m4 0h2m1 0h2M2 20.5h1m1 0h1m4 0h2m1 0h1m3 0h2m3 0h2m2 0h1m2 0h4M2 21.5h3m2 0h1m1 0h1m2 0h3m4 0h1m3 0h1m2 0h1m1 0h3m1 0h1M1 22.5h1m1 0h4m2 0h3m2 0h1m1 0h3m1 0h1m3 0h1m2 0h1m2 0h2m1 0h1M1 23.5h1m4 0h3m3 0h2m1 0h1m3 0h1m3 0h1m1 0h1m2 0h1m1 0h3M1 24.5h1m2 0h1m4 0h6m2 0h1m3 0h2m3 0h1m3 0h4M1 25.5h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h1m1 0h2m2 0h1m1 0h2m1 0h1m1 0h5M9 26.5h1m1 0h1m1 0h2m2 0h5m3 0h1m3 0h1m1 0h3M1 27.5h7m2 0h2m1 0h1m2 0h3m2 0h2m1 0h2m1 0h1m1 0h1m1 0h2M1 28.5h1m5 0h1m1 0h3m1 0h2m2 0h3m2 0h4m3 0h3m1 0h1M1 29.5h1m1 0h3m1 0h1m1 0h1m3 0h3m1 0h1m2 0h1m2 0h1m1 0h6m1 0h2M1 30.5h1m1 0h3m1 0h1m1 0h3m2 0h1m1 0h1m1 0h5m1 0h1m1 0h1m2 0h2m1 0h2M1 31.5h1m1 0h3m1 0h1m1 0h6m1 0h3m2 0h1m1 0h3m1 0h2M1 32.5h1m5 0h1m2 0h1m1 0h1m3 0h1m5 0h3m4 0h3M1 33.5h7m1 0h2m1 0h5m1 0h2m3 0h4m1 0h1m1 0h1m1 0h1"/></svg>
+      <p style="margin:0 0 10px;font-weight:600">Aponte a câmera do celular para o código</p>
+      <p class="url" id="url">https://agaklik.github.io/levantamento_patrimonial/</p>
+      <a class="btn" href="./" id="abrir">Abrir o app</a>
+      <button class="btn btn-2 naoimprime" id="imprimir" style="margin-top:8px">Imprimir esta página</button>
+    </div>
+    <div class="so">
+      <div class="card">
+        <h2>Android <span class="tag">Chrome</span></h2>
+        <ol>
+          <li><span class="n">1</span><div>Abra o endereço no <b>Chrome</b> (pelo QR code ou pelo link).</div></li>
+          <li><span class="n">2</span><div>Entre com o seu usuário. Vai aparecer <b>Instalar agora</b>; toque e confirme.</div></li>
+          <li><span class="n">3</span><div>Se não aparecer, toque no menu <b>⋮</b> e em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</div></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h2>iPhone e iPad <span class="tag">Safari</span></h2>
+        <ol>
+          <li><span class="n">1</span><div>Abra o endereço no <b>Safari</b>.</div></li>
+          <li><span class="n">2</span><div>Toque em <b>Compartilhar</b> (quadrado com uma seta para cima).</div></li>
+          <li><span class="n">3</span><div>Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.</div></li>
+        </ol>
+        <p class="hint">Para receber notificações no iPhone, abra sempre pelo ícone instalado (iOS 16.4 ou mais novo).</p>
+      </div>
+    </div>
+  </div>
+  <p class="hint">Depois de instalado, abra o app pelo ícone <b>Patrimônio</b>. Para ligar as notificações: menu ☰ &gt; <b>Notificações</b>.</p>
+</main>
+<script>
+  // mostra o endereço real (se a página estiver publicada em outro lugar, o QR code acima continua apontando para o endereço oficial)
+  document.getElementById('imprimir').onclick=()=>print();
+</script>
+</body>
+</html>

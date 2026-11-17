@@ -478,3 +478,18 @@ Para liberar a base de demonstração a outras pessoas por um tempo definido:
 2. No painel, aba **Usuários** (só a equipe da empresa vê): marque **Acesso de teste por N dias** ao cadastrar, ou use **Dar prazo / Prazo** num usuário existente (+7, +15, +30 dias ou data escolhida; **Tirar o prazo** volta ao acesso sem data).
 3. O acesso vale até as 23h59 (horário de Brasília) do último dia. Depois disso o banco não entrega mais nenhum dado a essa pessoa (as funções `usuario_ativo`, `is_admin` e `cliente_atual` conferem `usuarios.acesso_ate`), o login avisa que o teste terminou e o que ela fez fica preservado.
 4. Usuário de teste fica preso ao cliente em que foi cadastrado, não pode ser da empresa, não troca de cliente e não cadastra usuários.
+
+## Instalar no celular e avisos (notificações)
+
+**Instalação.** Ao abrir o app pelo navegador do celular ou tablet, aparece uma janela ensinando a instalar: no Android, o botão "Instalar agora" (ou o menu ⋮ > Instalar app); no iPhone e iPad, Compartilhar > Adicionar à Tela de Início, no Safari. "Agora não" fecha, e a janela volta na próxima vez que o app for aberto pelo navegador, até ser instalado ou até a pessoa tocar em "Já instalei". O passo a passo fica sempre no menu ☰ > Instalar o app no celular. A página `instalar.html` tem o QR code e as instruções para imprimir ou mostrar à equipe (também na aba Avisos do painel).
+
+**Avisos.** O administrador escreve na aba Avisos do painel, para toda a equipe do cliente ou para uma pessoa. O aviso aparece no app (menu ☰ > Avisos, com contador) e, para quem ligou as notificações (menu ☰ > Notificações), também na tela do celular com o app fechado. No iPhone, as notificações só funcionam com o app instalado (iOS 16.4 ou mais novo). Cada pessoa escolhe se quer receber as mensagens do administrador e os avisos automáticos.
+
+Avisos automáticos (cada um pode ser desligado no painel):
+- acesso de teste terminando: 3 dias e 1 dia antes do prazo (agendador do banco, de hora em hora);
+- localização reaberta: para quem tinha concluído;
+- itens parados no celular há mais de 24 horas: o próprio app avisa, no máximo a cada 12 horas.
+
+**Instalação no Supabase (uma vez):**
+1. SQL Editor: cole e rode `supabase/avisos.sql` (cria as tabelas, as regras de acesso, o aviso de localização reaberta e o agendador com pg_cron e pg_net).
+2. Edge Functions > Deploy a new function > Via Editor: nome `avisos`, cole `supabase/functions/avisos/index.ts` e publique. Em Details, deixe **Verify JWT desligado**. Não precisa configurar segredo: as chaves das notificações são criadas na primeira chamada e guardadas na tabela `push_config`, que só o servidor lê.
