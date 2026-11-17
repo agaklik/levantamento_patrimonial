@@ -122,6 +122,7 @@
   .page h1{font-size:14pt;text-align:center;margin:10pt 0 2pt;text-transform:uppercase}
   .page .org{text-align:center;font-weight:700;font-size:12pt;text-transform:uppercase}
   .page .org small{display:block;font-weight:400;font-size:10pt;text-transform:none}
+  .page .org img.brasao{display:block;margin:0 auto 6pt;max-height:24mm;max-width:45mm}
   .page .num{text-align:center;font-size:10pt;margin-bottom:12pt}
   .page h3{font-size:11pt;margin:12pt 0 4pt;border-bottom:1px solid #000;padding-bottom:2pt;text-transform:uppercase}
   .page table{font-size:9.5pt;margin:4pt 0}.page th,.page td,.page tbody tr:last-child td{border:1px solid #666;padding:3pt 5pt}.page th{background:#eee;color:#000;position:static;font-size:8.5pt}
@@ -432,6 +433,18 @@
         <div><label>Ato de nomeação da comissão</label><input id="cAto" placeholder="Ex.: Portaria nº 123/2026"></div>
         <div><label>Modalidade da avaliação</label><select id="cModalidade"><option value="comissao">Comissão de servidores</option><option value="laudo">Laudo de responsável técnico</option><option value="ambos">Comissão e responsável técnico</option></select></div>
       </div>
+      <div style="margin-top:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div id="cBrasaoPrev" style="width:84px;height:84px;border:1px dashed var(--border);border-radius:12px;display:grid;place-items:center;background:#fff;overflow:hidden;font-size:11px;color:var(--muted);text-align:center"></div>
+        <div style="flex:1;min-width:220px">
+          <label>Brasão do órgão</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <button type="button" class="btn-2" id="btnBrasao">Enviar brasão</button>
+            <button type="button" class="btn-2 hidden" id="btnBrasaoTirar">Remover</button>
+            <input type="file" id="cBrasaoFile" accept="image/png,image/jpeg,image/webp" class="hidden">
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Imagem PNG ou JPG. Aparece no cabeçalho dos documentos e no topo do app de campo deste cliente. Prefira PNG com fundo transparente.</div>
+        </div>
+      </div>
     </div>
     <div class="card">
       <h2>Envio dos dados do app de campo</h2>
@@ -691,7 +704,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-7'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-8'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -2002,6 +2015,45 @@ async function fotosDoBem(codigo,limite){
   }catch(_){ return []; }
 }
 
+/* ====================== BRASÃO DO ÓRGÃO ====================== */
+// Fica guardado dentro da configuração do cliente, já reduzido (data URL), para servir aos documentos e ao app de campo.
+function mostrarBrasao(){
+  const ok=brasaoOk();
+  $('#cBrasaoPrev').innerHTML=ok?`<img src="${CFG.brasao}" alt="Brasão" style="width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box">`:'Sem brasão';
+  $('#btnBrasaoTirar').classList.toggle('hidden',!ok); $('#btnBrasao').textContent=ok?'Trocar brasão':'Enviar brasão';
+}
+function reduzirImagem(file,lado){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{ URL.revokeObjectURL(url);
+      const k=Math.min(1,lado/Math.max(img.naturalWidth,img.naturalHeight)), c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(img.naturalWidth*k)); c.height=Math.max(1,Math.round(img.naturalHeight*k));
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height); res(c.toDataURL('image/png')); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('O arquivo não é uma imagem válida.')); };
+    img.src=url;
+  });
+}
+async function salvarBrasao(brasao){
+  if(!schemaOk){ toast('Execute antes o script supabase/reavaliacao.sql'); return; }
+  const dados=Object.assign({},CFG,{brasao});
+  const {error}=await sb.from('configuracao').upsert(comCliente({id:1,dados,atualizado_em:new Date().toISOString()}),{onConflict:conflito('id')});
+  if(error){ toast('Erro ao salvar o brasão: '+error.message,5000); return; }
+  CFG=dados; mostrarBrasao(); toast(brasao?'✓ Brasão salvo':'Brasão removido');
+}
+$('#btnBrasao').addEventListener('click',()=>$('#cBrasaoFile').click());
+$('#cBrasaoFile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  if(!/^image\/(png|jpeg|webp)$/.test(f.type)){ toast('Envie uma imagem PNG ou JPG.'); return; }
+  if(f.size>15*1024*1024){ toast('A imagem é grande demais (máximo 15 MB).'); return; }
+  try{
+    let d=await reduzirImagem(f,400);
+    if(d.length>400000) d=await reduzirImagem(f,240);
+    if(d.length>400000){ toast('Não foi possível reduzir esta imagem. Tente outra, mais simples.',5000); return; }
+    await salvarBrasao(d);
+  }catch(err){ toast(err.message||'Não foi possível ler a imagem.',5000); }
+});
+$('#btnBrasaoTirar').addEventListener('click',()=>{ if(confirm('Remover o brasão deste cliente?')) salvarBrasao(''); });
+
 /* ====================== FORMA DE ENVIO DO APP DE CAMPO ====================== */
 function preencherModo(){ const m=(CFG.modoEnvio==='offline')?'offline':'online'; document.querySelectorAll('input[name=modoEnvio]').forEach(r=>r.checked=r.value===m); }
 $('#btnSalvarModo').addEventListener('click',async()=>{
@@ -2533,6 +2585,7 @@ function preencherCfg(){
   $('#cTabRest').innerHTML=tr.map((v,i)=>`<tr><td>${i===0?'1 ano ou menos':i===tr.length-1?(i+1)+' anos ou mais':(i+1)+' anos'}</td><td class="n"><input type="number" class="cRest" step="0.5" value="${esc(v)}" style="width:80px;text-align:right"></td></tr>`).join('');
   cfgMetodoUI();
   $('#cFundamento').value=CFG.fundamento;
+  mostrarBrasao();
 }
 function cfgMetodoUI(){
   const pp=$('#cMetodoFator').value!=='anos';
@@ -2562,7 +2615,7 @@ $('#btnSalvarCfg').addEventListener('click',async()=>{
     tabUso:[...document.querySelectorAll('.cUso')].map((el,i)=>num(el.value)??CFG_PADRAO.tabUso[i]),
     tabRest:[...document.querySelectorAll('.cRest')].map((el,i)=>num(el.value)??CFG_PADRAO.tabRest[i]),
     fundamento:$('#cFundamento').value.trim(),
-    modoEnvio:CFG.modoEnvio||'online'
+    modoEnvio:CFG.modoEnvio||'online', brasao:CFG.brasao||''
   };
   const {error}=await sb.from('configuracao').upsert(comCliente({id:1,dados:novo,atualizado_em:new Date().toISOString()}),{onConflict:conflito('id')});
   if(error){ toast('Erro ao salvar: '+error.message); return; }
@@ -2578,7 +2631,7 @@ const CSS_DOC=`*{box-sizing:border-box}body{margin:0;background:#525659;font-fam
 table{border-collapse:collapse;width:100%}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}th,td{text-align:left;vertical-align:top}
 .page{background:#fff;color:#000;width:210mm;min-height:297mm;margin:16px auto;padding:18mm 16mm;font-family:Georgia,'Times New Roman',serif;font-size:11pt;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.4)}
 .page.land{width:297mm;min-height:210mm}.page h1{font-size:14pt;text-align:center;margin:10pt 0 2pt;text-transform:uppercase}
-.page .org{text-align:center;font-weight:700;font-size:12pt;text-transform:uppercase}.page .org small{display:block;font-weight:400;font-size:10pt;text-transform:none}
+.page .org{text-align:center;font-weight:700;font-size:12pt;text-transform:uppercase}.page .org small{display:block;font-weight:400;font-size:10pt;text-transform:none}.page .org img.brasao{display:block;margin:0 auto 6pt;max-height:24mm;max-width:45mm}
 .page .num{text-align:center;font-size:10pt;margin-bottom:12pt}.page h3{font-size:11pt;margin:12pt 0 4pt;border-bottom:1px solid #000;padding-bottom:2pt;text-transform:uppercase}
 .page table{font-size:9.5pt;margin:4pt 0}.page th,.page td{border:1px solid #666;padding:3pt 5pt}.page th{background:#eee;font-size:8.5pt}
 .page table.kv td:nth-child(odd){background:#f3f3f3;font-weight:700;width:22%}.page p{margin:4pt 0;text-align:justify}
@@ -2610,7 +2663,8 @@ function fecharPreview(){ $('#preview').classList.add('hidden'); $('#previewBody
 $('#btnClosePreview').addEventListener('click',fecharPreview);
 $('#btnPrint').addEventListener('click',()=>window.print());
 
-const cabecalho=()=>`<div class="org">${esc(CFG.orgao||'[Órgão não informado na Configuração]')}<small>${esc([CFG.municipio,CFG.cnpj?'CNPJ '+CFG.cnpj:''].filter(Boolean).join(' · '))}</small></div>`;
+const brasaoOk=()=>typeof CFG.brasao==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(CFG.brasao);
+const cabecalho=()=>`<div class="org">${brasaoOk()?`<img class="brasao" src="${CFG.brasao}" alt="Brasão">`:''}${esc(CFG.orgao||'[Órgão não informado na Configuração]')}<small>${esc([CFG.municipio,CFG.cnpj?'CNPJ '+CFG.cnpj:''].filter(Boolean).join(' · '))}</small></div>`;
 const localData=iso=>`<p class="local">${esc((CFG.municipio||'').split('/')[0]||'Local')}, ${dataExtenso(iso||CFG.dataBase||hojeISO())}.</p>`;
 function assinaturas(extra){
   const s=[];

@@ -32,6 +32,7 @@
   /* ---------- cabeçalho ---------- */
   header{position:sticky;top:0;z-index:50;background:var(--txt);color:#fff;padding:10px 12px 12px 16px;padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
   .hdr-center{flex:1;min-width:0}
+  .brasao-topo{height:44px;width:auto;max-width:56px;object-fit:contain;flex:none;background:#fff;border-radius:8px;padding:3px}
   header h1{font-size:17px;margin:0;font-weight:700;font-stretch:92%;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
   .stats{display:none}
   .cliente-nome.troca{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
@@ -316,6 +317,7 @@
 <!-- ====== APP (após login) ====== -->
 <div id="appScreen" class="hidden">
 <header>
+  <img id="brasaoTopo" class="brasao-topo hidden" alt="Brasão do órgão">
   <div class="hdr-center">
     <h1>Levantamento Patrimonial</h1>
     <div class="cliente-nome hidden" id="clienteNome"></div>
@@ -569,7 +571,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-7'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-8'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -847,6 +849,7 @@ $('#btnLogout').addEventListener('click',async()=>{
   if(n && !confirm(`Há ${n} item(ns) guardados neste celular que ainda não foram enviados. Eles continuam guardados. Sair mesmo assim?`)) return;
   SEM_SESSAO=false; try{ await sb.auth.signOut(); }catch(_){} showLogin(); toast('Sessão encerrada');
   try{ localStorage.removeItem('lev_cliente'); }catch(_){} CLIENTE={id:null,nome:'',pasta:''}; mostrarCliente();
+  try{ localStorage.removeItem('lev_brasao'); }catch(_){} mostrarBrasao('');
 });
 
 /* ====================== TABELAS DE APOIO ====================== */
@@ -1473,6 +1476,14 @@ async function saveItem(){
 //   offline = os bens ficam guardados no celular e os registros são enviados depois, pela sincronização ou por arquivo
 let MODO_ENVIO='online', SEM_SESSAO=false, USUARIO_EMAIL='', LOCAL_TEMP='';
 try{ MODO_ENVIO=localStorage.getItem('lev_modo')||'online'; }catch(_){}
+// brasão do órgão: vem da configuração do cliente (painel admin) e fica guardado no celular para uso sem internet
+function mostrarBrasao(d){
+  const el=document.getElementById('brasaoTopo'); if(!el) return;
+  const ok=typeof d==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(d);
+  if(ok) el.src=d; else el.removeAttribute('src');
+  el.classList.toggle('hidden',!ok);
+}
+try{ mostrarBrasao(localStorage.getItem('lev_brasao')); }catch(_){}
 const OFFLINE=()=>MODO_ENVIO==='offline';
 const esc=s=>(s??'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const semAcento=s=>(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -1500,6 +1511,7 @@ async function carregarModoEnvio(){
   try{
     const {data,error}=await sb.from('configuracao').select('dados').eq('id',1).maybeSingle();
     if(!error && data && data.dados){ MODO_ENVIO=data.dados.modoEnvio==='offline'?'offline':'online'; try{ localStorage.setItem('lev_modo',MODO_ENVIO); }catch(_){} }
+    if(!error){ const br=(data&&data.dados&&data.dados.brasao)||''; mostrarBrasao(br); try{ br?localStorage.setItem('lev_brasao',br):localStorage.removeItem('lev_brasao'); }catch(_){} }
   }catch(_){ /* sem internet: mantém o último modo conhecido */ }
 }
 async function baixarBase(){
