@@ -571,7 +571,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-9'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-10'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -1546,6 +1546,8 @@ async function atualizarFilaUI(){
   let fila=[]; try{ fila=await idbAll('fila'); }catch(_){}
   const n=fila.length, b=$('#filaBadge');
   b.textContent=n; b.classList.toggle('hidden',!n);
+  // no envio online o botão da nuvem só aparece enquanto houver item guardado no celular (sem sinal na hora de salvar)
+  $('#btnEnvio').classList.toggle('hidden',!OFFLINE()&&!n);
   const band=$('#modoBand');
   if(OFFLINE()||n){
     band.classList.remove('hidden');
