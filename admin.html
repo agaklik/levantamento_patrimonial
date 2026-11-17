@@ -390,7 +390,7 @@
   <section id="tab-usu" class="hidden">
     <div class="card">
       <h2>Usuários</h2>
-      <p class="sub">Quem pode entrar no app de campo e na administração. Administradores também usam o app de campo. Um usuário bloqueado não consegue mais entrar, e o que ele já levantou fica preservado. Aparecem aqui só os usuários do cliente atual, e quem você cadastra entra nele.</p>
+      <p class="sub">Quem pode entrar no app de campo e na administração. Administradores também usam o app de campo. Um usuário bloqueado não consegue mais entrar, e o que ele já levantou fica preservado. Aparecem aqui só os usuários do cliente atual, e quem você cadastra entra nele. Um acesso de teste vale até as 23h59 do último dia; depois disso o banco não entrega mais nenhum dado a essa pessoa, e o que ela fez fica preservado.</p>
       <div id="usuAviso" class="msg hidden"></div>
       <div id="usuArea">
         <div class="u-form">
@@ -399,10 +399,15 @@
           <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com" autocomplete="off"></div>
           <div><label for="uSenha">Senha inicial <button type="button" class="link-btn" id="btnGerarSenha" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="uSenha" type="password" autocomplete="new-password" spellcheck="false"></div>
           <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option></select></div>
+          <div class="full hidden" id="uPrazoBox" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:0"><input type="checkbox" id="uTeste" style="width:auto;margin:0"> Acesso de teste por</label>
+            <input type="number" id="uDias" min="1" max="365" value="7" style="width:80px;margin:0" disabled> <span>dias</span>
+            <span id="uPrazoTxt" style="color:var(--muted);font-size:13px"></span>
+          </div>
           <div class="full hidden" id="uGeralBox"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="uGeral" style="width:auto"> Equipe da empresa: administrador com acesso a todos os clientes</label></div>
           <div class="full" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap"><ul class="pw-rules" id="uSenhaRegras"></ul><button class="btn" id="btnCriarUsu">Cadastrar usuário</button></div>
         </div>
-        <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
+        <div class="tblwrap"><table id="tblUsu"><thead><tr><th>Nome</th><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Prazo</th><th>Último acesso</th><th></th></tr></thead><tbody id="usuBody"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:24px">Carregando usuários...</td></tr></tbody></table></div>
       </div>
     </div>
   </section>
@@ -619,6 +624,13 @@
   <div class="fld-err" id="eErro"></div>
   <div class="acts"><button class="btn-2" id="eCancelar">Cancelar</button><button class="btn" id="eSalvar">Salvar</button></div>
 </dialog>
+<dialog class="dlg" id="dlgPrazo">
+  <h3>Prazo de acesso</h3><p class="sub" id="dlgPrazoEmail" style="margin:0 0 14px;color:var(--muted)"></p>
+  <label for="pzData">Acesso liberado até (23h59 deste dia)</label><input type="date" id="pzData">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 6px"><button type="button" class="btn-2 pzMais" data-d="7">+7 dias</button><button type="button" class="btn-2 pzMais" data-d="15">+15 dias</button><button type="button" class="btn-2 pzMais" data-d="30">+30 dias</button></div>
+  <div class="fld-err" id="pzErro"></div>
+  <div class="acts"><button class="btn-2" id="pzTirar" title="O usuário passa a ter acesso sem data para acabar">Tirar o prazo</button><span style="flex:1"></span><button class="btn-2" id="pzCancelar">Cancelar</button><button class="btn" id="pzSalvar">Salvar prazo</button></div>
+</dialog>
 <dialog class="dlg" id="dlgSenha">
   <h3>Nova senha</h3><p class="sub" id="dlgSenhaEmail" style="margin:0 0 14px;color:var(--muted)"></p>
   <label for="sNova">Nova senha <button type="button" class="link-btn" id="sGerar" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="sNova" type="password" spellcheck="false" autocomplete="new-password">
@@ -721,7 +733,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-11'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-12'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -891,6 +903,16 @@ async function iniciar(){
 const pastaCliente=()=>(CLIENTE&&CLIENTE.pasta)||'';
 const conflito=c=>CLIENTE.id!=null?'cliente_id,'+c:c;
 const comCliente=r=>CLIENTE.id!=null?Object.assign({},r,{cliente_id:CLIENTE.id}):r;
+const dataPrazo=s=>new Date(s).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'});
+// 'AAAA-MM-DD' de hoje + n dias, no horário de Brasília
+const diaMais=n=>new Date(Date.now()-3*3600000+n*86400000).toISOString().slice(0,10);
+function textoPrazo(ate){
+  if(!ate) return '';
+  const d=dataPrazo(ate), ms=new Date(ate)-Date.now();
+  if(ms<=0) return {txt:'vencido em '+d,cls:'p-no'};
+  const dias=Math.ceil(ms/86400000);
+  return {txt:'teste até '+d+(dias<=1?' (último dia)':' ('+dias+' dias)'),cls:dias<=2?'p-pend':'p-mut'};
+}
 async function carregarCliente(){
   const {data,error}=await sb.rpc('meu_cliente');
   if(error){
@@ -898,9 +920,15 @@ async function carregarCliente(){
     if(naoExiste){ CLIENTE={id:null,nome:'',pasta:'',geral:false}; return true; }
     $('#blockMsg').textContent='Não foi possível identificar o cliente: '+error.message; tela('blockScreen'); return false;
   }
-  if(!data){ $('#blockMsg').textContent='O usuário '+(USER.email||'')+' não está ligado a um cliente ativo.'; tela('blockScreen'); return false; }
+  if(!data){
+    let m='O usuário '+(USER.email||'')+' não está ligado a um cliente ativo.';
+    try{ const {data:pz}=await sb.rpc('meu_prazo'); if(pz&&pz.vencido) m='O período de teste de '+(USER.email||'')+' terminou em '+dataPrazo(pz.acesso_ate)+'. Para continuar, fale com quem liberou o seu acesso.'; }catch(_){}
+    $('#blockMsg').textContent=m; tela('blockScreen'); return false;
+  }
   CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true};
   $('#hdrCliente').textContent=CLIENTE.nome||'Levantamento patrimonial';
+  if(data.acesso_ate){ const pz=document.createElement('span'); pz.className='pill p-pend'; pz.style.marginLeft='8px'; pz.title='Acesso de teste';
+    pz.textContent='teste até '+dataPrazo(data.acesso_ate); $('#hdrCliente').appendChild(pz); }
   document.title=(CLIENTE.nome?CLIENTE.nome+' · ':'')+'Administração';
   $('#cardClientes').classList.toggle('hidden',!CLIENTE.geral);
   if(CLIENTE.geral) await carregarClientes(); else $('#cliSel').classList.add('hidden');
@@ -2442,7 +2470,7 @@ $('#btnAtualiza').addEventListener('click',()=>{
 });
 
 /* ====================== USUÁRIOS (função "usuarios" no Supabase) ====================== */
-let USUARIOS=[], usuCarregado=false;
+let USUARIOS=[], usuCarregado=false, USU_PRAZO=false;
 async function chamarUsuarios(body){
   const {data,error}=await sb.functions.invoke('usuarios',{body});
   if(error){
@@ -2456,7 +2484,7 @@ async function carregarUsuarios(){
   const aviso=$('#usuAviso');
   try{
     const d=await chamarUsuarios({acao:'listar'});
-    USUARIOS=d.usuarios||[]; usuCarregado=true; $('#uGeralBox').classList.toggle('hidden',!(CLIENTE.id!=null&&CLIENTE.geral)); aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
+    USUARIOS=d.usuarios||[]; usuCarregado=true; $('#uGeralBox').classList.toggle('hidden',!(CLIENTE.id!=null&&CLIENTE.geral)); USU_PRAZO=d.prazo===true&&CLIENTE.geral===true; $('#uPrazoBox').classList.toggle('hidden',!USU_PRAZO); aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
     renderUsuarios();
   }catch(e){
     $('#usuArea').classList.toggle('hidden',!!e.semFuncao);
@@ -2508,15 +2536,17 @@ function renderUsuarios(){
     <td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}</td>
     <td><select class="uPerfil" ${u.id===USER.id?'disabled':''}><option value="campo"${u.perfil!=='admin'?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option></select></td>
     <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}${u.senha_bloqueada_ate?` <span class="pill p-pend" title="Errou a senha 3 vezes">senha bloqueada até ${new Date(u.senha_bloqueada_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`:''}</td>
+    <td>${(()=>{ const p=textoPrazo(u.acesso_ate); return p?`<span class="pill ${p.cls}">${p.txt}</span>`:'<span style="color:var(--muted)">sem prazo</span>'; })()}</td>
     <td style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(u.ultimo_acesso)}</td>
-    <td><div class="acts"><button class="btn-2 uEditar">Editar</button>${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button>${u.senha_bloqueada_ate?'<button class="btn-2 uLiberar">Liberar acesso</button>':''}</div></td></tr>`).join('')
-    :'<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
+    <td><div class="acts"><button class="btn-2 uEditar">Editar</button>${USU_PRAZO&&u.id!==USER.id&&!u.geral?`<button class="btn-2 uPrazo">${u.acesso_ate?'Prazo':'Dar prazo'}</button>`:''}${u.id===USER.id?'':`<button class="btn-2 uAtivo">${u.ativo?'Bloquear':'Reativar'}</button>`}<button class="btn-2 uSenha">Nova senha</button>${u.senha_bloqueada_ate?'<button class="btn-2 uLiberar">Liberar acesso</button>':''}</div></td></tr>`).join('')
+    :'<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:24px">Nenhum usuário cadastrado.</td></tr>';
   document.querySelectorAll('#usuBody tr[data-id]').forEach(tr=>{
     const u=USUARIOS.find(x=>x.id===tr.dataset.id);
     const sel=tr.querySelector('.uPerfil'); if(sel) sel.onchange=()=>atualizarUsuario(u,{perfil:sel.value});
     const ba=tr.querySelector('.uAtivo'); if(ba) ba.onclick=()=>{ if(u.ativo&&!confirm(`Bloquear ${u.email}? A pessoa não consegue mais entrar até ser reativada.`)) return; atualizarUsuario(u,{ativo:!u.ativo}); };
     tr.querySelector('.uEditar').onclick=()=>abrirEditar(u);
     tr.querySelector('.uSenha').onclick=()=>abrirSenha(u);
+    const bp=tr.querySelector('.uPrazo'); if(bp) bp.onclick=()=>abrirPrazo(u);
     const bl=tr.querySelector('.uLiberar'); if(bl) bl.onclick=async()=>{ try{ await chamarUsuarios({acao:'desbloquear',id:u.id}); u.senha_bloqueada_ate=null; renderUsuarios(); toast('Acesso liberado'); }catch(e){ toast('Erro: '+e.message,5000); } };
   });
 }
@@ -2539,6 +2569,41 @@ $('#eSalvar').onclick=async()=>{
   catch(e){ $('#eErro').textContent=e.message; }
   finally{ $('#eSalvar').disabled=false; }
 };
+function abrirPrazo(u){
+  USU_ED=u; $('#dlgPrazoEmail').textContent=(u.nome?u.nome+' · ':'')+u.email; $('#pzErro').textContent='';
+  const atual=u.acesso_ate&&new Date(u.acesso_ate)>Date.now()?new Date(new Date(u.acesso_ate).getTime()-3*3600000).toISOString().slice(0,10):'';
+  $('#pzData').min=diaMais(0); $('#pzData').max=diaMais(365); $('#pzData').value=atual||diaMais(7);
+  $('#pzTirar').classList.toggle('hidden',!u.acesso_ate);
+  $('#dlgPrazo').showModal();
+}
+document.querySelectorAll('#dlgPrazo .pzMais').forEach(b=>b.onclick=()=>{
+  // soma a partir do prazo atual (ou de hoje, se já venceu)
+  const base=$('#pzData').value&&$('#pzData').value>=diaMais(0)?$('#pzData').value:diaMais(0);
+  const d=new Date(base+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+(+b.dataset.d)); $('#pzData').value=d.toISOString().slice(0,10);
+});
+$('#pzCancelar').onclick=()=>$('#dlgPrazo').close();
+async function salvarPrazo(ate){
+  $('#pzSalvar').disabled=$('#pzTirar').disabled=true;
+  try{
+    await chamarUsuarios({acao:'atualizar',id:USU_ED.id,acesso_ate:ate});
+    $('#dlgPrazo').close(); toast(ate?'Prazo salvo: acesso até '+ate.split('-').reverse().join('/'):'Prazo retirado: acesso sem data para acabar',4000);
+    await carregarUsuarios();
+  }catch(e){ $('#pzErro').textContent=e.message; }
+  finally{ $('#pzSalvar').disabled=$('#pzTirar').disabled=false; }
+}
+$('#pzSalvar').onclick=()=>{
+  const v=$('#pzData').value;
+  if(!v||v<diaMais(0)||v>diaMais(365)){ $('#pzErro').textContent='Escolha uma data de hoje até 365 dias.'; return; }
+  salvarPrazo(v);
+};
+$('#pzTirar').onclick=()=>{ if(confirm('Tirar o prazo? O usuário passa a ter acesso sem data para acabar.')) salvarPrazo(null); };
+function atualizarTextoPrazo(){
+  const on=$('#uTeste').checked, n=Math.max(1,Math.min(365,parseInt($('#uDias').value,10)||0));
+  $('#uDias').disabled=!on;
+  $('#uPrazoTxt').textContent=on?'acesso até '+diaMais(n).split('-').reverse().join('/')+' às 23h59':'sem marcar, o acesso não tem prazo';
+  if(on){ $('#uGeral').checked=false; } $('#uGeral').disabled=on;
+}
+$('#uTeste').addEventListener('change',atualizarTextoPrazo); $('#uDias').addEventListener('input',atualizarTextoPrazo); atualizarTextoPrazo();
 function abrirSenha(u){
   USU_ED=u; $('#dlgSenhaEmail').textContent=u.email; $('#sNova').value=''; verSenha($('#sNova'),false); $('#sErro').textContent=''; mostrarRegras($('#sRegras'),'');
   $('#dlgSenha').showModal(); $('#sNova').focus();
@@ -2563,8 +2628,11 @@ $('#btnCriarUsu').addEventListener('click',async()=>{
     ||(!RX_EMAIL.test(email)?'Informe um e-mail válido.':'')||erroSenha(senha,email,usuario);
   if(err){ toast(err,4500); return; }
   const btn=$('#btnCriarUsu'); btn.disabled=true;
-  const geral=perfil==='admin'&&$('#uGeral').checked;
-  try{ await chamarUsuarios({acao:'criar',nome,usuario,email,senha,perfil,geral}); $('#uGeral').checked=false; ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); verSenha($('#uSenha'),false); mostrarRegras($('#uSenhaRegras'),''); toast('Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',4500); await carregarUsuarios(); }
+  const teste=USU_PRAZO&&$('#uTeste').checked, dias=parseInt($('#uDias').value,10);
+  if(teste&&!(dias>=1&&dias<=365)){ toast('Informe de 1 a 365 dias de teste.',4500); btn.disabled=false; return; }
+  const geral=!teste&&perfil==='admin'&&$('#uGeral').checked;
+  const corpo={acao:'criar',nome,usuario,email,senha,perfil,geral}; if(teste) corpo.acesso_ate=diaMais(dias);
+  try{ await chamarUsuarios(corpo); $('#uGeral').checked=false; $('#uTeste').checked=false; atualizarTextoPrazo(); ['#uNome','#uUsuario','#uEmail','#uSenha'].forEach(i=>$(i).value=''); verSenha($('#uSenha'),false); mostrarRegras($('#uSenhaRegras'),''); toast(teste?'Usuário de teste cadastrado, com acesso até '+diaMais(dias).split('-').reverse().join('/')+'. Passe o acesso e a senha inicial para a pessoa.':'Usuário cadastrado. Passe o acesso e a senha inicial para a pessoa.',5000); await carregarUsuarios(); }
   catch(e){ toast('Erro: '+e.message,5000); }
   finally{ btn.disabled=false; }
 });

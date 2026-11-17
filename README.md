@@ -469,3 +469,12 @@ O plano gratuito do Supabase não guarda cópias do banco. Em **admin > Configur
 - A data da última cópia fica em `configuracao.dados.ultimaCopia` e aparece no cartão; passa de 7 dias, fica em amarelo.
 
 Não precisa de SQL nem de função nova: tudo usa as permissões do administrador do cliente.
+
+## Acesso de teste com prazo
+
+Para liberar a base de demonstração a outras pessoas por um tempo definido:
+
+1. Rode `supabase/acesso-teste.sql` no SQL Editor (depois do `clientes.sql`) e atualize a função `usuarios`.
+2. No painel, aba **Usuários** (só a equipe da empresa vê): marque **Acesso de teste por N dias** ao cadastrar, ou use **Dar prazo / Prazo** num usuário existente (+7, +15, +30 dias ou data escolhida; **Tirar o prazo** volta ao acesso sem data).
+3. O acesso vale até as 23h59 (horário de Brasília) do último dia. Depois disso o banco não entrega mais nenhum dado a essa pessoa (as funções `usuario_ativo`, `is_admin` e `cliente_atual` conferem `usuarios.acesso_ate`), o login avisa que o teste terminou e o que ela fez fica preservado.
+4. Usuário de teste fica preso ao cliente em que foi cadastrado, não pode ser da empresa, não troca de cliente e não cadastra usuários.

@@ -571,7 +571,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-11'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-12'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -669,7 +669,8 @@ try{ const c=JSON.parse(localStorage.getItem('lev_cliente')||'null'); if(c) CLIE
 const pastaCliente=()=>(CLIENTE&&CLIENTE.pasta)||'';
 function mostrarCliente(){
   const el=$('#clienteNome'); if(!el) return;
-  el.textContent=CLIENTE&&CLIENTE.nome?CLIENTE.nome+(CLIENTE.geral?' ▾':''):''; el.classList.toggle('hidden',!(CLIENTE&&CLIENTE.nome));
+  const pz=CLIENTE&&CLIENTE.acesso_ate?' · teste até '+new Date(CLIENTE.acesso_ate).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit'}):'';
+  el.textContent=CLIENTE&&CLIENTE.nome?CLIENTE.nome+pz+(CLIENTE.geral?' ▾':''):''; el.classList.toggle('hidden',!(CLIENTE&&CLIENTE.nome));
   el.classList.toggle('troca',!!(CLIENTE&&CLIENTE.geral)); el.title=CLIENTE&&CLIENTE.geral?'Trocar de órgão':'';
 }
 async function carregarCliente(){
@@ -681,11 +682,13 @@ async function carregarCliente(){
       throw error;
     }
     if(!data){
-      showLogin(); $('#loginMsg').innerHTML='<span class="err">Seu usuário não está ligado a um órgão ativo. Fale com o administrador.</span>';
+      let m='Seu usuário não está ligado a um órgão ativo. Fale com o administrador.';
+      try{ const {data:pz}=await sb.rpc('meu_prazo'); if(pz&&pz.vencido) m='O seu período de teste terminou em '+new Date(pz.acesso_ate).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})+'. Para continuar, fale com quem liberou o seu acesso.'; }catch(_){}
+      showLogin(); $('#loginMsg').innerHTML='<span class="err">'+esc(m)+'</span>';
       try{ await sb.auth.signOut(); }catch(_){}
       return false;
     }
-    CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true};
+    CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true,acesso_ate:data.acesso_ate||null};
     try{ localStorage.setItem('lev_cliente',JSON.stringify(CLIENTE)); }catch(_){}
   }catch(_){ /* sem internet: fica o último cliente conhecido */ }
   mostrarCliente();

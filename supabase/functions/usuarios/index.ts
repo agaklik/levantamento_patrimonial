@@ -17,6 +17,11 @@
 //   { acao: 'senha', id, senha }
 //   { acao: 'desbloquear', id }                        (libera quem errou a senha 3 vezes)
 //
+// Acesso de teste (supabase/acesso-teste.sql): em 'criar' e 'atualizar', o campo
+// acesso_ate ('AAAA-MM-DD' = vale até 23:59 desse dia, horário de Brasília; null =
+// sem prazo) só é aceito da equipe da empresa. Usuário de teste não gerencia
+// usuários, e o login dele é recusado depois do prazo (o banco também bloqueia).
+//
 // Vários clientes (supabase/clientes.sql): o administrador só vê e altera os usuários
 // do cliente em que está; quem ele cadastra entra nesse mesmo cliente. Usuário "da
 // empresa" (geral) só é visto e alterado por outro usuário da empresa.
@@ -30,6 +35,20 @@ const cors = {
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const BLOQUEIO = '876000h'; // ~100 anos: bloqueado até ser reativado
+const PRAZO_MAX_DIAS = 365;
+const dataBR = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+// 'AAAA-MM-DD' -> fim desse dia no horário de Brasília (UTC-3); undefined = inválido
+function prazoDe(v: unknown): string | null | undefined {
+  if (v === null || v === '') return null;
+  const t = String(v ?? '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return undefined;
+  const dia = new Date(t + 'T00:00:00Z');
+  if (isNaN(dia.getTime()) || dia.toISOString().slice(0, 10) !== t) return undefined; // ex.: 31/02
+  const hojeBR = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);   // data de hoje em Brasília
+  const dias = Math.round((dia.getTime() - new Date(hojeBR + 'T00:00:00Z').getTime()) / 86400000);
+  if (dias < 0 || dias > PRAZO_MAX_DIAS) return undefined;
+  return new Date(t + 'T23:59:59-03:00').toISOString();
+}
 
 // ---------- regras de cadastro (as mesmas do navegador) ----------
 const EMAIL = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i;
@@ -93,6 +112,11 @@ Deno.serve(async (req) => {
         const { data, error } = await publico().auth.signInWithPassword({ email, password: senha });
         if (!error && data.session) {
           await adm.from('acessos_falhos').delete().eq('chave', chave);
+          // acesso de teste vencido: não entrega a sessão (o banco também já bloqueia os dados)
+          const { data: pz } = await adm.from('usuarios').select('acesso_ate').eq('user_id', data.user.id).maybeSingle();
+          if (pz?.acesso_ate && new Date(pz.acesso_ate) <= new Date()) {
+            return json({ v: V, prazo_vencido: pz.acesso_ate, erro: `O período de teste terminou em ${dataBR(pz.acesso_ate)}. Para continuar, fale com quem liberou o seu acesso.` }, 403);
+          }
           return json({ v: V, session: { access_token: data.session.access_token, refresh_token: data.session.refresh_token } });
         }
         if (error && /banned/i.test(error.message)) return json({ v: V, erro: 'Este usuário está bloqueado. Fale com o administrador.' }, 403);
@@ -124,6 +148,10 @@ Deno.serve(async (req) => {
 
     // cliente em que o administrador está trabalhando (null = banco ainda sem clientes.sql)
     const { data: eu, error: eEu } = await adm.from('usuarios').select('cliente_id,geral').eq('user_id', user.id).maybeSingle();
+    // usuário de teste (com prazo) não cadastra nem altera usuários
+    const { data: euPz, error: ePz } = await adm.from('usuarios').select('acesso_ate').eq('user_id', user.id).maybeSingle();
+    const temPrazo = !ePz; // coluna acesso_ate instalada
+    if (temPrazo && euPz?.acesso_ate) return json({ erro: 'Usuário de teste não pode gerenciar usuários.' }, 403);
     const multi = !eEu && eu != null && eu.cliente_id != null;
     const meuCliente: number | null = multi ? eu!.cliente_id : null;
     const souGeral = multi ? eu!.geral === true : true;
@@ -176,10 +204,11 @@ Deno.serve(async (req) => {
           geral: p.geral === true,
           ativo: !banido && p.ativo !== false,
           senha_bloqueada_ate: travado.get((u.email ?? '').toLowerCase()) ?? null,
+          acesso_ate: p.acesso_ate ?? null,
           ultimo_acesso: u.last_sign_in_at, criado_em: u.created_at,
         };
       }).sort((a, b) => (a.nome || a.email).localeCompare(b.nome || b.email, 'pt-BR'));
-      return json({ usuarios, geral: souGeral });
+      return json({ usuarios, geral: souGeral, prazo: temPrazo });
     }
 
     if (b.acao === 'criar') {
@@ -193,11 +222,20 @@ Deno.serve(async (req) => {
       if (usuario && !USUARIO.test(usuario)) return json({ erro: 'Nome de usuário: de 3 a 30 caracteres, só letras minúsculas sem acento, números, ponto e sublinhado.' }, 400);
       if (usuario && !(await usuarioLivre(usuario))) return json({ erro: 'Este nome de usuário já está em uso.' }, 400);
       const eS = erroSenha(senha, email, usuario); if (eS) return json({ erro: eS }, 400);
+      let prazo: string | null = null;
+      if (b.acesso_ate !== undefined && b.acesso_ate !== null && b.acesso_ate !== '') {
+        if (!souGeral) return json({ erro: 'Só a equipe da empresa libera acesso de teste.' }, 403);
+        if (!temPrazo) return json({ erro: 'Rode antes o script supabase/acesso-teste.sql no Supabase.' }, 400);
+        const p = prazoDe(b.acesso_ate);
+        if (p === undefined) return json({ erro: `Prazo inválido: escolha uma data de hoje até ${PRAZO_MAX_DIAS} dias.` }, 400);
+        prazo = p;
+      }
       const { data, error } = await adm.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome, usuario: usuario || null } });
       if (error) return json({ erro: /already|registered|exists/i.test(error.message) ? 'Já existe um usuário com este e-mail.' : error.message }, 400);
       const id = data.user.id;
       const linha: Record<string, unknown> = { user_id: id, nome, usuario: usuario || null, perfil, ativo: true };
-      if (multi) { linha.cliente_id = meuCliente; linha.geral = souGeral && b.geral === true && perfil === 'admin'; }
+      if (multi) { linha.cliente_id = meuCliente; linha.geral = souGeral && b.geral === true && perfil === 'admin' && !prazo; }
+      if (prazo) linha.acesso_ate = prazo;
       const { error: e2 } = await adm.from('usuarios').upsert(linha);
       if (e2) throw e2;
       await definirPerfil(id, perfil);
@@ -227,6 +265,22 @@ Deno.serve(async (req) => {
         mud.geral = b.geral === true;
       }
       if (multi && mud.perfil === 'campo') mud.geral = false;
+      if (b.acesso_ate !== undefined) {
+        if (!souGeral) return json({ erro: 'Só a equipe da empresa muda o prazo de teste.' }, 403);
+        if (!temPrazo) return json({ erro: 'Rode antes o script supabase/acesso-teste.sql no Supabase.' }, 400);
+        if (id === user.id) return json({ erro: 'Você não pode colocar prazo no próprio acesso.' }, 400);
+        const p = prazoDe(b.acesso_ate);
+        if (p === undefined) return json({ erro: `Prazo inválido: escolha uma data de hoje até ${PRAZO_MAX_DIAS} dias.` }, 400);
+        if (p) {
+          const { data: alvo } = await adm.from('usuarios').select('geral').eq('user_id', id).maybeSingle();
+          if ((mud.geral ?? alvo?.geral) === true) return json({ erro: 'Usuário da empresa não pode ter prazo de teste.' }, 400);
+        }
+        mud.acesso_ate = p;
+      }
+      if (mud.geral === true) {
+        const { data: alvo } = await adm.from('usuarios').select('acesso_ate').eq('user_id', id).maybeSingle();
+        if ((mud.acesso_ate !== undefined ? mud.acesso_ate : alvo?.acesso_ate)) return json({ erro: 'Usuário de teste não pode ser da empresa. Tire o prazo antes.' }, 400);
+      }
       // update (e não upsert): a linha já existe e o cliente dela não muda aqui
       const { data: achou, error } = await adm.from('usuarios').update(mud).eq('user_id', id).select('user_id');
       if (!error && !(achou ?? []).length) {
