@@ -511,7 +511,7 @@
   <!-- CONFIGURAÇÃO -->
   <section id="tab-cfg" class="hidden">
     <div class="card" id="cardManual" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-      <div><h2 style="margin-bottom:4px">Manual operacional</h2><p class="sub" style="margin:0">Passo a passo de todo o trabalho: preparar a base, levantar em campo, reavaliar, emitir documentos e encerrar. Também abre pelo botão <b>?</b> no alto da página ou pela tecla <b>F1</b>, já no capítulo da aba em que você está.</p></div>
+      <div><h2 style="margin-bottom:4px">Manual operacional</h2><p class="sub" style="margin:0">Passo a passo de todo o trabalho: preparar a base, levantar em campo, reavaliar, emitir documentos e encerrar. Também abre pelo botão <b>?</b> no alto da página ou pela tecla <b>F1</b>.</p></div>
       <a class="btn" href="manual.html" target="_blank" rel="noopener" style="text-decoration:none;border-radius:8px;padding:9px 15px;font-weight:600">Abrir o manual</a>
     </div>
     <div class="card hidden" id="cardClientes">
@@ -862,7 +862,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-27'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-28'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -3626,13 +3626,11 @@ $('#btnCsvReav').addEventListener('click',()=>{
 
 iniciar();
 
-// F1 abre o manual no capítulo da aba atual
+// F1 abre o manual, sempre no início
 document.addEventListener('keydown',e=>{
   if(e.key!=='F1') return;
   e.preventDefault();
-  const aba=(document.querySelector('#nav button.active')||{}).dataset?.tab;
-  const cap={painel:'acompanhar',reav:'reavaliar',docs:'documentos',usu:'usuarios',av:'avisos',cfg:'preparar'}[aba]||'inicio';
-  const w=window.open('manual.html#'+cap,'manual-levantamento'); if(w){ w.opener=null; w.focus(); }
+  const w=window.open('manual.html','manual-levantamento'); if(w){ w.opener=null; w.focus(); }
 });
 </script>
 </body>
