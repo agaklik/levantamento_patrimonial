@@ -691,7 +691,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-6'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-7'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -2612,9 +2612,16 @@ const NOME_METODO={fator:'Valor de bem novo multiplicado por fator de reavaliaç
 function tabelaPrecosLaudo(p){
   if(!p||!p.itens||!p.itens.length) return '';
   const comFonte=p.itens.some(x=>x.fonte);
-  const linhas=p.itens.slice(0,15).map(x=>`<tr><td>${dataBR(x.data)}</td>${comFonte?`<td>${esc(x.fonte||'')}</td>`:''}<td>${esc(x.orgao||x.uasg||'')}</td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/'))}</td><td>${esc(x.unidade||'')}</td><td class="n">${brl(x.valor)}</td></tr>`).join('');
+  // no laudo aparecem no máximo 10 preços, repartidos entre as fontes (um de cada por vez);
+  // dentro de cada fonte, primeiro os mais próximos do valor adotado
+  const MAXL=10, grupos={}, ordemF=[];
+  p.itens.forEach(x=>{ const k=x.fonte||''; if(!grupos[k]){ grupos[k]=[]; ordemF.push(k); } grupos[k].push(x); });
+  const alvo=+p.valor; if(isFinite(alvo)) ordemF.forEach(k=>grupos[k].sort((a,b)=>Math.abs(a.valor-alvo)-Math.abs(b.valor-alvo)));
+  const mostra=[]; for(let i=0; mostra.length<Math.min(MAXL,p.itens.length); i++) ordemF.forEach(k=>{ if(grupos[k][i]&&mostra.length<MAXL) mostra.push(grupos[k][i]); });
+  mostra.sort((a,b)=>ordemF.indexOf(a.fonte||'')-ordemF.indexOf(b.fonte||'')||String(b.data||'').localeCompare(String(a.data||'')));
+  const linhas=mostra.map(x=>`<tr><td>${dataBR(x.data)}</td>${comFonte?`<td>${esc(x.fonte||'')}</td>`:''}<td>${esc(x.orgao||x.uasg||'')}</td><td>${esc([x.municipio,x.uf].filter(Boolean).join('/'))}</td><td>${esc(x.unidade||'')}</td><td class="n">${brl(x.valor)}</td></tr>`).join('');
   return `<p style="margin-bottom:4px"><b>Preços considerados</b> (${esc(p.fonte)}, ${esc(p.tipo?rotuloItem({tipo:p.tipo,codigo:p.catmat,nome:p.descricao_catmat}):'item CATMAT '+p.catmat)}${p.descricao_catmat&&p.tipo!=='pncp'&&p.tipo!=='licitacon'&&p.tipo!=='todas'?' – '+esc(p.descricao_catmat):''}; ${esc(p.abrangencia)}, últimos ${p.meses} meses; critério: ${esc(p.criterio)} = ${brl(p.valor)}):</p>
-    <table><tr><th>Data</th>${comFonte?'<th>Fonte</th>':''}<th>Órgão comprador</th><th>Local</th><th>Unid.</th><th>Valor unitário</th></tr>${linhas}</table>${p.itens.length>15?`<p style="font-size:11px">Mais ${p.itens.length-15} preço(s) considerados no cálculo.</p>`:''}`;
+    <table><tr><th>Data</th>${comFonte?'<th>Fonte</th>':''}<th>Órgão comprador</th><th>Local</th><th>Unid.</th><th>Valor unitário</th></tr>${linhas}</table>${p.itens.length>mostra.length?`<p style="font-size:11px">Mais ${p.itens.length-mostra.length} preço(s) considerados no cálculo.</p>`:''}`;
 }
 function paginaLaudo(b,fotos){
   const r=reav(b), ano=(r.data_avaliacao||hojeISO()).slice(0,4);
