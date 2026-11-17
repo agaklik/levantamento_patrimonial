@@ -319,7 +319,7 @@
     <button data-tab="av">Avisos</button>
     <button data-tab="cfg">Configuração</button>
   </nav>
-  <div class="hdr-right"><select id="cliSel" class="hidden" title="Cliente em que você está trabalhando" aria-label="Cliente"></select><a href="./">App de campo</a><a href="manual.html" target="_blank" rel="noopener" class="hdr-ajuda" title="Manual operacional (abre em outra aba)" aria-label="Manual operacional">?</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
+  <div class="hdr-right"><select id="cliSel" class="hidden" title="Cliente em que você está trabalhando" aria-label="Cliente"></select><a href="./">App de campo</a><a href="manual.html" target="_blank" rel="noopener" class="hdr-ajuda" title="Manual operacional (F1)" aria-label="Manual operacional">?</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
 </header>
 <main>
   <div id="schemaMsg" class="msg hidden">As tabelas de reavaliação ainda não existem no banco. Execute o script supabase/reavaliacao.sql no SQL Editor do Supabase e recarregue esta página.</div>
@@ -511,7 +511,7 @@
   <!-- CONFIGURAÇÃO -->
   <section id="tab-cfg" class="hidden">
     <div class="card" id="cardManual" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-      <div><h2 style="margin-bottom:4px">Manual operacional</h2><p class="sub" style="margin:0">Passo a passo de todo o trabalho: preparar a base, levantar em campo, reavaliar, emitir documentos e encerrar. Também fica no botão <b>?</b> no alto da página.</p></div>
+      <div><h2 style="margin-bottom:4px">Manual operacional</h2><p class="sub" style="margin:0">Passo a passo de todo o trabalho: preparar a base, levantar em campo, reavaliar, emitir documentos e encerrar. Também abre pelo botão <b>?</b> no alto da página ou pela tecla <b>F1</b>, já no capítulo da aba em que você está.</p></div>
       <a class="btn" href="manual.html" target="_blank" rel="noopener" style="text-decoration:none;border-radius:8px;padding:9px 15px;font-weight:600">Abrir o manual</a>
     </div>
     <div class="card hidden" id="cardClientes">
@@ -862,7 +862,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-26'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-27'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -3625,6 +3625,15 @@ $('#btnCsvReav').addEventListener('click',()=>{
 });
 
 iniciar();
+
+// F1 abre o manual no capítulo da aba atual
+document.addEventListener('keydown',e=>{
+  if(e.key!=='F1') return;
+  e.preventDefault();
+  const aba=(document.querySelector('#nav button.active')||{}).dataset?.tab;
+  const cap={painel:'acompanhar',reav:'reavaliar',docs:'documentos',usu:'usuarios',av:'avisos',cfg:'preparar'}[aba]||'inicio';
+  const w=window.open('manual.html#'+cap,'manual-levantamento'); if(w){ w.opener=null; w.focus(); }
+});
 </script>
 </body>
 </html>
