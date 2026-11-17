@@ -857,7 +857,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-24'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-25'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -2755,7 +2755,7 @@ async function carregarUsuarios(){
   const aviso=$('#usuAviso');
   try{
     const d=await chamarUsuarios({acao:'listar'});
-    USUARIOS=d.usuarios||[]; usuCarregado=true; $('#uGeralBox').classList.toggle('hidden',!(CLIENTE.id!=null&&CLIENTE.geral)); USU_PRAZO=d.prazo===true&&CLIENTE.geral===true; $('#uPrazoBox').classList.toggle('hidden',!USU_PRAZO); aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
+    USUARIOS=d.usuarios||[]; usuCarregado=true; $('#uGeralBox').classList.toggle('hidden',!(CLIENTE.id!=null&&CLIENTE.geral)); USU_PRAZO=d.prazo===true&&CLIENTE.geral===true&&CLIENTE.demonstracao===true; $('#uPrazoBox').classList.toggle('hidden',!USU_PRAZO); aviso.classList.add('hidden'); $('#usuArea').classList.remove('hidden');
     renderUsuarios();
   }catch(e){
     $('#usuArea').classList.toggle('hidden',!!e.semFuncao);
