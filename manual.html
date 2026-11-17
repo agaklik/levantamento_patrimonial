@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'none'">
+<meta name="robots" content="noindex">
+<title>Manual operacional</title>
+<link rel="icon" href="favicon-32.png">
+<style>
+@font-face{font-family:Archivo;src:url(vendor/archivo.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+:root{--ink:#18212B;--ink2:#3B4654;--muted:#5F6B7A;--line:#DDE3EA;--bg:#EEF1F5;--card:#FFFFFF;--blue:#2347A8;--blue-soft:#E8EEFB;--yellow:#F5C518;--yellow-soft:#FFF7D6;--red:#B42318;--red-soft:#FDECEA;--green:#1E7A46}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Archivo,"Segoe UI",Helvetica,Arial,sans-serif}
+a{color:var(--blue)}
+header.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:12px 20px;background:rgba(24,33,43,.9);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+header.top h1{margin:0;font-size:18px;font-weight:800;letter-spacing:.2px;white-space:nowrap}
+header.top h1 small{font-weight:500;color:#C9D3E0;margin-left:8px;font-size:14px}
+header.top .sp{flex:1}
+header.top input{width:min(320px,40vw);padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:14px}
+header.top input::placeholder{color:#C9D3E0}
+header.top button{padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:14px;cursor:pointer}
+.wrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:28px;max-width:1200px;margin:0 auto;padding:24px 20px 80px}
+nav.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 10px}
+nav.toc a{display:block;padding:6px 12px;border-radius:10px;color:var(--ink2);text-decoration:none;font-size:14.5px;line-height:1.35}
+nav.toc a:hover{background:var(--bg)}
+nav.toc a.on{background:var(--blue-soft);color:var(--blue);font-weight:700}
+nav.toc a .n{display:inline-block;width:22px;color:var(--muted);font-weight:600}
+main{min-width:0}
+.hero{background:linear-gradient(135deg,#18212B,#22324A);color:#fff;border-radius:22px;padding:30px 32px;margin-bottom:22px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-60px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(35,71,168,.55),transparent 70%)}
+.hero .kick{color:var(--yellow);font-weight:700;letter-spacing:3px;font-size:12.5px;text-transform:uppercase}
+.hero h2{margin:6px 0 8px;font-size:34px;line-height:1.15;font-weight:800;border:0;padding:0}
+.hero p{margin:0;color:#D5DDE8;max-width:640px;position:relative;z-index:1}
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:22px 0 0;position:relative;z-index:1}
+.flow a{display:block;text-decoration:none;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px;font-size:13.5px;line-height:1.3}
+.flow a b{display:block;color:var(--yellow);font-size:20px;font-weight:800}
+.flow a:hover{background:rgba(255,255,255,.16)}
+section.cap{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 30px;margin-bottom:18px}
+section.cap>h2{margin:0 0 4px;font-size:25px;line-height:1.25;font-weight:800;display:flex;gap:12px;align-items:baseline}
+section.cap>h2 .n{flex:none;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--yellow);font-size:17px}
+section.cap>.lead{color:var(--muted);margin:0 0 14px}
+h3{font-size:18.5px;margin:24px 0 6px;font-weight:750}
+.where{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.3px;padding:2px 10px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.where.p{background:var(--blue-soft);color:var(--blue)}
+.where.c{background:var(--yellow-soft);color:#7A5B00}
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:10px 0}
+ol.steps>li{counter-increment:s;position:relative;padding:2px 0 10px 44px}
+ol.steps>li:before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
+ul{padding-left:22px}
+li{margin:3px 0}
+.ui{display:inline-block;font-weight:650;background:#F3F5F8;border:1px solid var(--line);border-radius:7px;padding:0 7px;font-size:.93em;white-space:nowrap}
+.box{border-radius:14px;padding:12px 16px;margin:14px 0;font-size:15.2px}
+.box b:first-child{display:block;margin-bottom:2px}
+.dica{background:var(--blue-soft);border-left:4px solid var(--blue)}
+.aten{background:var(--yellow-soft);border-left:4px solid var(--yellow)}
+.risco{background:var(--red-soft);border-left:4px solid var(--red)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+th{background:#F6F8FA;font-weight:700;color:var(--ink2)}
+.tblw{overflow-x:auto}
+code{background:#F3F5F8;border-radius:6px;padding:1px 6px;font-size:.92em}
+.formula{background:var(--ink);color:#fff;border-radius:14px;padding:14px 18px;font-weight:600;margin:12px 0;overflow-x:auto;white-space:nowrap}
+.check li{list-style:none;position:relative;padding-left:30px}
+.check{padding-left:0}
+.check li:before{content:"";position:absolute;left:0;top:5px;width:16px;height:16px;border:2px solid var(--blue);border-radius:5px}
+details{border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin:10px 0;background:#FBFCFD}
+details summary{cursor:pointer;font-weight:700}
+details[open] summary{margin-bottom:6px}
+.hide{display:none!important}
+mark{background:#FFE58A;border-radius:3px;padding:0 1px}
+#semResultado{display:none;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 30px;color:var(--muted)}
+footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:26px}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;padding:16px}
+  nav.toc{position:static;max-height:none}
+  .flow{grid-template-columns:repeat(3,1fr)}
+  header.top h1 small{display:none}
+  section.cap{padding:20px 18px}
+  .hero{padding:24px 20px}
+  .hero h2{font-size:27px}
+}
+@media (max-width:560px){
+  header.top{flex-wrap:wrap}
+  header.top input{order:3;width:100%}
+  header.top .sp{display:none}
+  .flow{grid-template-columns:repeat(2,1fr)}
+}
+@media print{
+  header.top,nav.toc{display:none}
+  body{background:#fff}
+  .wrap{display:block;padding:0}
+  section.cap{border:0;padding:0 0 10px;break-inside:auto}
+  .hero{background:#18212B;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  details{border:0}
+  details>*{display:block}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Manual operacional <small>Levantamento patrimonial</small></h1>
+  <span class="sp"></span>
+  <input type="search" id="busca" placeholder="Procurar no manual (ex.: placa, laudo, senha)" aria-label="Procurar no manual">
+  <button type="button" id="btnImprimir">Imprimir</button>
+</header>
+
+<div class="wrap">
+<nav class="toc" id="toc" aria-label="Capítulos"></nav>
+<main id="conteudo">
+
+<div class="hero" id="inicio">
+  <div class="kick">Comece por aqui</div>
+  <h2>Do cadastro ao laudo, passo a passo</h2>
+  <p>Este manual mostra como conduzir um levantamento patrimonial completo com o app de campo e o painel de administração: preparar a base, contar os bens, reavaliar, emitir os documentos e devolver o resultado ao sistema de patrimônio.</p>
+  <div class="flow">
+    <a href="#preparar"><b>1</b>Preparar a base no painel</a>
+    <a href="#campo"><b>2</b>Contar os bens com o celular</a>
+    <a href="#acompanhar"><b>3</b>Acompanhar e concluir salas</a>
+    <a href="#reavaliar"><b>4</b>Reavaliar os bens</a>
+    <a href="#documentos"><b>5</b>Emitir documentos</a>
+    <a href="#encerrar"><b>6</b>Encerrar e devolver ao sistema</a>
+  </div>
+</div>
+
+<!-- 1 -->
+<section class="cap" id="visao" data-titulo="Visão geral e acessos">
+<h2><span class="n">1</span>Visão geral e acessos</h2>
+<p class="lead">Duas ferramentas, um mesmo banco de dados.</p>
+<div class="tblw"><table>
+<tr><th>Ferramenta</th><th>Para quê</th><th>Onde abrir</th></tr>
+<tr><td><b>App de campo</b> <span class="where c">celular</span></td><td>Ler as placas, conferir sala, estado e situação, tirar fotos, registrar bens sem cadastro e concluir localizações</td><td>Endereço principal do app, instalado na tela inicial do celular</td></tr>
+<tr><td><b>Painel de administração</b> <span class="where p">computador</span></td><td>Preparar a base, acompanhar, reavaliar, emitir documentos, cuidar de usuários, avisos e configuração</td><td>Endereço do app seguido de <code>/admin.html</code></td></tr>
+</table></div>
+
+<h3>Perfis</h3>
+<div class="tblw"><table>
+<tr><th>Perfil</th><th>O que pode fazer</th></tr>
+<tr><td><b>Equipe de campo</b></td><td>Usa só o app de campo: busca bens, registra o levantamento, tira fotos, informa a placa encontrada, registra sobras e conclui localizações. Não altera o cadastro do bem, exceto a placa.</td></tr>
+<tr><td><b>Administrador</b></td><td>Tudo o que a equipe faz, mais o painel inteiro do seu órgão.</td></tr>
+<tr><td><b>Equipe da empresa</b></td><td>Administrador com acesso a todos os órgãos (clientes). Escolhe em qual órgão está trabalhando.</td></tr>
+<tr><td><b>Acesso de teste</b></td><td>Usuário com prazo, que só existe na base de demonstração e perde o acesso no fim do último dia.</td></tr>
+</table></div>
+
+<h3>Entrar</h3>
+<ol class="steps">
+<li>Informe o <b>e-mail</b> ou o <b>nome de usuário</b> e a senha, e toque em <span class="ui">Entrar</span>.</li>
+<li>No primeiro acesso com senha provisória, o sistema pede uma senha nova. Ela precisa ter 10 ou mais caracteres, com letra maiúscula, minúscula, número e símbolo.</li>
+<li>A equipe da empresa escolhe o órgão em que vai trabalhar. No app, a pergunta é "Em qual órgão você vai trabalhar?"; no painel, há um seletor no alto da tela.</li>
+</ol>
+<div class="box aten"><b>Atenção</b>Três senhas erradas seguidas bloqueiam o acesso. Para a equipe de campo, o bloqueio dura até um administrador clicar em <span class="ui">Liberar acesso</span>; para administradores, 15 minutos. Esqueceu a senha? Use <span class="ui">Esqueci minha senha</span> e siga o link enviado por e-mail.</div>
+<div class="box dica"><b>Dica</b>O painel encerra a sessão depois de 30 minutos sem uso. Salve o que estiver fazendo antes de se afastar do computador.</div>
+</section>
+
+<!-- 2 -->
+<section class="cap" id="preparar" data-titulo="Preparar o levantamento">
+<h2><span class="n">2</span>Preparar o levantamento <span class="where p">painel</span></h2>
+<p class="lead">Feito uma vez, antes de a equipe ir a campo. Quase tudo fica na aba <span class="ui">Configuração</span>.</p>
+
+<h3>2.1 Organize o cadastro no sistema de patrimônio</h3>
+<p>Antes de exportar, transfira no sistema de patrimônio <b>todos os bens para uma única localização temporária</b> (por exemplo, "Levantamento 2026"). O painel reconhece essa localização sozinho, porque ela concentra mais da metade dos bens. Durante o trabalho, cada bem encontrado sai dela para a sala onde está. O que sobrar nela no fim é o que <b>não foi localizado</b>.</p>
+
+<h3>2.2 Dados do órgão</h3>
+<ol class="steps">
+<li>Em <span class="ui">Configuração</span> &gt; <b>Dados do órgão e do trabalho</b>, preencha órgão, município/UF, CNPJ, data-base da reavaliação, ato de nomeação da comissão e a modalidade da avaliação (comissão de servidores, responsável técnico ou ambos).</li>
+<li>Clique em <span class="ui">Enviar brasão</span> e escolha a imagem do brasão (PNG, JPG ou SVG). Ele aparece no topo do app e no cabeçalho de todos os documentos.</li>
+<li>Se houver engenheiro, preencha <b>Responsável técnico</b> (nome, título e registro).</li>
+<li>Clique em <span class="ui">Salvar configuração</span>.</li>
+</ol>
+
+<h3>2.3 Importe os dados do sistema de patrimônio</h3>
+<p>Em <b>Importar dados do sistema de patrimônio</b>, envie os arquivos CSV exportados do sistema, <b>nesta ordem</b>:</p>
+<ol class="steps">
+<li><span class="ui">Importar localizações</span></li>
+<li><span class="ui">Importar motivos</span></li>
+<li><span class="ui">Importar bens</span></li>
+</ol>
+<div class="box dica"><b>Pode importar de novo sem medo</b>A importação inclui ou atualiza pelo código. Ela nunca apaga o levantamento já feito, e um bem que já foi levantado nunca é removido. Se a base tiver registros que não vieram no arquivo, o painel pergunta se deve removê-los.</div>
+
+<h3>2.4 Comissão de avaliação</h3>
+<p>Em <b>Comissão de avaliação</b>, informe o código e a descrição da comissão e clique em <span class="ui">Salvar comissão</span>. Sem comissão, o app não deixa salvar itens. Ao trocar a comissão, todos os itens já levantados passam a usar a nova.</p>
+
+<h3>2.5 Forma de envio do app de campo</h3>
+<div class="tblw"><table>
+<tr><th>Opção</th><th>Quando usar</th><th>Como funciona</th></tr>
+<tr><td><b>Online</b></td><td>Prédios com internet ou sinal de celular</td><td>Cada item salvo vai direto para a nuvem. Se o sinal cair, o item espera no celular e sobe sozinho quando a conexão voltar.</td></tr>
+<tr><td><b>Offline (exportação)</b></td><td>Locais sem sinal, como zona rural, depósitos e porões</td><td>O celular baixa a base e guarda tudo. A equipe envia depois, com internet, ou exporta um arquivo para o administrador.</td></tr>
+</table></div>
+<p>Escolha a forma em <b>Envio dos dados do app de campo</b> e clique em <span class="ui">Salvar forma de envio</span>. A escolha vale na próxima vez que cada pessoa abrir o app com internet.</p>
+
+<h3>2.6 Cadastre a equipe</h3>
+<p>Veja o capítulo <a href="#usuarios">Usuários</a>. Depois, mostre à equipe o QR code em <span class="ui">Avisos</span> &gt; <b>Instalar o app no celular</b> para cada pessoa instalar o app.</p>
+
+<h3>Lista de conferência antes de ir a campo</h3>
+<ul class="check">
+<li>Bens transferidos para a localização temporária no sistema de patrimônio</li>
+<li>Dados do órgão e brasão salvos</li>
+<li>Localizações, motivos e bens importados, nessa ordem</li>
+<li>Comissão de avaliação salva</li>
+<li>Forma de envio escolhida</li>
+<li>Equipe cadastrada, com o app instalado e o primeiro acesso feito</li>
+<li>Uma cópia de segurança baixada (veja <a href="#copias">Cópias</a>)</li>
+</ul>
+</section>
+
+<!-- 3 -->
+<section class="cap" id="campo" data-titulo="Trabalho em campo">
+<h2><span class="n">3</span>Trabalho em campo <span class="where c">celular</span></h2>
+<p class="lead">Sala por sala, bem por bem. A barra amarela no topo mostra quanto já foi encontrado.</p>
+
+<h3>3.1 Instalar o app</h3>
+<ul>
+<li><b>Android (Chrome):</b> toque em <span class="ui">Instalar agora</span> na janela que aparece, ou no menu ⋮ &gt; Instalar app.</li>
+<li><b>iPhone e iPad (Safari):</b> botão Compartilhar &gt; <b>Adicionar à Tela de Início</b>.</li>
+<li>O passo a passo também fica no menu <span class="ui">☰</span> &gt; Instalar o app no celular.</li>
+</ul>
+
+<h3>3.2 Levantar um bem</h3>
+<ol class="steps">
+<li>Toque em <span class="ui">Ler código de barras</span> e aponte para a placa. Se a etiqueta estiver ilegível, digite a placa, ou escolha <span class="ui">Por código</span> ou <span class="ui">Por nome</span> e toque em <span class="ui">Buscar</span>.</li>
+<li>Confira a ficha: descrição, código, valor, classificação, marca e modelo.</li>
+<li>Em <b>Localização</b>, toque no ✕ e procure a sala onde o bem está, pelo nome ou pelo código. Só aparecem salas da mesma unidade gestora do bem.</li>
+<li>Se a sala mudou, confira o <b>Motivo da movimentação</b>. Ele já vem com o motivo padrão do levantamento.</li>
+<li>Ajuste o <b>Estado de conservação</b> (Excelente, Bom, Regular ou Péssimo) e a <b>Situação</b>.</li>
+<li>Toque em <span class="ui">Tirar foto</span> quantas vezes precisar.</li>
+<li>Marque <b>Item conferido, levantamento concluído</b> e toque em <span class="ui">Salvar item</span>. O app volta para a busca, pronto para o próximo.</li>
+</ol>
+<div class="box aten"><b>Só conta como encontrado o que foi marcado como concluído</b>Um item salvo sem a marcação continua pendente e entra nos não localizados.</div>
+<div class="box dica"><b>Estado de conservação importa</b>Ele entra direto no cálculo da reavaliação. Na dúvida entre dois estados, fotografe o defeito.</div>
+
+<h3>3.3 Bem sem placa</h3>
+<p>Abra o bem <span class="ui">Por código</span> ou <span class="ui">Por nome</span>. A ficha mostra um campo para digitar ou ler a placa encontrada. O app avisa se a placa já pertence a outro bem. Ao salvar, a placa passa para o cadastro. Deixe em branco se o bem realmente não tiver placa.</p>
+
+<h3>3.4 Bem que não está no cadastro (sobra)</h3>
+<ol class="steps">
+<li>Na tela de busca, toque em <span class="ui">Registrar bem sem cadastro</span>.</li>
+<li>Preencha descrição, placa se houver, marca, modelo, localização, estado e observação, e tire até 4 fotos.</li>
+<li>Toque em <span class="ui">Registrar</span>. É preciso estar com internet.</li>
+</ol>
+<p>O administrador decide depois o que fazer com cada sobra (veja <a href="#acompanhar">Acompanhar</a>).</p>
+
+<h3>3.5 Concluir uma sala</h3>
+<ol class="steps">
+<li>Terminada a sala, toque em <span class="ui">Concluir uma localização</span>.</li>
+<li>Escolha a sala. O app mostra quantos bens foram encontrados nela.</li>
+<li>Toque em <span class="ui">Marcar como concluída</span>. O sistema registra quem concluiu, a data e a hora.</li>
+</ol>
+<div class="box aten"><b>Precisa de internet e de nada pendente no celular</b>Envie antes os itens guardados. Só os bens de salas concluídas ficam liberados para a reavaliação.</div>
+
+<h3>3.6 Trabalhar sem internet</h3>
+<ul>
+<li>No modo <b>online</b>, se o sinal cair, os itens ficam guardados e sobem sozinhos quando a conexão voltar. O botão de nuvem no topo reaparece enquanto houver algo esperando.</li>
+<li>No modo <b>offline</b>, toque no botão de nuvem no topo:
+  <ul>
+  <li><span class="ui">Enviar agora para a nuvem</span>, quando houver internet;</li>
+  <li><span class="ui">Exportar arquivo do levantamento</span>, para entregar o arquivo ao administrador. Depois de exportar, <span class="ui">Apagar do celular os itens já exportados</span> libera espaço;</li>
+  <li><span class="ui">Atualizar os bens guardados no celular</span>, quando o administrador importar uma base nova.</li>
+  </ul>
+</li>
+</ul>
+<div class="box risco"><b>Não limpe os dados do navegador</b>Enquanto houver itens ou fotos esperando envio, limpar os dados do navegador ou desinstalar o app apaga esse trabalho.</div>
+
+<h3>3.7 Menu ☰</h3>
+<p>Reúne <b>Avisos</b> (com o número de não lidos), <b>Notificações</b> (para receber avisos com o app fechado), <b>Instalar o app</b>, <b>Trocar de órgão</b> (só para a equipe da empresa) e <b>Sair</b>. No iPhone, as notificações só funcionam com o app instalado.</p>
+</section>
+
+<!-- 4 -->
+<section class="cap" id="acompanhar" data-titulo="Acompanhar o andamento">
+<h2><span class="n">4</span>Acompanhar o andamento <span class="where p">painel</span></h2>
+<p class="lead">Aba <span class="ui">Painel</span>. Use <span class="ui">Atualizar</span> no topo para trazer o que acabou de chegar do campo.</p>
+<ul>
+<li><b>Cartões de resumo:</b> bens no cadastro, encontrados, não localizados, reavaliados, valor contábil dos encontrados, valor reavaliado e variação.</li>
+<li><b>Resumo por classificação:</b> encontrados, reavaliados e valores por grupo de bens.</li>
+<li><b>Conclusão das localizações:</b> cada sala com bens, levantados, quem concluiu e quando. O administrador pode <span class="ui">Concluir</span> uma sala por ali ou <span class="ui">Reabrir</span> uma sala que precisa ser revista. Quem tinha concluído recebe um aviso.</li>
+<li><b>Bens sem cadastro (sobras):</b> veja as <span class="ui">Fotos</span>, use <span class="ui">Dar destinação</span> para registrar o que será feito com o bem, <span class="ui">Reabrir</span> ou <span class="ui">Excluir</span>.</li>
+</ul>
+<h3>Arquivo vindo do campo (modo offline)</h3>
+<p>Em <span class="ui">Configuração</span> &gt; <b>Receber arquivo do app de campo</b>, clique em <span class="ui">Importar arquivo do celular (.json)</span>. Registros e fotos vão para a nuvem. Um item que já foi atualizado depois do arquivo não é sobrescrito.</p>
+<h3>Quem fez o quê</h3>
+<p>Na ficha de qualquer bem (aba <span class="ui">Reavaliação</span>), aparecem "Levantado por" e o botão <span class="ui">Ver histórico de alterações</span>, com o valor de antes e o de depois de cada mudança.</p>
+</section>
+
+<!-- 5 -->
+<section class="cap" id="reavaliar" data-titulo="Reavaliar os bens">
+<h2><span class="n">5</span>Reavaliar os bens <span class="where p">painel</span></h2>
+<p class="lead">Aba <span class="ui">Reavaliação</span>. Só os bens de salas concluídas aparecem como liberados.</p>
+
+<h3>5.1 Como o valor é calculado</h3>
+<div class="formula">Valor reavaliado = valor de bem novo × (4 × EC + 6 × PVU − 3 × VUR) ÷ 100</div>
+<div class="tblw"><table>
+<tr><th>Parte</th><th>De onde vem</th></tr>
+<tr><td><b>Valor de bem novo</b></td><td>Preço de um bem novo igual ou equivalente, tirado da pesquisa de preços</td></tr>
+<tr><td><b>EC</b>, estado de conservação</td><td>Do levantamento: Excelente 10, Bom 8, Regular 5, Péssimo 2 pontos</td></tr>
+<tr><td><b>PVU</b>, vida útil já utilizada</td><td>Anos de uso desde o ingresso: menos de 2 anos 10 pontos, caindo 1 ponto por ano até 3 pontos com 8 anos ou mais</td></tr>
+<tr><td><b>VUR</b>, vida útil restante</td><td>Anos que o bem ainda deve durar: 1 a 3 anos 8 pontos, caindo até 1 ponto com 10 anos ou mais. A sugestão é a vida útil × o percentual do estado (100%, 80%, 50% ou 20%)</td></tr>
+</table></div>
+<p>O resultado nunca fica abaixo de <b>10% do valor de bem novo</b>. Pesos, tabelas e piso ficam em <span class="ui">Configuração</span> &gt; <b>Parâmetros do método do fator de reavaliação</b>.</p>
+
+<h3>5.2 Filtros da lista</h3>
+<p>Use <b>Situação</b> para escolher o que ver: <i>Liberados, a reavaliar</i> (padrão), <i>Aguardando conclusão da localização</i>, <i>Encontrados</i>, <i>Reavaliados</i>, <i>Não localizados</i> ou <i>Todos os bens</i>. Combine com a busca, a localização e a classificação.</p>
+
+<h3>5.3 O caminho mais rápido: um valor por tipo de bem</h3>
+<p>Bens com a mesma descrição recebem sempre o mesmo valor de referência. Por isso, o normal é pesquisar uma vez por tipo:</p>
+<ol class="steps">
+<li>Clique em <span class="ui">Valores por tipo de bem</span>.</li>
+<li>Em cada tipo, clique em <span class="ui">Definir valor</span> e use <span class="ui">Pesquisar preços</span> (veja 5.4).</li>
+<li>Clique em <span class="ui">Aplicar a N</span> para reavaliar todos os bens liberados daquele tipo, ou em <span class="ui">Aplicar a todos os liberados</span>.</li>
+</ol>
+<div class="box dica"><b>Quando outra sala for concluída</b>Abra <span class="ui">Valores por tipo de bem</span> e aplique de novo. Os bens novos recebem os valores já definidos, sem nova pesquisa.</div>
+<div class="box aten"><b>Mudar o valor de um tipo recalcula tudo</b>O painel pede confirmação e refaz todos os bens daquele tipo já reavaliados, para que bens iguais nunca fiquem com valores diferentes.</div>
+
+<h3>5.4 Pesquisar preços</h3>
+<ol class="steps">
+<li>Clique em <span class="ui">Pesquisar preços</span>, seja na ficha do bem, no tipo ou na linha da reavaliação em lote.</li>
+<li>Confira as palavras da busca. Por padrão, o painel consulta juntas as três fontes públicas: <b>Compras.gov.br</b>, <b>PNCP</b> e <b>LicitaCon (TCE-RS)</b>.</li>
+<li>Ajuste a abrangência (estado, região ou Brasil) e o período (6, 12 ou 24 meses) e clique em <span class="ui">Buscar preços</span>.</li>
+<li>Os preços do mesmo modelo vêm marcados. Desmarque o que não serve (outro modelo, valor fora da realidade).</li>
+<li>Clique em <span class="ui">Usar mediana</span> (recomendado), <span class="ui">Usar média</span> ou <span class="ui">Usar menor</span>.</li>
+</ol>
+<p>A média e a mediana usam no máximo os <b>10 preços mais próximos</b>, com pelo menos um de cada fonte. Esses mesmos preços aparecem no laudo como prova da pesquisa.</p>
+
+<h3>5.5 Reavaliar um bem pela ficha</h3>
+<ol class="steps">
+<li>Clique no bem na lista. A ficha mostra os dados do levantamento, as fotos e o formulário.</li>
+<li>Confira o método, o valor de referência e os anos sugeridos de uso e de vida restante.</li>
+<li>Clique em <span class="ui">Salvar</span> ou em <span class="ui">Salvar e ir ao próximo</span>. <span class="ui">Laudo</span> abre o laudo daquele bem.</li>
+</ol>
+
+<h3>5.6 Reavaliar vários de uma vez</h3>
+<ul>
+<li><b>Pela tela:</b> marque os bens e clique em <span class="ui">Reavaliar selecionados</span>. Informe o valor de cada um (ou um só para todos) e a fonte.</li>
+<li><b>Pela planilha:</b> <span class="ui">Baixar planilha de pesquisa de preços</span>, preencha <code>valor_referencia</code> e <code>fonte</code> e use <span class="ui">Importar valores de referência</span>.</li>
+</ul>
+
+<h3>5.7 Laudo de engenheiro</h3>
+<p>Para imóveis, veículos e máquinas, use <span class="ui">+ Laudo técnico de engenheiro</span> na ficha do bem. Informe número e data, responsável técnico, registro, ART/RRT, valor avaliado e metodologia, e anexe o PDF. O valor do laudo passa a ser o valor reavaliado do bem.</p>
+</section>
+
+<!-- 6 -->
+<section class="cap" id="documentos" data-titulo="Emitir documentos">
+<h2><span class="n">6</span>Emitir documentos <span class="where p">painel</span></h2>
+<p class="lead">Aba <span class="ui">Documentos</span>. Cada documento abre em outra aba do navegador. Para guardar, use <span class="ui">Imprimir / salvar em PDF</span>.</p>
+<div class="tblw"><table>
+<tr><th>Documento</th><th>Botão</th><th>Quando usar</th></tr>
+<tr><td><b>Laudo de avaliação por item</b></td><td><span class="ui">Gerar laudos</span></td><td>Um por bem reavaliado, com vistoria, fotos, metodologia, pesquisa de preços e assinaturas</td></tr>
+<tr><td><b>Termo de responsabilidade</b></td><td><span class="ui">Gerar termos</span></td><td>Um por sala, para o responsável assinar a lista de bens encontrados</td></tr>
+<tr><td><b>Relatório de bens não localizados</b></td><td><span class="ui">Gerar relatório</span></td><td>No fim do trabalho, para apurar o que não apareceu</td></tr>
+<tr><td><b>Relatório de bens sem cadastro</b></td><td><span class="ui">Gerar relatório</span></td><td>Sobras por localização, com a destinação dada</td></tr>
+<tr><td><b>Histórico de alterações</b></td><td><span class="ui">Gerar relatório</span></td><td>Auditoria: quem alterou o quê e quando</td></tr>
+<tr><td><b>Relatório geral da reavaliação</b></td><td><span class="ui">Gerar relatório</span> ou <span class="ui">Baixar CSV</span></td><td>Todos os bens reavaliados, com totais por classificação e as fontes dos valores</td></tr>
+<tr><td><b>Listas do levantamento</b></td><td><span class="ui">Baixar encontrados</span> / <span class="ui">Baixar não encontrados</span></td><td>Planilhas para conferência</td></tr>
+</table></div>
+<div class="box dica"><b>Laudos de parte dos bens</b>Na aba <span class="ui">Reavaliação</span>, marque os bens e clique em <span class="ui">Laudos dos selecionados</span>.</div>
+<div class="box aten"><b>Espere as fotos carregarem</b>Antes de imprimir os laudos, aguarde alguns instantes até todas as fotos aparecerem na pré-visualização.</div>
+</section>
+
+<!-- 7 -->
+<section class="cap" id="encerrar" data-titulo="Encerrar e devolver ao sistema">
+<h2><span class="n">7</span>Encerrar e devolver ao sistema <span class="where p">painel</span></h2>
+<ol class="steps">
+<li>Confirme que todas as salas estão concluídas (<span class="ui">Painel</span> &gt; Conclusão das localizações) e que não há itens parados nos celulares.</li>
+<li>Gere o <b>Relatório de bens não localizados</b> e o <b>Relatório de bens sem cadastro</b>, e dê destinação às sobras.</li>
+<li>Termine a reavaliação e gere os laudos, os termos e o relatório geral.</li>
+<li>Em <span class="ui">Documentos</span> &gt; <b>Arquivo para o sistema de patrimônio</b>, decida se marca <b>Usar o valor reavaliado como Valor Atual</b> e clique em <span class="ui">Gerar ATUALIZA.csv</span>. O painel avisa se houver placas repetidas.</li>
+<li>Importe o <code>ATUALIZA.csv</code> no sistema de patrimônio.</li>
+<li>Baixe uma <a href="#copias">cópia de segurança</a> final, com fotos, e guarde-a fora do computador.</li>
+</ol>
+<div class="box risco"><b>Confira antes de importar no sistema</b>O arquivo leva localização, estado, situação, placa e, se marcado, os valores reavaliados de todos os itens levantados. Faça a importação primeiro em um ambiente de teste, se o sistema permitir.</div>
+</section>
+
+<!-- 8 -->
+<section class="cap" id="usuarios" data-titulo="Usuários">
+<h2><span class="n">8</span>Usuários <span class="where p">painel</span></h2>
+<h3>Cadastrar</h3>
+<ol class="steps">
+<li>Aba <span class="ui">Usuários</span>. Preencha o nome completo (nome e sobrenome), o nome de usuário (opcional) e o e-mail.</li>
+<li>Deixe a senha em branco ou clique em <span class="ui">gerar</span>. Ela é provisória e a pessoa troca no primeiro acesso.</li>
+<li>Escolha o perfil: <b>Equipe de campo</b> ou <b>Administrador</b>.</li>
+<li>Mantenha marcado <b>Enviar por e-mail o link do app e a senha provisória</b> e clique em <span class="ui">Cadastrar usuário</span>.</li>
+</ol>
+<h3>Ações em cada usuário</h3>
+<p><span class="ui">Editar</span> muda nome, usuário e perfil. O botão <span class="ui">Mais ▾</span> reúne:</p>
+<ul>
+<li><b>Liberar acesso:</b> desbloqueia quem errou a senha três vezes.</li>
+<li><b>Nova senha:</b> define uma senha provisória nova, que pode ir por e-mail.</li>
+<li><b>Bloquear acesso / Reativar acesso:</b> o usuário bloqueado não entra mais, e o que ele fez continua guardado.</li>
+<li><b>Excluir usuário:</b> só para quem foi cadastrado errado. Pede que você digite EXCLUIR e mostra quantos registros a pessoa fez.</li>
+<li><b>Dar / Alterar prazo de teste:</b> só aparece na base de demonstração.</li>
+</ul>
+<div class="box dica"><b>Fim do trabalho de campo</b>A equipe temporária deve ser <b>bloqueada</b>, não excluída. Assim, o nome de quem levantou cada bem continua nos relatórios.</div>
+</section>
+
+<!-- 9 -->
+<section class="cap" id="avisos" data-titulo="Avisos para a equipe">
+<h2><span class="n">9</span>Avisos para a equipe <span class="where p">painel</span></h2>
+<ol class="steps">
+<li>Aba <span class="ui">Avisos</span> &gt; <b>Enviar aviso</b>. Escolha toda a equipe ou uma pessoa, escreva e clique em <span class="ui">Enviar aviso</span>.</li>
+<li>O aviso aparece no app (menu ☰ &gt; Avisos) e, para quem ligou as notificações, na tela do celular.</li>
+<li>Em <b>Avisos enviados</b>, veja quantos receberam e quantos leram.</li>
+</ol>
+<p><b>Avisos automáticos</b> (cada um pode ser desligado): acesso de teste terminando, sala reaberta e itens parados no celular há mais de 24 horas. Para alterar, mude e clique em <span class="ui">Salvar avisos automáticos</span>.</p>
+<p>O cartão <b>Instalar o app no celular</b> tem o QR code para mostrar ou imprimir para a equipe.</p>
+</section>
+
+<!-- 10 -->
+<section class="cap" id="copias" data-titulo="Cópias de segurança">
+<h2><span class="n">10</span>Cópias de segurança <span class="where p">painel</span></h2>
+<p class="lead">O banco de dados não guarda cópias sozinho. Essa rotina é sua.</p>
+<ol class="steps">
+<li>Em <span class="ui">Configuração</span> &gt; <b>Cópia de segurança</b>, marque se quer incluir fotos e laudos em PDF.</li>
+<li>Clique em <span class="ui">Baixar cópia deste cliente</span>. A equipe da empresa também pode usar <span class="ui">Baixar cópia de todos os clientes</span>.</li>
+<li>Guarde o arquivo fora do computador também (Google Drive, pen drive).</li>
+</ol>
+<div class="box aten"><b>Frequência</b>Pelo menos uma vez por semana durante o trabalho de campo, e sempre antes de importar uma base nova. A data da última cópia fica amarela depois de 7 dias.</div>
+<p><b>Para voltar dados:</b> <span class="ui">Restaurar a partir de uma cópia</span> inclui o que sumiu e corrige o que mudou, sem apagar nada que existe hoje. Antes de começar, o painel baixa uma cópia da situação atual.</p>
+</section>
+
+<!-- 11 -->
+<section class="cap" id="empresa" data-titulo="Equipe da empresa e demonstração">
+<h2><span class="n">11</span>Equipe da empresa e demonstração <span class="where p">painel</span></h2>
+<h3>Órgãos (clientes)</h3>
+<ul>
+<li>Em <span class="ui">Configuração</span> &gt; <b>Clientes</b>: <span class="ui">Cadastrar cliente</span>, <span class="ui">Trabalhar neste</span>, <span class="ui">Desativar</span> ou <span class="ui">Reativar</span>.</li>
+<li>Cada órgão só vê os próprios dados. Um cliente desativado deixa de ser acessado pelos usuários dele, e nada é apagado.</li>
+<li>Para trocar de órgão, use o seletor no alto do painel. A troca vale também para o seu app de campo.</li>
+</ul>
+<h3>Base de demonstração</h3>
+<ul>
+<li>A PM Demonstração tem uma prefeitura fictícia completa, pronta para apresentar o sistema.</li>
+<li>Depois de uma apresentação ou de um teste, use <span class="ui">Restaurar demonstração</span> (em <span class="ui">Configuração</span> &gt; <b>Base de demonstração</b>). Usuários, senhas e prazos não mudam.</li>
+<li>Ajustou a base e quer manter assim? Use <span class="ui">Guardar como ponto de partida</span>.</li>
+<li><b>Acesso de teste:</b> ao cadastrar alguém na demonstração, marque <b>Acesso de teste por N dias</b>. O acesso vale até as 23h59 do último dia. Esse tipo de acesso só existe na base de demonstração e nunca alcança dados de outro órgão.</li>
+</ul>
+</section>
+
+<!-- 12 -->
+<section class="cap" id="problemas" data-titulo="Problemas comuns">
+<h2><span class="n">12</span>Problemas comuns</h2>
+<details><summary>A câmera não lê a placa</summary>Limpe a etiqueta, aproxime e afaste devagar, e evite reflexo de luz. Se não ler, digite a placa ou busque por código ou por nome. A câmera só funciona no endereço com https e com a permissão de câmera liberada no navegador.</details>
+<details><summary>"Placa já pertence a outro bem"</summary>A placa informada está no cadastro de outro bem ou já foi usada em outro levantamento. Confira a etiqueta. Se o cadastro estiver errado, registre na observação e avise o administrador.</details>
+<details><summary>Não consigo concluir a localização</summary>É preciso estar com internet e sem itens esperando envio. Toque no botão de nuvem no topo e envie primeiro.</details>
+<details><summary>O app mostra a versão antiga</summary>Feche o app por completo e abra de novo, com internet. A versão aparece na tela de entrada.</details>
+<details><summary>Um bem encontrado não aparece para reavaliar</summary>A sala dele ainda não foi concluída. Mude o filtro para <i>Aguardando conclusão da localização</i> ou conclua a sala pelo <span class="ui">Painel</span>.</details>
+<details><summary>A pessoa errou a senha e ficou bloqueada</summary>Aba <span class="ui">Usuários</span> &gt; <span class="ui">Mais ▾</span> &gt; <span class="ui">Liberar acesso</span>, ou defina uma <b>Nova senha</b>.</details>
+<details><summary>O e-mail de acesso não chegou</summary>Peça para olhar a caixa de spam. Se não estiver lá, use <span class="ui">Nova senha</span> e informe a senha à pessoa por outro meio.</details>
+<details><summary>O painel ficou lento ou fora do ar depois de dias sem uso</summary>O banco de dados gratuito entra em pausa depois de um período sem uso e leva alguns instantes para voltar. Recarregue a página.</details>
+<details><summary>A pesquisa de preços trouxe poucos resultados</summary>Use menos palavras (por exemplo, "cadeira giratória" em vez da descrição inteira), aumente o período para 24 meses ou amplie a abrangência para região ou Brasil.</details>
+</section>
+
+<div id="semResultado">Nada encontrado no manual para essa busca. Tente outra palavra.</div>
+<footer>Manual operacional · as telas e os nomes de botões correspondem à versão atual do sistema.</footer>
+</main>
+</div>
+
+<script>
+(function(){
+  var caps=[].slice.call(document.querySelectorAll('section.cap'));
+  var toc=document.getElementById('toc');
+  var html='<a href="#inicio"><span class="n">•</span>Comece por aqui</a>';
+  caps.forEach(function(s,i){html+='<a href="#'+s.id+'"><span class="n">'+(i+1)+'</span>'+s.getAttribute('data-titulo')+'</a>';});
+  toc.innerHTML=html;
+  var links=[].slice.call(toc.querySelectorAll('a'));
+  function marca(){
+    var y=window.scrollY+120, atual=links[0];
+    caps.forEach(function(s,i){ if(!s.classList.contains('hide') && s.offsetTop<=y) atual=links[i+1]; });
+    links.forEach(function(a){a.classList.toggle('on',a===atual);});
+  }
+  addEventListener('scroll',marca,{passive:true}); marca();
+
+  // busca: mostra só os capítulos com a palavra e destaca
+  var originais=caps.map(function(s){return s.innerHTML;});
+  function semAcento(t){return t.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();}
+  function destacar(el,termo){
+    var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null),nos=[],n;
+    while((n=w.nextNode())) nos.push(n);
+    nos.forEach(function(no){
+      var t=no.nodeValue, s=semAcento(t), i=s.indexOf(termo); if(i<0) return;
+      var frag=document.createDocumentFragment(), p=0;
+      while(i>=0){ frag.appendChild(document.createTextNode(t.slice(p,i))); var m=document.createElement('mark'); m.textContent=t.slice(i,i+termo.length); frag.appendChild(m); p=i+termo.length; i=s.indexOf(termo,p); }
+      frag.appendChild(document.createTextNode(t.slice(p))); no.parentNode.replaceChild(frag,no);
+    });
+  }
+  var busca=document.getElementById('busca'), hero=document.getElementById('inicio'), vazio=document.getElementById('semResultado');
+  var tempo;
+  busca.addEventListener('input',function(){
+    clearTimeout(tempo);
+    tempo=setTimeout(function(){
+      var termo=semAcento(busca.value.trim()), achou=0;
+      caps.forEach(function(s,i){
+        s.innerHTML=originais[i];
+        if(!termo){ s.classList.remove('hide'); return; }
+        var tem=semAcento(s.textContent).indexOf(termo)>=0;
+        s.classList.toggle('hide',!tem);
+        if(tem){ achou++; s.querySelectorAll('details').forEach(function(d){ if(semAcento(d.textContent).indexOf(termo)>=0) d.open=true; }); destacar(s,termo); }
+      });
+      hero.classList.toggle('hide',!!termo);
+      vazio.style.display=termo&&!achou?'block':'none';
+      links.forEach(function(a,i){ if(i>0) a.classList.toggle('hide',caps[i-1].classList.contains('hide')); });
+      if(termo){ var m=document.querySelector('main mark'); if(m) m.scrollIntoView({block:'center'}); } else window.scrollTo(0,0);
+      marca();
+    },220);
+  });
+  document.getElementById('btnImprimir').addEventListener('click',function(){
+    document.querySelectorAll('details').forEach(function(d){d.open=true;}); window.print();
+  });
+})();
+</script>
+</body>
+</html>

@@ -44,6 +44,7 @@
   .hdr-right{display:flex;gap:8px;align-items:center;font-size:13px}
   .hdr-right a,.hdr-right button{color:#fff;background:transparent;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px 12px;text-decoration:none;font-size:13px;font-weight:600}
   .hdr-right a:hover,.hdr-right button:hover{background:rgba(255,255,255,.1)}
+  .hdr-right a.hdr-ajuda{width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:50%;font-size:15px;font-weight:800}
   main{padding:24px;max-width:1400px;margin:0 auto}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
   .card h2{margin:0 0 4px;font-size:17px;font-weight:700;font-stretch:96%}
@@ -318,7 +319,7 @@
     <button data-tab="av">Avisos</button>
     <button data-tab="cfg">Configuração</button>
   </nav>
-  <div class="hdr-right"><select id="cliSel" class="hidden" title="Cliente em que você está trabalhando" aria-label="Cliente"></select><a href="./">App de campo</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
+  <div class="hdr-right"><select id="cliSel" class="hidden" title="Cliente em que você está trabalhando" aria-label="Cliente"></select><a href="./">App de campo</a><a href="manual.html" target="_blank" rel="noopener" class="hdr-ajuda" title="Manual operacional (abre em outra aba)" aria-label="Manual operacional">?</a><button id="btnReload">Atualizar</button><button id="btnLogout">Sair</button></div>
 </header>
 <main>
   <div id="schemaMsg" class="msg hidden">As tabelas de reavaliação ainda não existem no banco. Execute o script supabase/reavaliacao.sql no SQL Editor do Supabase e recarregue esta página.</div>
@@ -509,6 +510,10 @@
 
   <!-- CONFIGURAÇÃO -->
   <section id="tab-cfg" class="hidden">
+    <div class="card" id="cardManual" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <div><h2 style="margin-bottom:4px">Manual operacional</h2><p class="sub" style="margin:0">Passo a passo de todo o trabalho: preparar a base, levantar em campo, reavaliar, emitir documentos e encerrar. Também fica no botão <b>?</b> no alto da página.</p></div>
+      <a class="btn" href="manual.html" target="_blank" rel="noopener" style="text-decoration:none;border-radius:8px;padding:9px 15px;font-weight:600">Abrir o manual</a>
+    </div>
     <div class="card hidden" id="cardClientes">
       <h2>Clientes</h2>
       <p class="sub">Cada cliente (prefeitura, câmara, autarquia) tem os próprios bens, levantamento, reavaliação, documentos e usuários. A equipe de campo e os administradores de um cliente só enxergam os dados dele. Só a equipe da empresa vê esta lista e troca de cliente pelo seletor no alto da página. Desativar um cliente corta o acesso dos usuários dele, sem apagar nada.</p>
@@ -857,7 +862,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-25'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-26'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
