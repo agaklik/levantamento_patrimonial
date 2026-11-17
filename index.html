@@ -9,9 +9,10 @@
 <meta property="og:title" content="Levantamento Patrimonial · App de campo">
 <meta property="og:description" content="Conferir, etiquetar e fotografar os bens públicos pelo celular, com envio online ou offline.">
 <meta property="og:url" content="https://agaklik.github.io/levantamento_patrimonial/">
-<meta property="og:image" content="https://agaklik.github.io/levantamento_patrimonial/icon-512.png">
-<meta property="og:image:width" content="512">
-<meta property="og:image:height" content="512">
+<meta property="og:image" content="https://agaklik.github.io/levantamento_patrimonial/previa-link.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="800">
+<meta property="og:image:height" content="800">
 <meta name="twitter:card" content="summary">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://wrhtisnejlpjsliplloz.supabase.co; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https://wrhtisnejlpjsliplloz.supabase.co wss://wrhtisnejlpjsliplloz.supabase.co; worker-src 'self' blob:; frame-src 'self' blob: https://wrhtisnejlpjsliplloz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
@@ -683,7 +684,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-15'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-16'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
