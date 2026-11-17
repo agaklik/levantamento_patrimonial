@@ -34,6 +34,10 @@
   .hdr-center{flex:1;min-width:0}
   header h1{font-size:17px;margin:0;font-weight:700;font-stretch:92%;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
   .stats{display:none}
+  .cliente-nome.troca{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+  .cli-op{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left}
+  .cli-op small{color:var(--muted);font-weight:500}
+  .cli-op.atual{box-shadow:inset 0 0 0 2px var(--brand,#2347A8)}
   .versao-topo{font-size:10.5px;opacity:.55;margin-top:1px;font-variant-numeric:tabular-nums}
   .cliente-nome{font-size:12px;font-weight:600;opacity:.8;letter-spacing:.02em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
   #progWrap{margin-top:7px!important}
@@ -332,6 +336,12 @@
 
 <main>
   <!-- BUSCA / SCANNER -->
+  <div class="card hidden" id="cliCard">
+    <h3>Em qual órgão você vai trabalhar?</h3>
+    <p class="hint" style="margin-top:0">O que você levantar fica gravado só no órgão escolhido. Para trocar depois, toque no nome do órgão no topo da tela.</p>
+    <div class="stack" id="cliLista"></div>
+    <div id="cliMsg" style="margin-top:10px;font-size:14px"></div>
+  </div>
   <div class="card" id="searchCard">
     <button class="btn-scan" id="btnScan"><svg><use href="#i-barcode"/></svg>Ler código de barras</button>
     <div id="scanWrap" class="hidden">
@@ -559,7 +569,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-2'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-3'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -615,6 +625,8 @@ async function enterApp(session){
   try{
     if(!SEM_SESSAO){
       if(!(await carregarCliente())) return;
+      // equipe da empresa: escolhe o órgão a cada vez que abre o app
+      if(CLIENTE.geral && !clienteEscolhidoNestaSessao()){ if(await mostrarEscolhaCliente(false)) return; }
       await carregarPerfil(); await carregarModoEnvio();
     }
     await conferirBaseDoCliente(); mostrarCliente();
@@ -655,7 +667,8 @@ try{ const c=JSON.parse(localStorage.getItem('lev_cliente')||'null'); if(c) CLIE
 const pastaCliente=()=>(CLIENTE&&CLIENTE.pasta)||'';
 function mostrarCliente(){
   const el=$('#clienteNome'); if(!el) return;
-  el.textContent=CLIENTE&&CLIENTE.nome?CLIENTE.nome:''; el.classList.toggle('hidden',!(CLIENTE&&CLIENTE.nome));
+  el.textContent=CLIENTE&&CLIENTE.nome?CLIENTE.nome+(CLIENTE.geral?' ▾':''):''; el.classList.toggle('hidden',!(CLIENTE&&CLIENTE.nome));
+  el.classList.toggle('troca',!!(CLIENTE&&CLIENTE.geral)); el.title=CLIENTE&&CLIENTE.geral?'Trocar de órgão':'';
 }
 async function carregarCliente(){
   try{
@@ -670,12 +683,47 @@ async function carregarCliente(){
       try{ await sb.auth.signOut(); }catch(_){}
       return false;
     }
-    CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||''};
+    CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true};
     try{ localStorage.setItem('lev_cliente',JSON.stringify(CLIENTE)); }catch(_){}
   }catch(_){ /* sem internet: fica o último cliente conhecido */ }
   mostrarCliente();
   return true;
 }
+// ---- escolha do órgão (só para a equipe da empresa, que atende vários clientes)
+function clienteEscolhidoNestaSessao(){ try{ return sessionStorage.getItem('lev_cli_ok')===String(CLIENTE.id); }catch(_){ return true; } }
+function marcarClienteEscolhido(){ try{ sessionStorage.setItem('lev_cli_ok',String(CLIENTE.id)); }catch(_){} }
+// mostra a lista; devolve true se a tela de escolha ficou aberta (o app espera a escolha)
+async function mostrarEscolhaCliente(trocando){
+  let lista=[];
+  try{ const {data,error}=await sb.from('clientes').select('id,nome,municipio').eq('ativo',true).order('nome'); if(error) throw error; lista=data||[]; }
+  catch(e){ if(trocando) toast('Sem internet para trocar de órgão agora.'); return false; }
+  if(!trocando && lista.length<2){ marcarClienteEscolhido(); return false; }
+  let fila=[]; try{ fila=await idbAll('fila'); }catch(_){}
+  const msg=$('#cliMsg'); msg.innerHTML=fila.length?`<span class="err">Há ${fila.length} item(ns) guardados neste celular. Envie antes de trocar de órgão.</span>`:'';
+  $('#cliLista').innerHTML=lista.map(c=>`<button class="btn-2 btn-block cli-op${c.id===CLIENTE.id?' atual':''}" data-id="${c.id}"><span>${esc(c.nome)}${c.municipio?'<br><small>'+esc(c.municipio)+'</small>':''}</span>${c.id===CLIENTE.id?'<small>atual</small>':''}</button>`).join('')
+    +(trocando?'<button class="btn-ghost btn-block" id="cliCancelar">Continuar no órgão atual</button>':'');
+  ['searchCard','locCard','syncCard','sobraCard','detailCard'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+  $('#cliCard').classList.remove('hidden');
+  const cancelar=$('#cliCancelar'); if(cancelar) cancelar.onclick=()=>{ $('#cliCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); };
+  document.querySelectorAll('#cliLista .cli-op').forEach(b=>b.onclick=async()=>{
+    const id=+b.dataset.id, c=lista.find(x=>x.id===id);
+    if(id!==CLIENTE.id && fila.length){ toast('Envie antes os itens guardados neste celular.',3600); return; }
+    if(trocando && id!==CLIENTE.id && !confirm(`Trocar para "${c.nome}"?\n\nOs bens deste órgão serão carregados no lugar dos atuais.`)) return;
+    b.disabled=true;
+    if(id!==CLIENTE.id){
+      const {data,error}=await sb.rpc('escolher_cliente',{p_id:id});
+      if(error||!data){ b.disabled=false; msg.innerHTML='<span class="err">Não foi possível escolher o órgão: '+esc(error?error.message:'tente de novo')+'</span>'; return; }
+      CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true};
+      try{ localStorage.setItem('lev_cliente',JSON.stringify(CLIENTE)); }catch(_){}
+    }
+    marcarClienteEscolhido(); mostrarCliente();
+    $('#cliCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden');
+    toast('Trabalhando em '+CLIENTE.nome);
+    const {data:{session}}=await sb.auth.getSession(); enterApp(session);
+  });
+  return true;
+}
+$('#clienteNome').addEventListener('click',()=>{ if(CLIENTE.geral && !SEM_SESSAO) mostrarEscolhaCliente(true); });
 // os bens guardados no celular são de um cliente só: se mudou, baixa de novo
 async function conferirBaseDoCliente(){
   if(CLIENTE.id==null) return;

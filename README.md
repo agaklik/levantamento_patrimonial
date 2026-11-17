@@ -450,6 +450,7 @@ Em Documentos, a opção "Usar o valor reavaliado como Valor Atual" faz o ATUALI
 Um único projeto do Supabase atende vários clientes (prefeituras, câmaras, autarquias). Cada usuário pertence a um cliente e só enxerga os bens, o levantamento, a reavaliação, os valores por tipo de bem, a conclusão das localizações, o histórico, as sobras, as fotos, os laudos e os usuários desse cliente. Quem decide é o banco (RLS), pela função `cliente_atual()`; as telas só mostram o nome do cliente.
 
 - **Equipe da empresa** (`usuarios.geral = true`, sempre administrador): vê a lista de clientes em Configuração > Clientes, cadastra clientes novos e troca de cliente pelo seletor no alto do painel. A troca vale também para o app de campo desse usuário.
+- **Escolha do órgão no app de campo**: a equipe da empresa escolhe o órgão toda vez que abre o app ("Em qual órgão você vai trabalhar?") e pode trocar tocando no nome do órgão no topo. Com itens guardados no celular, a troca só é liberada depois de enviá-los.
 - **Administrador do cliente**: administra só o próprio cliente; os usuários que ele cadastra entram nesse cliente.
 - **Cliente desativado**: os usuários dele deixam de ver os dados; nada é apagado.
 - Os dados que já existiam ficam no cliente nº 1. Fotos e laudos dele continuam nas pastas antigas do bucket `fotos`; os clientes novos usam a pasta `c<nº>/`.
