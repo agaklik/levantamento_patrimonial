@@ -771,8 +771,10 @@
     <div class="pz-lc hidden" id="pzLc">
       <div id="pzLcReg"></div>
       <div class="reg-form hidden" id="pzRegForm">
-        <input id="pzRegNome" placeholder="Nome da região (ex.: AMGSR – Grande Santa Rosa)" maxlength="80">
-        <textarea id="pzRegMun" rows="4" placeholder="Municípios da associação, um por linha ou separados por vírgula (ex.: Santa Rosa, Tuparendi, Tucunduva...)"></textarea>
+        <label for="pzRegNome" style="font-weight:600;font-size:13px;margin-bottom:-4px">1. Nome da região (só o nome, ex.: AMGSR)</label>
+        <input id="pzRegNome" placeholder="Ex.: AMGSR – Grande Santa Rosa">
+        <label for="pzRegMun" style="font-weight:600;font-size:13px;margin-bottom:-4px">2. Municípios da associação (cole a lista toda aqui, sem limite de tamanho)</label>
+        <textarea id="pzRegMun" rows="6" placeholder="Um por linha ou separados por vírgula. Ex.: Alecrim, Alegria, Boa Vista do Buricá, Santa Rosa, Tuparendi..."></textarea>
         <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="pzRegCam"> Incluir também as câmaras de vereadores (ocupa mais espaço e quase não compram bens)</label>
         <div style="display:flex;gap:6px"><button class="btn-2" id="pzRegSalvar">Salvar região</button><button class="btn-2" id="pzRegCancelar">Cancelar</button></div>
       </div>
@@ -812,7 +814,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-18'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-19'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1735,6 +1737,14 @@ function pzRegForm(r){
 }
 $('#pzRegCancelar').onclick=()=>$('#pzRegForm').classList.add('hidden');
 $('#pzRegSalvar').onclick=async()=>{
+  // lista colada no campo do nome: leva para a caixa dos municípios e pede o nome
+  const nm=$('#pzRegNome').value;
+  if((nm.match(/[,;\n]/g)||[]).length>=2){
+    const mun=$('#pzRegMun').value.trim();
+    $('#pzRegMun').value=nm+(mun?', '+mun:''); $('#pzRegNome').value=''; $('#pzRegNome').focus();
+    toast('A lista de municípios foi para a caixa de baixo. Agora escreva só o nome da região no campo de cima (ex.: AMGSR).'); return;
+  }
+  if(nm.trim().length>80){ toast('O nome da região pode ter até 80 letras.'); return; }
   const btn=$('#pzRegSalvar'); btn.disabled=true;
   try{
     const d=await chamarPrecos({acao:'lc_regiao_salvar',id:LR.editando&&LR.editando.id,nome:$('#pzRegNome').value,municipios:$('#pzRegMun').value,incluir_camaras:$('#pzRegCam').checked});
