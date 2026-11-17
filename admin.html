@@ -73,6 +73,19 @@
   .grid{display:grid;gap:14px}
   .g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
   /* faixa de indicadores: uma régua só, dividida, em vez de cartões soltos */
+  /* andamento: gráficos do painel */
+  .and-topo{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0 6px}
+  .and-topo div{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .and-topo b{display:block;font-size:22px;font-weight:800;font-stretch:85%;font-variant-numeric:tabular-nums;line-height:1.2}
+  .and-topo small{color:var(--muted);font-size:12.5px}
+  .and-graf{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-top:10px}
+  .and-graf h3{font-size:14px;margin:0 0 2px}.and-graf .sub{margin:0 0 6px;font-size:12.5px}
+  .graf{position:relative}.graf svg{display:block;width:100%;height:auto;overflow:visible}
+  .graf .gtip{position:absolute;pointer-events:none;background:var(--txt);color:#fff;font-size:12.5px;line-height:1.35;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-100%);margin-top:-8px;opacity:0;transition:opacity .1s;z-index:5}
+  .graf .gtip.on{opacity:1}
+  .graf .hit:hover+.bar,.graf .bar.on{opacity:.75}
+  .and-dados summary{cursor:pointer;color:var(--accent);font-size:13px;margin-top:10px}
+  .and-dados table{margin-top:6px;font-size:13px}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
   .kpi{container-type:inline-size;min-width:0;padding:16px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -1px -1px 0}
   .kpi .l{font-size:13px;font-weight:500;color:var(--muted)}
@@ -337,6 +350,16 @@
   <section id="tab-painel" class="hidden">
     <div class="gestor-faixa">Painel do gestor: acompanhamento do levantamento patrimonial, só para consulta. Os documentos e o relatório executivo ficam na aba Documentos.</div>
     <div class="kpis" id="kpis"></div>
+    <div class="card" id="cardAndamento">
+      <h2>Andamento do levantamento</h2>
+      <p class="sub" style="margin:0" id="andSub"></p>
+      <div class="and-topo" id="andTopo"></div>
+      <div class="and-graf">
+        <div><h3>Bens encontrados por dia</h3><p class="sub">Dias úteis. Passe o mouse sobre as barras para ver o número do dia.</p><div class="graf" id="grafDia"></div></div>
+        <div><h3>Encontrados acumulados, em % do cadastro</h3><p class="sub">A linha tracejada é a previsão no ritmo das duas últimas semanas.</p><div class="graf" id="grafAcum"></div></div>
+      </div>
+      <details class="and-dados"><summary>Ver os números em tabela</summary><div id="andTabela"></div></details>
+    </div>
     <div class="card" id="cardOcResumo">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
         <div><h2>Ocorrências do campo</h2><p class="sub" style="margin:0" id="ocResumo">Nenhuma ocorrência registrada.</p></div>
@@ -898,7 +921,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-30'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-31'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1334,7 +1357,111 @@ function renderPainel(){
   const g=porClassificacao(enc);
   $('#tblClass').innerHTML='<thead><tr><th>Classificação</th><th class="n">Encontrados</th><th class="n">Reavaliados</th><th class="n">Valor atual</th><th class="n">Valor reavaliado</th></tr></thead><tbody>'+
     g.map(x=>`<tr style="cursor:default"><td>${esc(x.nome)}</td><td class="n">${x.qtd}</td><td class="n">${x.qtdR}</td><td class="n">${brl(x.vAtual)}</td><td class="n">${x.qtdR?brl(x.vNovo):'—'}</td></tr>`).join('')+'</tbody>';
-  renderConclusao(); renderSobras(); renderOcorrencias();
+  renderConclusao(); renderSobras(); renderOcorrencias(); renderAndamento();
+}
+/* ---------- andamento: evolução diária, ritmo e previsão ---------- */
+const isoDia=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const diaDe=iso=>{ const [a,m,d]=iso.split('-').map(Number); return new Date(a,m-1,d); };
+const util=d=>d.getDay()!==0&&d.getDay()!==6;
+const curtoBR=iso=>{ const d=diaDe(iso); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
+function dadosAndamento(){
+  // data em que o bem foi encontrado: a do registro do levantamento (atualizado_em)
+  const cont={}; let semData=0;
+  BENS.forEach(b=>{ if(!encontrado(b)) return; const t=lev(b).atualizado_em; if(!t){ semData++; return; } const k=isoDia(new Date(t)); cont[k]=(cont[k]||0)+1; });
+  const chaves=Object.keys(cont).sort(), hoje=hojeISO();
+  const enc=BENS.filter(encontrado).length, total=BENS.length;
+  const dias=[];
+  if(chaves.length){
+    const fim=diaDe(hoje>chaves[chaves.length-1]?hoje:chaves[chaves.length-1]);
+    for(let d=diaDe(chaves[0]);d<=fim;d.setDate(d.getDate()+1)){ const k=isoDia(d); if(util(d)||cont[k]) dias.push({d:k,n:cont[k]||0}); }
+  }
+  let ac=semData; dias.forEach(x=>{ ac+=x.n; x.ac=ac; });
+  // ritmo: média dos últimos 10 dias úteis (duas semanas), contando hoje
+  const ult=[]; for(let d=diaDe(hoje);ult.length<10;d.setDate(d.getDate()-1)) if(util(d)) ult.push(isoDia(d));
+  const noPeriodo=ult.reduce((s,k)=>s+(cont[k]||0),0), ritmo=noPeriodo/10;
+  const faltam=total-enc;
+  let previsao=null, diasUteis=0;
+  if(ritmo>0&&faltam>0){ diasUteis=Math.ceil(faltam/ritmo); const d=diaDe(hoje); for(let i=0;i<diasUteis;){ d.setDate(d.getDate()+1); if(util(d)) i++; } previsao=isoDia(d); }
+  const locsComBens=new Set(); BENS.forEach(b=>{ if(encontrado(b)) locsComBens.add(locCod(b)); });
+  const conc=Object.keys(CONC).length, andam=[...locsComBens].filter(c=>c&&c!==LOCAL_ORIGEM&&!CONC[c]).length;
+  const sem=[]; Object.values(CONC).forEach(c=>{ if(c.concluido_em) sem.push(isoDia(new Date(c.concluido_em))); });
+  return {dias,ritmo,noPeriodo,faltam,previsao,diasUteis,enc,total,conc,andam,inicio:chaves[0]||null,hoje,concDias:sem};
+}
+const nBR=v=>Math.round(v).toLocaleString('pt-BR');
+function passoEixo(max){ const alvo=max/4, p=Math.pow(10,Math.floor(Math.log10(alvo||1))); for(const m of [1,2,2.5,5,10]) if(m*p>=alvo) return m*p; return 10*p; }
+// barras dos encontrados por dia (SVG desenhado à mão; interativo no painel, estático no relatório)
+function svgDias(A,opt){
+  const o=Object.assign({w:560,h:220,cor:'#2347A8',tinta:'#5B6672',linha:'#E6EAEE'},opt||{});
+  const ds=A.dias; if(!ds.length) return '<p class="sub">Nenhum bem encontrado ainda.</p>';
+  const L=40,R=8,T=12,B=26, W=o.w-L-R, H=o.h-T-B;
+  const max=Math.max(...ds.map(x=>x.n),1), st=passoEixo(max), top=Math.ceil(max/st)*st;
+  const bw=W/ds.length, gap=Math.min(2,bw*.25), y=v=>T+H-(v/top)*H;
+  let g='';
+  for(let v=0;v<=top;v+=st) g+=`<line x1="${L}" x2="${L+W}" y1="${y(v)}" y2="${y(v)}" stroke="${o.linha}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="${o.tinta}">${nBR(v)}</text>`;
+  const cada=Math.max(1,Math.ceil(ds.length/8));
+  ds.forEach((x,i)=>{ const x0=L+i*bw+gap/2, w=Math.max(1,bw-gap), h=(x.n/top)*H, r=Math.min(4,w/2,h);
+    const path=h<=0?'':`M${x0},${T+H} V${T+H-h+r} Q${x0},${T+H-h} ${x0+r},${T+H-h} H${x0+w-r} Q${x0+w},${T+H-h} ${x0+w},${T+H-h+r} V${T+H} Z`;
+    g+=`<rect class="hit" x="${L+i*bw}" y="${T}" width="${bw}" height="${H}" fill="transparent" data-i="${i}"/>`+(path?`<path class="bar" d="${path}" fill="${o.cor}"/>`:'<g class="bar"></g>');
+    if(i%cada===0) g+=`<text x="${L+i*bw+bw/2}" y="${T+H+16}" text-anchor="middle" font-size="11" fill="${o.tinta}">${curtoBR(x.d)}</text>`; });
+  g+=`<line x1="${L}" x2="${L+W}" y1="${T+H}" y2="${T+H}" stroke="${o.tinta}" stroke-opacity=".5"/>`;
+  return `<svg viewBox="0 0 ${o.w} ${o.h}" role="img" aria-label="Bens encontrados por dia, de ${curtoBR(ds[0].d)} a ${curtoBR(ds[ds.length-1].d)}. Maior dia: ${nBR(max)} bens.">${g}</svg>`;
+}
+// acumulado em % do cadastro, com a previsão tracejada até 100%
+function svgAcum(A,opt){
+  const o=Object.assign({w:560,h:220,cor:'#2347A8',prev:'#8A95A1',tinta:'#5B6672',linha:'#E6EAEE'},opt||{});
+  const ds=A.dias; if(!ds.length||!A.total) return '<p class="sub">Nenhum bem encontrado ainda.</p>';
+  const L=40,R=12,T=26,B=26, W=o.w-L-R, H=o.h-T-B;
+  const t0=diaDe(ds[0].d).getTime(), fimD=A.previsao&&A.previsao>ds[ds.length-1].d?A.previsao:ds[ds.length-1].d, t1=Math.max(diaDe(fimD).getTime(),t0+864e5);
+  const x=iso=>L+(diaDe(iso).getTime()-t0)/(t1-t0)*W, y=p=>T+H-(p/100)*H, pc=v=>v/A.total*100;
+  let g='';
+  [0,25,50,75,100].forEach(v=>g+=`<line x1="${L}" x2="${L+W}" y1="${y(v)}" y2="${y(v)}" stroke="${o.linha}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="${o.tinta}">${v}%</text>`);
+  // rótulos de data: início, hoje e previsão
+  const marcas=[ds[0].d, A.hoje]; if(A.previsao) marcas.push(A.previsao);
+  marcas.forEach((m,i)=>{ if(i&&Math.abs(x(m)-x(marcas[i-1]))<40) return; g+=`<text x="${x(m)}" y="${T+H+16}" text-anchor="${i===0?'start':i===marcas.length-1?'end':'middle'}" font-size="11" fill="${o.tinta}">${curtoBR(m)}</text>`; });
+  const pts=ds.map(d=>`${x(d.d).toFixed(1)},${y(pc(d.ac)).toFixed(1)}`).join(' ');
+  const ult=ds[ds.length-1];
+  g+=`<polygon points="${x(ds[0].d)},${T+H} ${pts} ${x(ult.d)},${T+H}" fill="${o.cor}" fill-opacity=".08"/>`;
+  g+=`<polyline points="${pts}" fill="none" stroke="${o.cor}" stroke-width="2" stroke-linejoin="round"/>`;
+  if(A.previsao){
+    g+=`<line x1="${x(ult.d)}" y1="${y(pc(ult.ac))}" x2="${x(A.previsao)}" y2="${y(100)}" stroke="${o.prev}" stroke-width="2" stroke-dasharray="5 4"/>`;
+    g+=`<circle cx="${x(A.previsao)}" cy="${y(100)}" r="4" fill="#fff" stroke="${o.prev}" stroke-width="2"/>`;
+    g+=`<text x="${x(A.previsao)-8}" y="${y(100)-9}" text-anchor="end" font-size="11" fill="${o.tinta}">previsão ${curtoBR(A.previsao)}</text>`;
+  }
+  g+=`<circle cx="${x(ult.d)}" cy="${y(pc(ult.ac))}" r="4" fill="${o.cor}" stroke="#fff" stroke-width="2"/>`;
+  g+=`<text x="${x(ult.d)-6}" y="${y(pc(ult.ac))-10}" text-anchor="end" font-size="12" font-weight="700" fill="#18212B">${pc(ult.ac).toFixed(0)}%</text>`;
+  g+=`<line class="cruz" x1="0" x2="0" y1="${T}" y2="${T+H}" stroke="${o.tinta}" stroke-opacity=".4" visibility="hidden"/><circle class="ponto" r="4" fill="${o.cor}" stroke="#fff" stroke-width="2" visibility="hidden"/>`;
+  g+=`<rect class="area" x="${L}" y="${T}" width="${W}" height="${H}" fill="transparent"/>`;
+  return `<svg viewBox="0 0 ${o.w} ${o.h}" role="img" aria-label="Encontrados acumulados: ${pc(ult.ac).toFixed(0)}% do cadastro em ${curtoBR(ult.d)}${A.previsao?'. Previsão de 100% em '+dataBR(diaDe(A.previsao)):''}." data-t0="${t0}" data-t1="${t1}" data-l="${L}" data-w="${W}" data-top="${T}" data-h="${H}">${g}</svg>`;
+}
+function renderAndamento(){
+  const A=dadosAndamento();
+  $('#andSub').textContent=A.inicio?`Desde ${dataBR(diaDe(A.inicio))}. Cada bem conta no dia em que foi registrado como encontrado.`:'O levantamento ainda não começou.';
+  const t=(v,l)=>`<div><b>${v}</b><small>${l}</small></div>`;
+  $('#andTopo').innerHTML=
+    t(A.ritmo?nBR(A.ritmo):'0','bens por dia útil, média das duas últimas semanas')+
+    t(nBR(A.faltam),'bens do cadastro ainda não encontrados')+
+    t(A.previsao?dataBR(diaDe(A.previsao)):'—',A.previsao?`previsão para ler o restante, em cerca de ${A.diasUteis} dia(s) útil(eis) no ritmo atual`:A.faltam?'sem leituras nas duas últimas semanas para prever o término':'todos os bens do cadastro foram encontrados')+
+    t(nBR(A.conc),`salas concluídas${A.andam?' · '+A.andam+' em andamento':''}`);
+  $('#grafDia').innerHTML=svgDias(A)+'<div class="gtip"></div>';
+  $('#grafAcum').innerHTML=svgAcum(A)+'<div class="gtip"></div>';
+  // dicas ao passar o mouse
+  { const box=$('#grafDia'), svg=box.querySelector('svg'), tip=box.querySelector('.gtip');
+    if(svg) svg.querySelectorAll('.hit').forEach(h=>{ const i=+h.dataset.i, x=A.dias[i];
+      h.addEventListener('mouseenter',()=>{ const r=h.getBoundingClientRect(), rb=box.getBoundingClientRect(); svg.querySelectorAll('.bar.on').forEach(b=>b.classList.remove('on')); h.nextElementSibling.classList.add('on');
+        tip.innerHTML=`<b>${dataBR(diaDe(x.d))}</b><br>${nBR(x.n)} bem(ns) encontrados`; tip.style.left=(r.left-rb.left+r.width/2)+'px'; tip.style.top=(r.top-rb.top+12)+'px'; tip.classList.add('on'); });
+      h.addEventListener('mouseleave',()=>{ tip.classList.remove('on'); h.nextElementSibling.classList.remove('on'); }); }); }
+  { const box=$('#grafAcum'), svg=box.querySelector('svg'), tip=box.querySelector('.gtip');
+    if(svg&&svg.dataset.t0){ const area=svg.querySelector('.area'), cruz=svg.querySelector('.cruz'), pt=svg.querySelector('.ponto'), d=svg.dataset;
+      const t0=+d.t0,t1=+d.t1,L=+d.l,W=+d.w,T=+d.top,H=+d.h;
+      area.addEventListener('mousemove',e=>{ const p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; const q=p.matrixTransform(svg.getScreenCTM().inverse());
+        const tt=t0+(q.x-L)/W*(t1-t0); let best=A.dias[0]; A.dias.forEach(x=>{ if(Math.abs(diaDe(x.d).getTime()-tt)<Math.abs(diaDe(best.d).getTime()-tt)) best=x; });
+        const xx=L+(diaDe(best.d).getTime()-t0)/(t1-t0)*W, yy=T+H-(best.ac/A.total)*H;
+        cruz.setAttribute('x1',xx); cruz.setAttribute('x2',xx); cruz.setAttribute('visibility','visible'); pt.setAttribute('cx',xx); pt.setAttribute('cy',yy); pt.setAttribute('visibility','visible');
+        const k=box.clientWidth/svg.viewBox.baseVal.width; tip.style.left=(xx*k)+'px'; tip.style.top=(yy*k)+'px';
+        tip.innerHTML=`<b>${dataBR(diaDe(best.d))}</b><br>${nBR(best.ac)} encontrados · ${(best.ac/A.total*100).toFixed(1).replace('.',',')}% do cadastro`; tip.classList.add('on'); });
+      area.addEventListener('mouseleave',()=>{ tip.classList.remove('on'); cruz.setAttribute('visibility','hidden'); pt.setAttribute('visibility','hidden'); }); } }
+  $('#andTabela').innerHTML=A.dias.length?'<table><thead><tr><th>Dia</th><th class="n">Encontrados no dia</th><th class="n">Acumulado</th><th class="n">% do cadastro</th></tr></thead><tbody>'+
+    A.dias.slice().reverse().map(x=>`<tr style="cursor:default"><td>${dataBR(diaDe(x.d))}</td><td class="n">${nBR(x.n)}</td><td class="n">${nBR(x.ac)}</td><td class="n">${(x.ac/A.total*100).toFixed(1).replace('.',',')}%</td></tr>`).join('')+'</tbody></table>':'<p class="sub">Nenhum bem encontrado ainda.</p>';
 }
 /* ---------- ocorrências do campo ---------- */
 let OCORR=[], ocOk=true;
@@ -3707,6 +3834,11 @@ $('#btnDocExec').addEventListener('click',()=>{
       <tr>${quadro('Valor contábil dos encontrados',brl(vEnc),'conforme o cadastro')}${quadro('Bens reavaliados',n(rv.length),pct(rv.length,enc.length)+' dos encontrados')}${quadro('Valor reavaliado',brl(vNovo),rv.length?'antes: '+brl(vAnt)+' · variação '+(vNovo-vAnt>=0?'+':'')+brl(vNovo-vAnt):'')}</tr>
     </tbody></table>
     ${at.length?`<h3>Pontos de atenção</h3><ul style="margin:4px 0 0 18px;padding:0">${at.map(x=>`<li style="margin:3px 0">${x}</li>`).join('')}</ul>`:''}
+    ${(()=>{ const A=dadosAndamento(); if(!A.dias.length) return '';
+      return `<h3>Andamento</h3>
+      <p style="margin:2px 0 8px">Ritmo das duas últimas semanas: <b>${nBR(A.ritmo)}</b> bem(ns) por dia útil. ${A.previsao?`Faltam <b>${nBR(A.faltam)}</b> bens do cadastro; nesse ritmo, seriam lidos em cerca de <b>${A.diasUteis}</b> dia(s) útil(eis), por volta de <b>${dataBR(diaDe(A.previsao))}</b>. Parte deles pode não estar mais no órgão: os que não forem encontrados ao fim das salas encurtam esse prazo.`:A.faltam?'Não houve leituras nas duas últimas semanas, por isso não há previsão de término.':'Todos os bens do cadastro foram encontrados.'}</p>
+      <table class="graf-rel"><tbody><tr><td style="width:50%;vertical-align:top;padding:4px 8px 4px 0"><div style="font-size:11px;font-weight:700;margin-bottom:2px">Bens encontrados por dia útil</div>${svgDias(A,{w:420,h:190,tinta:'#444',linha:'#ddd'})}</td>
+      <td style="width:50%;vertical-align:top;padding:4px 0 4px 8px"><div style="font-size:11px;font-weight:700;margin-bottom:2px">Encontrados acumulados, em % do cadastro (tracejado: previsão)</div>${svgAcum(A,{w:420,h:190,tinta:'#444',linha:'#ddd'})}</td></tr></tbody></table>`; })()}
     <h3>Estado de conservação dos bens encontrados</h3>
     <table><thead><tr><th>Estado</th><th>Bens</th><th>Participação</th></tr></thead>
     <tbody>${estados.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${n(v)}</td><td class="n">${pct(v,enc.length)}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum bem encontrado ainda.</td></tr>'}</tbody></table>

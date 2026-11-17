@@ -535,3 +535,7 @@ No app de campo, **Varredura da sala (ler vários seguidos)**: a equipe escolhe 
 - sala de outra unidade gestora: não grava.
 
 A mesma etiqueta parada diante da câmera conta uma vez só. **Ficha** abre o bem para mudar estado, situação ou tirar fotos e volta para a varredura. **Ver o que falta nesta sala** lista os bens que o cadastro põe na sala e ainda não foram lidos; **Terminei: concluir esta sala** leva à conclusão da localização. No modo offline as leituras vão para a fila do celular.
+
+## Andamento e previsão de término
+
+No Painel (também para o gestor), o card **Andamento do levantamento** mostra o ritmo (bens encontrados por dia útil, média dos últimos 10 dias úteis), os bens que faltam, a previsão de término nesse ritmo (dias úteis, sem sábados e domingos) e as salas concluídas, com dois gráficos: encontrados por dia e acumulado em % do cadastro com a previsão tracejada. A data de cada bem é a do registro do levantamento (`levantamento.atualizado_em`); se o bem for alterado depois, passa a contar no dia da alteração. O relatório executivo traz a mesma seção, com os gráficos prontos para impressão. Não exige script novo no banco.
