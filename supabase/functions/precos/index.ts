@@ -23,6 +23,11 @@
 //   { acao: 'lc_carregar', cd_orgao }              -> baixa o ZIP do órgão no TCE-RS e guarda os itens
 //   { acao: 'lc_remover', cd_orgao }               -> tira o órgão da lista de referência
 //   { acao: 'licitacon', texto, orgaos, meses }    -> preços nos órgãos carregados pela descrição
+//   { acao: 'lc_marcar', orgaos, marcado }         -> marca/desmarca órgãos como referência (fica salvo)
+//   { acao: 'lc_regioes' }                         -> regiões (associações de municípios) e espaço usado
+//   { acao: 'lc_regiao_salvar', id?, nome, municipios, incluir_camaras } -> cria/edita uma região
+//   { acao: 'lc_regiao_remover', id, apagar }      -> apaga a região (e, se pedir, os órgãos só dela)
+//   { acao: 'lc_regiao_orgaos', id }               -> prefeituras (e câmaras) da região, para carregar
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { Unzip, UnzipInflate } from 'npm:fflate@0.8.2';
 
@@ -211,6 +216,15 @@ async function precosPncp(adm: ReturnType<typeof createClient>, texto: string, u
 // fica com os itens de valor unitário homologado dos últimos 3 anos e grava em licitacon_itens.
 const TCE = 'https://dados.tce.rs.gov.br/dados';
 const LC_ANOS = 3;
+// Só ficam guardados itens com cara de bem permanente: vendidos por unidade/peça/conjunto/kit/par/jogo,
+// a partir de LC_VALOR_MIN, e que não sejam serviço. Remédio, comida, combustível e serviços ficam de fora:
+// a tabela fica de 3 a 7 vezes menor (cabe uma associação inteira no plano gratuito) e a pesquisa traz menos lixo.
+const LC_VALOR_MIN = 100;
+const LC_UNIDADES = new Set(['UN', 'UND', 'UNID', 'UNIDADE', 'UNIDADES', 'UNI', 'UNDS', 'UNIDS', 'PC', 'PÇ', 'PCS', 'PEC', 'PECA', 'PEÇA', 'PECAS', 'PEÇAS',
+  'CJ', 'CJT', 'CONJ', 'CONJUNTO', 'KIT', 'KITS', 'PAR', 'PARES', 'JG', 'JOGO', 'JOGOS', 'EQ', 'EQUIP', 'EQUIPAMENTO', 'MOD', 'MODULO', 'APARELHO']);
+const LC_SERVICO = /^(servico|prestacao|contratacao de (empresa|servico)|conserto|montagem|desmontagem|manutencao|locacao|aluguel|instalacao|recarga|confeccao|reforma|transporte|frete|assinatura|licenca|licenciamento|curso|capacitacao|treinamento|exame|consulta|refeic|lanche|almoco|janta|hospedagem|diaria|mao de obra|revisao|recapagem|vulcaniz|alinhamento|balanceamento|lavagem|limpeza|dedetiz|coleta|publicac|impressao de|show|apresentacao|locac)/;
+const lcEhBem = (descricaoSemAcento: string, unidade: string, valor: number | null) =>
+  (valor ?? 0) >= LC_VALOR_MIN && LC_UNIDADES.has(unidade.toUpperCase().replace(/[.\s]/g, '')) && !LC_SERVICO.test(descricaoSemAcento);
 const MODALIDADE: Record<string, string> = {
   PRD: 'Dispensa', PRI: 'Inexigibilidade', PRP: 'Pregão presencial', PRE: 'Pregão eletrônico',
   TMP: 'Tomada de preços', CNV: 'Convite', CNC: 'Concorrência', LEI: 'Leilão', RPO: 'Adesão a ata de registro de preços',
@@ -355,7 +369,7 @@ async function carregarOrgaoLc(adm: ReturnType<typeof createClient>, cd: number)
       filtro: anoRecente,
       linha: (c) => {
         if (!cabItem.length) { cabItem = c; return; }
-        if (!(numero(c[cabItem.indexOf('VL_UNITARIO_HOMOLOGADO')])! > 0)) return;
+        if (!(numero(c[cabItem.indexOf('VL_UNITARIO_HOMOLOGADO')])! >= LC_VALOR_MIN)) return;
         itens.push(c);
       },
     },
@@ -378,11 +392,13 @@ async function carregarOrgaoLc(adm: ReturnType<typeof createClient>, cd: number)
     const doc = docs.map((k) => txt(c[k])).find(Boolean) || '';
     const descricao = txt(c[col('DS_ITEM')]).replace(/\s+/g, ' ');
     if (!descricao) return null;
+    const busca = semAcento(descricao);
+    if (!lcEhBem(busca, txt(c[col('SG_UNIDADE_MEDIDA')]), numero(c[col('VL_UNITARIO_HOMOLOGADO')]))) return null;
     return {
       cd_orgao: cd, orgao: lic?.nome || org.nome, municipio: org.municipio,
       licitacao: `${mod} ${nr}/${ano}`, modalidade: MODALIDADE[mod] || mod,
       nr_lote: txt(c[col('NR_LOTE')]), nr_item: txt(c[col('NR_ITEM')]),
-      descricao: descricao.slice(0, 600), busca: semAcento(descricao),
+      descricao: descricao.slice(0, 600), busca,
       unidade: txt(c[col('SG_UNIDADE_MEDIDA')]), quantidade: numero(c[col('QT_ITENS')]),
       valor: numero(c[col('VL_UNITARIO_HOMOLOGADO')]), valor_estimado: numero(c[col('VL_UNITARIO_ESTIMADO')]),
       data: quandoItem, fornecedor: pessoas.get(doc) || doc, objeto: lic?.objeto || '', link: lic?.link || '',
@@ -397,7 +413,22 @@ async function carregarOrgaoLc(adm: ReturnType<typeof createClient>, cd: number)
     const { error } = await adm.from('licitacon_itens').insert(linhas.slice(i, i + 1000));
     if (error) throw new Error('Erro ao gravar os itens: ' + error.message);
   }
-  return { cd_orgao: cd, nome: org.nome, municipio: org.municipio, itens: linhas.length, arquivo_de: quando };
+  return { cd_orgao: cd, nome: org.nome, municipio: org.municipio, itens: linhas.length, arquivo_de: quando, lidos: itens.length };
+}
+
+// ---------- regiões (associações de municípios) ----------
+// O nome do município é comparado sem acento e em minúsculas com a lista de órgãos do TCE-RS.
+const chaveMun = (s: string) => semAcento(s).replace(/[^a-z0-9]+/g, ' ').trim();
+async function municipiosTce(adm: ReturnType<typeof createClient>) {
+  const m = new Map<string, string>();
+  for (const o of await listaOrgaosTce(adm)) if (o.municipio) m.set(chaveMun(o.municipio), o.municipio);
+  return m;
+}
+async function orgaosDaRegiao(adm: ReturnType<typeof createClient>, municipios: string[], camaras: boolean) {
+  const alvo = new Set(municipios.map(chaveMun));
+  return (await listaOrgaosTce(adm))
+    .filter((o) => o.ativo && alvo.has(chaveMun(o.municipio)) && (/^PM /.test(o.nome) || (camaras && /^CM /.test(o.nome))))
+    .sort((a, c) => a.municipio.localeCompare(c.municipio) || a.nome.localeCompare(c.nome));
 }
 
 async function precosLicitacon(adm: ReturnType<typeof createClient>, texto: string, orgaos: number[], meses: number) {
@@ -545,6 +576,59 @@ Deno.serve(async (req) => {
       const { error } = await adm.from('licitacon_orgaos').delete().eq('cd_orgao', cd);
       if (error) throw new Error(error.message);
       return json({ ok: true });
+    }
+    if (b.acao === 'lc_marcar') {
+      const orgaos: number[] = Array.isArray(b.orgaos) ? (b.orgaos as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
+      if (!orgaos.length) return json({ ok: true });
+      const { error } = await adm.from('licitacon_orgaos').update({ marcado: b.marcado !== false }).in('cd_orgao', orgaos);
+      if (error) return json({ erro: 'Rode antes o script 9-licitacon-regioes.sql no Supabase. (' + error.message + ')' }, 500);
+      return json({ ok: true });
+    }
+    if (b.acao === 'lc_regioes') {
+      const { data: l, error } = await adm.from('licitacon_regioes').select('*').order('nome');
+      if (error) return json({ erro: 'Rode antes o script 9-licitacon-regioes.sql no Supabase. (' + error.message + ')' }, 500);
+      const { data: bytes } = await adm.rpc('licitacon_espaco');
+      return json({ regioes: l || [], espaco: Number(bytes) || 0 });
+    }
+    if (b.acao === 'lc_regiao_salvar') {
+      const nome = txt(b.nome).slice(0, 80);
+      if (nome.length < 2) return json({ erro: 'Dê um nome à região (ex.: AMGSR).' }, 400);
+      const mapa = await municipiosTce(adm);
+      const pedidos = [...new Set(txt(b.municipios).split(/[\n,;]+/).map((x) => x.replace(/\s*[-–\/]\s*RS\s*$/i, '').trim()).filter(Boolean))].slice(0, 120);
+      const achados: string[] = [], faltam: string[] = [];
+      for (const p of pedidos) { const m = mapa.get(chaveMun(p)); if (m) { if (!achados.includes(m)) achados.push(m); } else faltam.push(p); }
+      if (!achados.length) return json({ erro: 'Nenhum município reconhecido. Escreva um por linha ou separados por vírgula.', faltam }, 400);
+      const reg = { nome, municipios: achados.sort((a, c) => a.localeCompare(c)), incluir_camaras: b.incluir_camaras === true };
+      const id = Number(b.id);
+      const q = Number.isInteger(id) && id > 0
+        ? adm.from('licitacon_regioes').update(reg).eq('id', id).select().single()
+        : adm.from('licitacon_regioes').insert(reg).select().single();
+      const { data: r, error } = await q;
+      if (error) return json({ erro: /duplicate|unique/i.test(error.message) ? 'Já existe uma região com esse nome.' : error.message }, 400);
+      return json({ regiao: r, faltam });
+    }
+    if (b.acao === 'lc_regiao_remover') {
+      const id = Number(b.id);
+      const { data: r } = await adm.from('licitacon_regioes').select('*').eq('id', id).maybeSingle();
+      if (!r) return json({ ok: true });
+      let apagados = 0;
+      if (b.apagar === true) {
+        // apaga só os órgãos que não fazem parte de outra região
+        const { data: outras } = await adm.from('licitacon_regioes').select('municipios').neq('id', id);
+        const ficam = new Set((outras || []).flatMap((o) => (o.municipios as string[]).map(chaveMun)));
+        const daqui = new Set((r.municipios as string[]).map(chaveMun));
+        const { data: orgs } = await adm.from('licitacon_orgaos').select('cd_orgao,municipio');
+        const cds = (orgs || []).filter((o) => daqui.has(chaveMun(o.municipio || '')) && !ficam.has(chaveMun(o.municipio || ''))).map((o) => o.cd_orgao as number);
+        for (const cd of cds) { const { error } = await adm.from('licitacon_orgaos').delete().eq('cd_orgao', cd); if (!error) apagados++; }
+      }
+      const { error } = await adm.from('licitacon_regioes').delete().eq('id', id);
+      if (error) throw new Error(error.message);
+      return json({ ok: true, apagados });
+    }
+    if (b.acao === 'lc_regiao_orgaos') {
+      const { data: r, error } = await adm.from('licitacon_regioes').select('*').eq('id', Number(b.id)).maybeSingle();
+      if (error || !r) return json({ erro: 'Região não encontrada.' }, 404);
+      return json({ orgaos: await orgaosDaRegiao(adm, r.municipios as string[], r.incluir_camaras === true) });
     }
     if (b.acao === 'licitacon') {
       const texto = txt(b.texto).slice(0, 120);

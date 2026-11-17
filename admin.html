@@ -223,6 +223,12 @@
   .pz-lc .org small{color:var(--muted)}
   .pz-lc .org .acoes{margin-left:auto;display:flex;gap:6px}
   .pz-lc .org .acoes button{padding:4px 9px;font-size:12px}
+  .pz-lc .reg-cab{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:2px}
+  .pz-lc .reg-cab button{padding:4px 9px;font-size:12px}
+  .pz-lc .reg-form{margin:6px 0 10px;padding:10px;border:1px dashed var(--border);border-radius:8px;display:grid;gap:8px}
+  .pz-lc .reg-form textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--border);border-radius:8px;background:transparent;color:inherit;resize:vertical}
+  .pz-lc .reg-tag{display:inline-block;padding:0 6px;border-radius:6px;background:var(--border);font-size:11px;margin-left:4px}
+  .pz-lc details{margin-top:8px} .pz-lc details summary{cursor:pointer;font-weight:600}
   #pzTabela{font-size:13px}#pzTabela td,#pzTabela th{padding:7px 9px}
   #pzTabela tr.off td{color:var(--muted);text-decoration:line-through}
   #pzTabela td small{display:block;color:var(--muted);font-size:11.5px}
@@ -763,7 +769,14 @@
     </div>
     <div class="pz-cat hidden" id="pzCat"></div>
     <div class="pz-lc hidden" id="pzLc">
-      <div style="font-weight:600;margin-bottom:4px">Órgãos de referência <span style="font-weight:400;color:var(--muted)">(os marcados entram na pesquisa)</span></div>
+      <div id="pzLcReg"></div>
+      <div class="reg-form hidden" id="pzRegForm">
+        <input id="pzRegNome" placeholder="Nome da região (ex.: AMGSR – Grande Santa Rosa)" maxlength="80">
+        <textarea id="pzRegMun" rows="4" placeholder="Municípios da associação, um por linha ou separados por vírgula (ex.: Santa Rosa, Tuparendi, Tucunduva...)"></textarea>
+        <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="pzRegCam"> Incluir também as câmaras de vereadores (ocupa mais espaço e quase não compram bens)</label>
+        <div style="display:flex;gap:6px"><button class="btn-2" id="pzRegSalvar">Salvar região</button><button class="btn-2" id="pzRegCancelar">Cancelar</button></div>
+      </div>
+      <div style="font-weight:600;margin:8px 0 4px">Órgãos de referência <span style="font-weight:400;color:var(--muted)">(os marcados entram na pesquisa; a marcação fica salva)</span></div>
       <div id="pzLcLista"></div>
       <div class="pz-row" style="margin-top:8px"><div><input id="pzLcTexto" placeholder="Adicionar órgão: digite o município (ex.: Tuparendi) ou o nome do órgão"></div><div class="fix"><button class="btn-2" id="pzLcProcurar">Procurar</button></div></div>
       <div class="pz-cat hidden" id="pzLcAchados"></div>
@@ -1597,13 +1610,13 @@ function pzFonteMudou(){
   $('#pzFontes').classList.add('hidden');
   $('#pzLc').classList.toggle('hidden',!lc); $('#pzAbrBox').classList.toggle('hidden',so);
   if(so) $('#pzOndeBox').classList.add('hidden'); else pzOnde();
-  if(lc) pzLcListar();
+  if(lc){ pzLcListar(); pzRegListar(); }
   $('#pzBuscarCat').classList.toggle('hidden',pn); $('#pzCat').classList.add('hidden'); $('#pzSel').classList.add('hidden'); PZ.item=null;
   $('#pzTextoRot').textContent=pn?'Descrição do bem (as palavras que a descrição da licitação precisa ter)':'Nome do bem ou código CATMAT';
   $('#pzBuscar').disabled=!pn;
   PZ.itens=[]; PZ.off=new Set(); $('#pzTblBox').classList.add('hidden'); $('#pzFiltroBox').classList.add('hidden'); $('#pzCorpo').innerHTML=''; pzStats();
   $('#pzInfo').textContent=pzTodas()?'Digite a descrição (ex.: cadeira giratória) e clique em "Buscar preços": a pesquisa roda ao mesmo tempo no Compras.gov.br e no PNCP (na abrangência escolhida) e no LicitaCon (nos órgãos de referência marcados).'
-    :so?'Digite a descrição (ex.: cadeira giratória), marque os órgãos de referência e clique em "Buscar preços". Para incluir a prefeitura ou uma vizinha, procure pelo município: o arquivo do TCE-RS é baixado uma vez (alguns segundos) e fica guardado.'
+    :so?'Digite a descrição (ex.: cadeira giratória), marque os órgãos de referência e clique em "Buscar preços". Para usar uma associação de municípios inteira, crie a região e clique em Carregar; para um órgão só, procure pelo município. O arquivo do TCE-RS é baixado uma vez e fica guardado.'
     :pn?'Digite a descrição (ex.: cadeira giratória), escolha a abrangência e o período e clique em "Buscar preços". O PNCP reúne as licitações de prefeituras, câmaras, estados e União.'
     :'Digite o nome do bem (ex.: cadeira escritório, notebook, ar condicionado) e busque no catálogo do governo. Se souber o código CATMAT do item, digite o número.';
 }
@@ -1662,20 +1675,105 @@ async function pzBuscarPncp(){
 const LC={orgaos:[],off:new Set()};
 async function pzLcListar(){
   $('#pzLcLista').innerHTML='<small style="color:var(--muted)">Carregando...</small>';
-  try{ const d=await chamarPrecos({acao:'lc_orgaos'}); LC.orgaos=d.orgaos||[]; LC.lido=true; }
+  try{ const d=await chamarPrecos({acao:'lc_orgaos'}); LC.orgaos=d.orgaos||[]; LC.lido=true; LC.off=new Set(LC.orgaos.filter(o=>o.marcado===false).map(o=>o.cd_orgao)); }
   catch(e){ $('#pzLcLista').innerHTML=`<small style="color:var(--accent-2)">${esc(e.message)}</small>`; return; }
-  pzLcDesenhar();
+  pzLcDesenhar(); pzRegDesenhar();
 }
 function pzLcDesenhar(){
-  $('#pzLcLista').innerHTML=LC.orgaos.length?LC.orgaos.map(o=>`<div class="org" data-cd="${o.cd_orgao}"><input type="checkbox"${LC.off.has(o.cd_orgao)?'':' checked'}><span><b>${esc(o.nome)}</b> <small>· ${esc(o.municipio||'')} · ${o.itens.toLocaleString('pt-BR')} itens · carregado em ${new Date(o.carregado_em).toLocaleDateString('pt-BR')}</small></span><span class="acoes"><button class="btn-2" data-a="atualizar">Atualizar</button><button class="btn-2" data-a="remover">Remover</button></span></div>`).join('')
-    :'<small style="color:var(--muted)">Nenhum órgão ainda. Procure a prefeitura do cliente e as vizinhas logo abaixo.</small>';
+  const tags=o=>LR.regioes.filter(r=>r.municipios.some(m=>chaveMun(m)===chaveMun(o.municipio))).map(r=>`<span class="reg-tag">${esc(r.nome)}</span>`).join('');
+  const linhas=LC.orgaos.map(o=>`<div class="org" data-cd="${o.cd_orgao}"><input type="checkbox"${LC.off.has(o.cd_orgao)?'':' checked'}><span><b>${esc(o.nome)}</b>${tags(o)} <small>· ${esc(o.municipio||'')} · ${o.itens.toLocaleString('pt-BR')} itens · carregado em ${new Date(o.carregado_em).toLocaleDateString('pt-BR')}</small></span><span class="acoes"><button class="btn-2" data-a="atualizar">Atualizar</button><button class="btn-2" data-a="remover">Remover</button></span></div>`).join('');
+  const marc=LC.orgaos.filter(o=>!LC.off.has(o.cd_orgao)).length;
+  $('#pzLcLista').innerHTML=!LC.orgaos.length?'<small style="color:var(--muted)">Nenhum órgão ainda. Carregue uma região acima ou procure a prefeitura do cliente e as vizinhas logo abaixo.</small>'
+    :LC.orgaos.length>6?`<details${LC.aberto?' open':''}><summary>${LC.orgaos.length} órgãos carregados, ${marc} marcado(s) · ${LC.orgaos.reduce((s,o)=>s+o.itens,0).toLocaleString('pt-BR')} itens</summary>${linhas}</details>`:linhas;
+  const det=$('#pzLcLista').querySelector('details'); if(det) det.ontoggle=()=>{ LC.aberto=det.open; };
   $('#pzLcLista').querySelectorAll('.org').forEach(el=>{
     const cd=+el.dataset.cd;
-    el.querySelector('input').onchange=e=>{ e.target.checked?LC.off.delete(cd):LC.off.add(cd); };
+    el.querySelector('input').onchange=e=>{ const m=e.target.checked; m?LC.off.delete(cd):LC.off.add(cd); pzLcMarcar([cd],m); pzRegDesenhar(); };
     el.querySelector('[data-a=atualizar]').onclick=()=>pzLcCarregar(cd,el.querySelector('b').textContent);
     el.querySelector('[data-a=remover]').onclick=async()=>{ if(!confirm('Tirar este órgão da lista de referência?')) return; try{ await chamarPrecos({acao:'lc_remover',cd_orgao:cd}); LC.off.delete(cd); pzLcListar(); }catch(e){ toast('Erro: '+e.message); } };
   });
 }
+// guarda a marcação no banco (sem o script de regiões, vale só nesta tela)
+async function pzLcMarcar(cds,marcado){
+  LC.orgaos.forEach(o=>{ if(cds.includes(o.cd_orgao)) o.marcado=marcado; });
+  try{ await chamarPrecos({acao:'lc_marcar',orgaos:cds,marcado}); }catch(e){ if(!LC.avisouMarca){ LC.avisouMarca=true; toast('A marcação vale só nesta tela: '+e.message); } }
+}
+
+/* ---------- LicitaCon: regiões (associações de municípios) ---------- */
+const LR={regioes:[],espaco:0,ok:true,erro:'',carregando:false,parar:false,editando:null};
+const chaveMun=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const orgsDaRegiao=r=>{ const m=new Set(r.municipios.map(chaveMun)); return LC.orgaos.filter(o=>m.has(chaveMun(o.municipio))); };
+async function pzRegListar(){
+  try{ const d=await chamarPrecos({acao:'lc_regioes'}); LR.regioes=d.regioes||[]; LR.espaco=d.espaco||0; LR.ok=true; }
+  catch(e){ LR.ok=false; LR.erro=e.message; }
+  pzRegDesenhar(); if(LC.lido) pzLcDesenhar();
+}
+function pzRegDesenhar(){
+  const el=$('#pzLcReg');
+  if(!LR.ok){ el.innerHTML=`<small style="color:var(--muted)">Regiões por associação de municípios: ${esc(LR.erro)}</small>`; return; }
+  const mb=LR.espaco/1048576;
+  el.innerHTML=`<div class="reg-cab"><span style="font-weight:600">Regiões <span style="font-weight:400;color:var(--muted)">(associações de municípios: um clique marca ou desmarca a região inteira)</span></span><button class="btn-2" id="pzRegNova">Nova região</button></div>`
+    +(LR.regioes.length?LR.regioes.map(r=>{
+      const os=orgsDaRegiao(r), n=os.length, marc=os.filter(o=>!LC.off.has(o.cd_orgao)).length, itens=os.reduce((s,o)=>s+o.itens,0);
+      return `<div class="org" data-id="${r.id}"><input type="checkbox"${n&&marc===n?' checked':''}${n?'':' disabled'} data-parcial="${n&&marc&&marc<n?1:''}"><span><b>${esc(r.nome)}</b> <small>· ${r.municipios.length} município(s)${r.incluir_camaras?' com câmaras':''} · ${n?`${n} órgão(s) carregado(s), ${itens.toLocaleString('pt-BR')} itens`:'ainda não carregada'}</small></span><span class="acoes"><button class="btn-2" data-a="carregar">${n?'Carregar/atualizar':'Carregar'}</button><button class="btn-2" data-a="editar">Editar</button><button class="btn-2" data-a="apagar">Apagar</button></span></div>`;
+    }).join(''):'<small style="color:var(--muted)">Nenhuma região ainda. Clique em "Nova região", dê o nome da associação (ex.: AMGSR) e cole a lista de municípios dela.</small>')
+    +(LR.espaco?`<div><small style="color:${mb>150?'var(--accent-2)':'var(--muted)'}">Espaço usado pelos preços do LicitaCon: ${mb.toLocaleString('pt-BR',{maximumFractionDigits:1})} MB (o banco do plano gratuito do Supabase tem 500 MB para tudo; cada prefeitura ocupa de 1 a 3 MB)</small></div>`:'');
+  el.querySelectorAll('.org').forEach(div=>{
+    const r=LR.regioes.find(x=>x.id==div.dataset.id), cb=div.querySelector('input');
+    if(cb.dataset.parcial) cb.indeterminate=true;
+    cb.onchange=()=>{ const cds=orgsDaRegiao(r).map(o=>o.cd_orgao), m=cb.checked; cds.forEach(cd=>m?LC.off.delete(cd):LC.off.add(cd)); pzLcMarcar(cds,m); pzLcDesenhar(); pzRegDesenhar(); };
+    div.querySelector('[data-a=carregar]').onclick=()=>pzRegCarregar(r);
+    div.querySelector('[data-a=editar]').onclick=()=>pzRegForm(r);
+    div.querySelector('[data-a=apagar]').onclick=()=>pzRegApagar(r);
+  });
+  $('#pzRegNova').onclick=()=>pzRegForm(null);
+}
+function pzRegForm(r){
+  LR.editando=r;
+  $('#pzRegNome').value=r?r.nome:''; $('#pzRegMun').value=r?r.municipios.map(m=>m.toLowerCase().replace(/(^|\s)(\S)/g,(a,b,c)=>b+c.toUpperCase()).replace(/ (Da|De|Do|Das|Dos) /g,x=>x.toLowerCase())).join('\n'):''; $('#pzRegCam').checked=!!(r&&r.incluir_camaras);
+  $('#pzRegForm').classList.remove('hidden'); $('#pzRegNome').focus();
+}
+$('#pzRegCancelar').onclick=()=>$('#pzRegForm').classList.add('hidden');
+$('#pzRegSalvar').onclick=async()=>{
+  const btn=$('#pzRegSalvar'); btn.disabled=true;
+  try{
+    const d=await chamarPrecos({acao:'lc_regiao_salvar',id:LR.editando&&LR.editando.id,nome:$('#pzRegNome').value,municipios:$('#pzRegMun').value,incluir_camaras:$('#pzRegCam').checked});
+    $('#pzRegForm').classList.add('hidden');
+    $('#pzInfo').textContent=`Região ${d.regiao.nome} salva com ${d.regiao.municipios.length} município(s).`+(d.faltam&&d.faltam.length?` Não reconheci: ${d.faltam.join(', ')} (confira a grafia e edite a região).`:' Agora clique em "Carregar" para baixar as prefeituras dela do TCE-RS.');
+    await pzRegListar();
+  }catch(e){ toast('Erro: '+e.message); }
+  finally{ btn.disabled=false; }
+};
+async function pzRegApagar(r){
+  if(!confirm(`Apagar a região ${r.nome}?`)) return;
+  const n=orgsDaRegiao(r).length;
+  const apagar=n?confirm(`Apagar também os preços dos ${n} órgão(s) já carregados desta região? Isso libera espaço no Supabase. Órgãos que fazem parte de outra região ficam.\n\nOK = apagar os preços · Cancelar = manter os órgãos na lista`):false;
+  try{ const d=await chamarPrecos({acao:'lc_regiao_remover',id:r.id,apagar}); toast(`Região apagada${d.apagados?`, com ${d.apagados} órgão(s)`:''}.`); await pzLcListar(); await pzRegListar(); }
+  catch(e){ toast('Erro: '+e.message); }
+}
+async function pzRegCarregar(r){
+  if(LR.carregando){ toast('Já tem uma região carregando. Espere terminar ou clique em Parar.'); return; }
+  let lista;
+  try{ lista=(await chamarPrecos({acao:'lc_regiao_orgaos',id:r.id})).orgaos||[]; }catch(e){ toast('Erro: '+e.message); return; }
+  if(!lista.length){ toast('Não achei prefeituras ativas desses municípios na lista do TCE-RS.'); return; }
+  const ja=new Set(LC.orgaos.map(o=>o.cd_orgao)); let fila=lista.filter(o=>!ja.has(o.cd));
+  if(!fila.length){
+    if(!confirm(`Os ${lista.length} órgão(s) de ${r.nome} já estão carregados. Atualizar todos com o arquivo mais recente do TCE-RS?`)) return;
+    fila=lista;
+  }else if(!confirm(`Baixar do TCE-RS ${fila.length} órgão(s) de ${r.nome}?\n\nLeva uns 5 a 15 segundos por órgão (pode deixar a tela aberta). Ficam guardados só os itens com cara de bem permanente (por unidade, a partir de R$ 100, sem serviços), cerca de 1 a 3 MB por prefeitura.`)) return;
+  LR.carregando=true; LR.parar=false; let ok=0, itens=0; const erros=[];
+  for(let i=0;i<fila.length&&!LR.parar;i++){
+    const o=fila[i];
+    $('#pzInfo').innerHTML=`Carregando ${esc(r.nome)}: ${i+1} de ${fila.length} · ${esc(o.nome)}... <button class="btn-2" id="pzRegParar" style="padding:2px 8px;font-size:12px">Parar</button>`;
+    $('#pzRegParar').onclick=()=>{ LR.parar=true; };
+    try{ const d=await chamarPrecos({acao:'lc_carregar',cd_orgao:o.cd}); ok++; itens+=d.itens||0; }
+    catch(e){ erros.push(`${o.nome}: ${e.message}`); }
+  }
+  LR.carregando=false;
+  $('#pzInfo').textContent=`${r.nome}: ${ok} de ${fila.length} órgão(s) carregado(s), ${itens.toLocaleString('pt-BR')} itens${LR.parar?' (parado por você; clique em Carregar de novo para continuar)':''}.`+(erros.length?` Com erro: ${erros.join(' · ')}`:'');
+  await pzLcListar(); await pzRegListar();
+}
+
 async function pzLcProcurar(){
   const t=$('#pzLcTexto').value.trim(); if(t.length<3){ toast('Digite ao menos 3 letras.'); return; }
   const btn=$('#pzLcProcurar'); btn.disabled=true;
