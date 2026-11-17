@@ -193,7 +193,15 @@
   #drawerBg{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
   .login{background:radial-gradient(70vmax 50vmax at 100% 0%,rgba(35,71,168,.55),transparent 60%),radial-gradient(60vmax 40vmax at 0% 100%,rgba(245,197,24,.22),transparent 60%),var(--txt)}
   .login .card{background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);box-shadow:inset 0 1px 0 #fff,0 24px 60px rgba(0,0,0,.35)}
-  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ header{background:var(--txt)} .login .card{background:var(--surface)} }
+  /* ---------- quadros de valores do painel: cartões de vidro ---------- */
+  .kpis{gap:12px;background:none;border:0;border-radius:0;overflow:visible;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+  .kpi{position:relative;margin:0;border:0;border-radius:20px;padding:16px 18px 15px;
+    background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.52));
+    -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1px rgba(255,255,255,.55),0 0 0 1px rgba(24,33,43,.06),0 10px 28px rgba(24,33,43,.10)}
+  .kpi::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.55),rgba(255,255,255,0) 32%,rgba(255,255,255,0) 72%,rgba(255,255,255,.22))}
+  .kpi>*{position:relative}
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ header{background:var(--txt)} .login .card{background:var(--surface)} .kpi{background:var(--surface)} }
   .link-btn{background:none;border:0;color:var(--accent);font-weight:600;width:100%;margin-top:6px}
   .pw-rules{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
   .pw-rules li{display:flex;align-items:center;gap:6px}
