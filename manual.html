@@ -140,6 +140,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:26px}
 <tr><td><b>Equipe de campo</b></td><td>Usa só o app de campo: busca bens, registra o levantamento, tira fotos, informa a placa encontrada, registra sobras e conclui localizações. Não altera o cadastro do bem, exceto a placa.</td></tr>
 <tr><td><b>Administrador</b></td><td>Tudo o que a equipe faz, mais o painel inteiro do seu órgão.</td></tr>
 <tr><td><b>Equipe da empresa</b></td><td>Administrador com acesso a todos os órgãos (clientes). Escolhe em qual órgão está trabalhando.</td></tr>
+<tr><td><b>Gestor (só consulta)</b></td><td>Prefeito, secretário ou controlador. Entra no painel e vê o andamento, as ocorrências e o relatório executivo do seu órgão, mas não grava nada. O bloqueio é do próprio banco de dados, não só das telas. Se tentar entrar pelo app de campo, é levado ao painel.</td></tr>
 <tr><td><b>Acesso de teste</b></td><td>Usuário com prazo, que só existe na base de demonstração e perde o acesso no fim do último dia.</td></tr>
 </table></div>
 
@@ -262,7 +263,17 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:26px}
 </ul>
 <div class="box risco"><b>Não limpe os dados do navegador</b>Enquanto houver itens ou fotos esperando envio, limpar os dados do navegador ou desinstalar o app apaga esse trabalho.</div>
 
-<h3>3.7 Menu ☰</h3>
+<h3>3.7 Registrar uma ocorrência</h3>
+<p>Ocorrência é tudo o que a equipe precisa deixar registrado e que não é o levantamento de um bem: sala trancada, bem quebrado, risco, cadastro que não bate com o que está na sala. Fica guardada com autor, data e fotos e entra no relatório executivo.</p>
+<ol class="steps">
+<li>Toque em <span class="ui">Registrar ocorrência</span>.</li>
+<li>Escolha o tipo: <b>Sala trancada ou sem acesso</b>, <b>Bem danificado, quebrado ou sem uso</b>, <b>Risco ou instalação precária</b>, <b>Divergência no cadastro</b> ou <b>Outro assunto</b>.</li>
+<li>Informe a localização e, se for sobre um bem, a placa ou o código.</li>
+<li>Descreva o que aconteceu, tire até 3 fotos e toque em <span class="ui">Registrar ocorrência</span>. É preciso estar com internet.</li>
+</ol>
+<p>Logo abaixo aparecem as suas ocorrências, com a situação e a resposta do administrador. Enquanto estiver aberta, quem registrou pode corrigi-la.</p>
+
+<h3>3.8 Menu ☰</h3>
 <p>Reúne <b>Avisos</b> (com o número de não lidos), <b>Notificações</b> (para receber avisos com o app fechado), <b>Instalar o app</b>, <b>Trocar de órgão</b> (só para a equipe da empresa) e <b>Sair</b>. No iPhone, as notificações só funcionam com o app instalado.</p>
 </section>
 
@@ -274,8 +285,20 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:26px}
 <li><b>Cartões de resumo:</b> bens no cadastro, encontrados, não localizados, reavaliados, valor contábil dos encontrados, valor reavaliado e variação.</li>
 <li><b>Resumo por classificação:</b> encontrados, reavaliados e valores por grupo de bens.</li>
 <li><b>Conclusão das localizações:</b> cada sala com bens, levantados, quem concluiu e quando. O administrador pode <span class="ui">Concluir</span> uma sala por ali ou <span class="ui">Reabrir</span> uma sala que precisa ser revista. Quem tinha concluído recebe um aviso.</li>
+<li><b>Ocorrências do campo:</b> o cartão mostra quantas estão abertas e o botão <span class="ui">Ver ocorrências</span> leva à aba <span class="ui">Ocorrências</span>.</li>
 <li><b>Bens sem cadastro (sobras):</b> veja as <span class="ui">Fotos</span>, use <span class="ui">Dar destinação</span> para registrar o que será feito com o bem, <span class="ui">Reabrir</span> ou <span class="ui">Excluir</span>.</li>
 </ul>
+<h3>Ocorrências</h3>
+<p>Aba <span class="ui">Ocorrências</span>. Filtre por texto, tipo e situação. Em cada linha:</p>
+<ul>
+<li><span class="ui">Fotos</span> abre as imagens enviadas pela equipe;</li>
+<li><span class="ui">Responder</span> registra a providência tomada e marca a ocorrência como resolvida, com o seu nome, data e hora. A equipe vê a resposta no app;</li>
+<li><span class="ui">Reabrir</span> volta a ocorrência para aberta;</li>
+<li><span class="ui">Excluir</span> apaga um registro feito por engano.</li>
+</ul>
+<div class="box dica"><b>Responda antes do relatório</b>O relatório executivo lista cada ocorrência com a providência informada. Uma ocorrência sem resposta aparece como pendente.</div>
+<h3>Painel do gestor (prefeito)</h3>
+<p>Quem tem o perfil <b>Gestor (só consulta)</b> entra no mesmo endereço do painel e vê o <b>Painel do gestor</b>: o andamento, as ocorrências e a aba <span class="ui">Documentos</span> com o relatório executivo e os demais relatórios. Reavaliação, usuários, avisos e configuração não aparecem, e nenhum botão de gravar fica disponível.</p>
 <h3>Arquivo vindo do campo (modo offline)</h3>
 <p>Em <span class="ui">Configuração</span> &gt; <b>Receber arquivo do app de campo</b>, clique em <span class="ui">Importar arquivo do celular (.json)</span>. Registros e fotos vão para a nuvem. Um item que já foi atualizado depois do arquivo não é sobrescrito.</p>
 <h3>Quem fez o quê</h3>
@@ -344,6 +367,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:26px}
 <p class="lead">Aba <span class="ui">Documentos</span>. Cada documento abre em outra aba do navegador. Para guardar, use <span class="ui">Imprimir / salvar em PDF</span>.</p>
 <div class="tblw"><table>
 <tr><th>Documento</th><th>Botão</th><th>Quando usar</th></tr>
+<tr><td><b>Relatório executivo</b></td><td><span class="ui">Gerar relatório executivo</span></td><td>Para o prefeito e o controle interno: resumo em números, pontos de atenção, estado de conservação, equipe de campo, ocorrências com as providências e andamento por localização. O gestor também emite</td></tr>
 <tr><td><b>Laudo de avaliação por item</b></td><td><span class="ui">Gerar laudos</span></td><td>Um por bem reavaliado, com vistoria, fotos, metodologia, pesquisa de preços e assinaturas</td></tr>
 <tr><td><b>Termo de responsabilidade</b></td><td><span class="ui">Gerar termos</span></td><td>Um por sala, para o responsável assinar a lista de bens encontrados</td></tr>
 <tr><td><b>Relatório de bens não localizados</b></td><td><span class="ui">Gerar relatório</span></td><td>No fim do trabalho, para apurar o que não apareceu</td></tr>
@@ -377,7 +401,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:26px}
 <ol class="steps">
 <li>Aba <span class="ui">Usuários</span>. Preencha o nome completo (nome e sobrenome), o nome de usuário (opcional) e o e-mail.</li>
 <li>Deixe a senha em branco ou clique em <span class="ui">gerar</span>. Ela é provisória e a pessoa troca no primeiro acesso.</li>
-<li>Escolha o perfil: <b>Equipe de campo</b> ou <b>Administrador</b>.</li>
+<li>Escolha o perfil: <b>Equipe de campo</b>, <b>Administrador</b> ou <b>Gestor (só consulta)</b>, para o prefeito, secretário ou controlador acompanhar sem alterar nada.</li>
 <li>Mantenha marcado <b>Enviar por e-mail o link do app e a senha provisória</b> e clique em <span class="ui">Cadastrar usuário</span>.</li>
 </ol>
 <h3>Ações em cada usuário</h3>

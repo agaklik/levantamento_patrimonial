@@ -44,6 +44,13 @@
   .hdr-right{display:flex;gap:8px;align-items:center;font-size:13px}
   .hdr-right a,.hdr-right button{color:#fff;background:transparent;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px 12px;text-decoration:none;font-size:13px;font-weight:600}
   .hdr-right a:hover,.hdr-right button:hover{background:rgba(255,255,255,.1)}
+  /* gestor (prefeito, secretário): só leitura */
+  body.gestor #nav button[data-tab=reav],body.gestor #nav button[data-tab=usu],body.gestor #nav button[data-tab=av],body.gestor #nav button[data-tab=cfg],
+  body.gestor .hdr-right a[href="./"],body.gestor .so-admin,body.gestor .cConcluir,body.gestor .cReabrir,body.gestor .sResolver,body.gestor .sReabrir,body.gestor .sExcluir{display:none!important}
+  .gestor-faixa{display:none}
+  body.gestor .gestor-faixa{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:16px;font-size:14px;color:var(--muted)}
+  .oc-tipo{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap}
+  .oc-tipo.acesso{background:#FFF4D6;border-color:#F1D27A}.oc-tipo.dano{background:#FDECEA;border-color:#EFB8B1}.oc-tipo.risco{background:#FCE3E3;border-color:#E39A9A}.oc-tipo.cadastro{background:#E8EEFB;border-color:#B6C6EE}
   .hdr-right a.hdr-ajuda{width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:50%;font-size:15px;font-weight:800}
   main{padding:24px;max-width:1400px;margin:0 auto}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
@@ -315,6 +322,7 @@
     <button data-tab="painel" class="active">Painel</button>
     <button data-tab="reav">Reavaliação</button>
     <button data-tab="docs">Documentos</button>
+    <button data-tab="oc">Ocorrências</button>
     <button data-tab="usu">Usuários</button>
     <button data-tab="av">Avisos</button>
     <button data-tab="cfg">Configuração</button>
@@ -327,7 +335,14 @@
 
   <!-- PAINEL -->
   <section id="tab-painel" class="hidden">
+    <div class="gestor-faixa">Painel do gestor: acompanhamento do levantamento patrimonial, só para consulta. Os documentos e o relatório executivo ficam na aba Documentos.</div>
     <div class="kpis" id="kpis"></div>
+    <div class="card" id="cardOcResumo">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div><h2>Ocorrências do campo</h2><p class="sub" style="margin:0" id="ocResumo">Nenhuma ocorrência registrada.</p></div>
+        <button class="btn-2" id="btnVerOc">Ver ocorrências</button>
+      </div>
+    </div>
     <div class="card">
       <h2>Resumo por classificação</h2>
       <p class="sub">Somente bens encontrados no levantamento.</p>
@@ -382,9 +397,30 @@
     </div>
   </section>
 
+  <!-- OCORRÊNCIAS -->
+  <section id="tab-oc" class="hidden">
+    <div class="card">
+      <h2>Ocorrências do campo</h2>
+      <p class="sub">O que a equipe registrou pelo app durante o levantamento: sala trancada, bem danificado, risco, divergência no cadastro. Responda cada uma com a providência tomada; tudo entra no relatório executivo.</p>
+      <div class="msg hidden" id="ocMsg">Para usar as ocorrências, execute o script supabase/gestor-ocorrencias.sql no Supabase.</div>
+      <div class="toolbar" style="margin-bottom:10px">
+        <div style="flex:2"><input type="search" id="ocBusca" placeholder="Filtrar por texto, localização, bem ou pessoa"></div>
+        <div class="fix"><select id="ocFTipo"><option value="">Todos os tipos</option></select></div>
+        <div class="fix"><select id="ocFSit"><option value="aberta">Abertas</option><option value="resolvida">Resolvidas</option><option value="">Todas</option></select></div>
+        <div style="color:var(--muted);font-size:13px" id="ocInfo"></div>
+      </div>
+      <div class="tblwrap" style="max-height:640px;overflow-y:auto"><table><thead><tr><th style="width:120px">Data</th><th>Tipo</th><th>Localização / bem</th><th>O que aconteceu</th><th>Registrado por</th><th>Situação</th><th></th></tr></thead><tbody id="ocCorpo"></tbody></table></div>
+    </div>
+  </section>
+
   <!-- DOCUMENTOS -->
   <section id="tab-docs" class="hidden">
     <div class="doc-grid">
+      <div class="card">
+        <h2>Relatório executivo</h2>
+        <p class="sub">Visão para o prefeito e os secretários: números do levantamento, andamento por localização, estado dos bens, valores, equipe e as ocorrências registradas em campo, com os pontos de atenção.</p>
+        <div class="acts"><button class="btn" id="btnDocExec">Gerar relatório executivo</button></div>
+      </div>
       <div class="card">
         <h2>Laudo de avaliação por item</h2>
         <p class="sub">Um laudo por bem reavaliado, com identificação, vistoria, metodologia, resultado e assinaturas.</p>
@@ -408,7 +444,7 @@
         <p class="sub">Bens encontrados no local que não constam no cadastro, por localização, com quem registrou e a destinação dada.</p>
         <div class="acts"><button class="btn" id="btnDocSobras">Gerar relatório</button></div>
       </div>
-      <div class="card">
+      <div class="card so-admin">
         <h2>Histórico de alterações</h2>
         <p class="sub">Quem incluiu, alterou ou excluiu cada registro do levantamento e da reavaliação, com data, hora e o valor de antes e de depois.</p>
         <div class="grid g2"><div><label>De</label><input type="date" id="dHistDe"></div><div><label>Até</label><input type="date" id="dHistAte"></div></div>
@@ -419,7 +455,7 @@
         <p class="sub">Todos os bens reavaliados com valor anterior, valor reavaliado e variação, com totais por classificação.</p>
         <div class="acts"><button class="btn" id="btnDocGeral">Gerar relatório</button><button class="btn-2" id="btnCsvReav">Baixar CSV</button></div>
       </div>
-      <div class="card">
+      <div class="card so-admin">
         <h2>Arquivo para o sistema de patrimônio</h2>
         <p class="sub">Gera o ATUALIZA.csv com todos os itens levantados, no layout de importação do sistema. Antes de gerar, confere se há placas repetidas.</p>
         <label style="display:flex;gap:8px;align-items:center;text-transform:none;font-size:13px;font-weight:400;color:var(--txt)"><input type="checkbox" id="dAtualizaReav"> Usar o valor reavaliado como Valor Atual (e o valor residual da reavaliação) nos bens já reavaliados</label>
@@ -445,7 +481,7 @@
           <div><label for="uUsuario">Nome de usuário <span style="font-weight:400;color:var(--muted)">(opcional)</span></label><input id="uUsuario" placeholder="Ex.: maria.souza" autocapitalize="none" spellcheck="false" autocomplete="off"></div>
           <div><label for="uEmail">E-mail</label><input id="uEmail" type="email" placeholder="maria@exemplo.com" autocomplete="off"></div>
           <div><label for="uSenha">Senha provisória <button type="button" class="link-btn" id="btnGerarSenha" style="width:auto;margin:0 0 0 6px;padding:0;font-size:12.5px">gerar</button></label><input id="uSenha" type="password" autocomplete="new-password" spellcheck="false"></div>
-          <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option></select></div>
+          <div><label for="uPerfil">Perfil</label><select id="uPerfil"><option value="campo">Equipe de campo</option><option value="admin">Administrador</option><option value="gestor">Gestor do órgão (só consulta)</option></select></div>
           <div class="full hidden" id="uPrazoBox" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:0"><input type="checkbox" id="uTeste" style="width:auto;margin:0"> Acesso de teste por</label>
             <input type="number" id="uDias" min="1" max="365" value="7" style="width:80px;margin:0" disabled> <span>dias</span>
@@ -862,7 +898,7 @@
 const SUPABASE_URL = 'https://wrhtisnejlpjsliplloz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_duqG7eYQgtBkllbzzqXp9w_zD1xbJsV';
 const FOTOS_BUCKET = 'fotos';
-const APP_VERSION = 'v2026.11.17-28'; // mesma versão do app de campo (index.html)
+const APP_VERSION = 'v2026.11.17-29'; // mesma versão do app de campo (index.html)
 let LINK_RECUPERACAO = /type=recovery/.test(location.hash), LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||"";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 /* olho para mostrar/ocultar a senha, em todos os campos de senha */
@@ -1022,6 +1058,16 @@ async function iniciar(){
     if(error){ falta = error.code==='PGRST202'||error.code==='42883'||/could not find the function|does not exist/i.test(error.message||''); }
     else admin = data===true;
   }catch(_){}
+  if(!admin&&!falta){
+    try{ const {data:g}=await sb.rpc('eh_gestor'); GESTOR=g===true; }catch(_){ GESTOR=false; }
+    if(GESTOR){
+      if(!(await carregarCliente())) return;
+      document.body.classList.add('gestor');
+      const h1=document.querySelector('header h1'); if(h1&&h1.firstChild) h1.firstChild.textContent='Painel do gestor ';
+      document.title=(CLIENTE.nome?CLIENTE.nome+' · ':'')+'Painel do gestor';
+      tela('app'); await carregar(); return;
+    }
+  }
   if(!admin){
     $('#blockMsg').textContent = falta
       ? 'As regras de acesso ainda não foram configuradas no banco. Execute o script supabase/seguranca.sql no SQL Editor do Supabase e tente de novo.'
@@ -1032,6 +1078,7 @@ async function iniciar(){
   tela('app');
   await carregar();
 }
+let GESTOR=false;
 /* ====================== CLIENTES ====================== */
 // O banco separa os dados pelo cliente do usuário logado (supabase/clientes.sql).
 // id null = banco ainda sem a separação: o painel funciona como antes.
@@ -1245,6 +1292,9 @@ async function carregar(){
     }catch(e){ if(tabelaAusente(e)) concOk=false; else throw e; }
     SOBRAS=[]; sobOk=true;
     try{ SOBRAS=await lerTudo('sobras','*','criado_em'); }catch(e){ if(tabelaAusente(e)) sobOk=false; else throw e; }
+    OCORR=[]; ocOk=true;
+    try{ OCORR=await lerTudo('ocorrencias','*','criado_em'); }catch(e){ if(tabelaAusente(e)) ocOk=false; else throw e; }
+    $('#ocMsg').classList.toggle('hidden',ocOk);
     $('#sobMsg').classList.toggle('hidden',sobOk);
     $('#concMsg').classList.toggle('hidden',concOk);
     $('#fStatus').value=concOk?'liberados':'pendentes';
@@ -1258,8 +1308,9 @@ async function carregar(){
 /* ====================== ABAS ====================== */
 let abaAtual='painel';
 function mostrarAba(t){
+  if(GESTOR&&!['painel','docs','oc'].includes(t)) t='painel';
   abaAtual=t;
-  ['painel','reav','docs','usu','av','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
+  ['painel','reav','docs','oc','usu','av','cfg'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==t));
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
 }
 document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>mostrarAba(b.dataset.tab)));
@@ -1283,8 +1334,66 @@ function renderPainel(){
   const g=porClassificacao(enc);
   $('#tblClass').innerHTML='<thead><tr><th>Classificação</th><th class="n">Encontrados</th><th class="n">Reavaliados</th><th class="n">Valor atual</th><th class="n">Valor reavaliado</th></tr></thead><tbody>'+
     g.map(x=>`<tr style="cursor:default"><td>${esc(x.nome)}</td><td class="n">${x.qtd}</td><td class="n">${x.qtdR}</td><td class="n">${brl(x.vAtual)}</td><td class="n">${x.qtdR?brl(x.vNovo):'—'}</td></tr>`).join('')+'</tbody>';
-  renderConclusao(); renderSobras();
+  renderConclusao(); renderSobras(); renderOcorrencias();
 }
+/* ---------- ocorrências do campo ---------- */
+let OCORR=[], ocOk=true;
+const OC_TIPOS={acesso:'Sala trancada ou sem acesso',dano:'Bem danificado ou sem uso',risco:'Risco ou instalação precária',cadastro:'Divergência no cadastro',outro:'Outro assunto'};
+$('#ocFTipo').insertAdjacentHTML('beforeend',Object.entries(OC_TIPOS).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join(''));
+function renderOcorrencias(){
+  const ab=OCORR.filter(x=>x.situacao!=='resolvida').length;
+  const porTipo=Object.entries(OC_TIPOS).map(([k,v])=>[v,OCORR.filter(x=>x.tipo===k).length]).filter(x=>x[1]);
+  $('#ocResumo').innerHTML=!ocOk?'Ainda não instalado no banco.':OCORR.length
+    ?`<b>${ab}</b> aberta(s) e <b>${OCORR.length-ab}</b> resolvida(s). `+porTipo.map(([v,n])=>`${esc(v)}: ${n}`).join(' · ')
+    :'Nenhuma ocorrência registrada pela equipe até agora.';
+  const navOc=document.querySelector('#nav button[data-tab=oc]'); if(navOc) navOc.textContent=ab?`Ocorrências (${ab})`:'Ocorrências';
+  const q=semAcento($('#ocBusca').value.trim()), ft=$('#ocFTipo').value, fs=$('#ocFSit').value;
+  const lista=OCORR.filter(x=>(!ft||x.tipo===ft)&&(!fs||x.situacao===fs)&&(!q||semAcento([x.texto,x.localizacao,x.placa,x.codigo,x.descricao_bem,x.usuario_nome,x.resposta].join(' ')).includes(q)))
+    .sort((a,b)=>a.criado_em<b.criado_em?1:-1);
+  $('#ocInfo').textContent=OCORR.length?`${ab} aberta(s) de ${OCORR.length}`:'';
+  $('#ocCorpo').innerHTML=lista.map(x=>`<tr style="cursor:default" data-id="${esc(x.id)}">
+      <td style="white-space:nowrap">${dataHoraBR(x.criado_em)}</td>
+      <td><span class="oc-tipo ${esc(x.tipo)}">${esc(OC_TIPOS[x.tipo]||x.tipo)}</span></td>
+      <td>${esc(x.localizacao||'—')}${x.placa||x.descricao_bem?`<small style="display:block;color:var(--muted);font-size:12px">${x.placa?'Placa '+esc(x.placa):''}${x.descricao_bem?(x.placa?' · ':'')+esc(x.descricao_bem):''}</small>`:''}</td>
+      <td style="min-width:240px">${esc(x.texto)}${x.resposta?`<small style="display:block;margin-top:4px;color:var(--txt)"><b>Providência:</b> ${esc(x.resposta)}</small>`:''}</td>
+      <td>${esc(x.usuario_nome||'—')}</td>
+      <td>${x.situacao==='resolvida'?'<span class="pill p-ok">Resolvida</span>'+(x.resolvido_em?`<small style="display:block;color:var(--muted);font-size:12px">${esc(x.resolvido_nome||'')} · ${dataHoraBR(x.resolvido_em)}</small>`:''):'<span class="pill p-pend">Aberta</span>'}</td>
+      <td style="text-align:right;white-space:nowrap">${x.fotos?'<button class="btn-2 oFotos" style="padding:5px 10px;font-size:12.5px">Fotos ('+x.fotos+')</button> ':''}<span class="so-admin">${x.situacao==='resolvida'?'<button class="btn-2 oReabrir" style="padding:5px 10px;font-size:12.5px">Reabrir</button>':'<button class="btn-2 oResolver" style="padding:5px 10px;font-size:12.5px">Responder</button>'} <button class="btn-2 oExcluir" style="padding:5px 10px;font-size:12.5px">Excluir</button></span></td></tr>`).join('')
+    || `<tr style="cursor:default"><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">${OCORR.length?'Nenhuma ocorrência com esse filtro.':'Nenhuma ocorrência registrada.'}</td></tr>`;
+  const de=b=>OCORR.find(x=>x.id===b.closest('tr').dataset.id);
+  $('#ocCorpo').querySelectorAll('.oResolver').forEach(b=>b.onclick=()=>responderOc(de(b)));
+  $('#ocCorpo').querySelectorAll('.oReabrir').forEach(b=>b.onclick=()=>mudarOc(de(b),{situacao:'aberta'},'Ocorrência reaberta'));
+  $('#ocCorpo').querySelectorAll('.oExcluir').forEach(b=>b.onclick=()=>excluirOc(de(b)));
+  $('#ocCorpo').querySelectorAll('.oFotos').forEach(b=>b.onclick=()=>fotosOc(de(b)));
+}
+async function mudarOc(x,mud,aviso){
+  const {data,error}=await sb.from('ocorrencias').update(mud).eq('id',x.id).select().single();
+  if(error){ toast('Erro: '+error.message,5000); return; }
+  Object.assign(x,data||mud); toast(aviso); renderOcorrencias();
+}
+function responderOc(x){
+  const r=prompt(`Providência para a ocorrência:\n"${x.texto}"\n\n(ex.: chave entregue à equipe; bem encaminhado para conserto)`, x.resposta||'');
+  if(r==null) return; if(!r.trim()){ toast('Escreva a providência tomada.'); return; }
+  mudarOc(x,{situacao:'resolvida',resposta:r.trim().slice(0,1000)},'✓ Ocorrência resolvida');
+}
+async function excluirOc(x){
+  if(!confirm(`Excluir a ocorrência "${x.texto.slice(0,80)}"? Use só para registro feito por engano.`)) return;
+  const {error}=await sb.from('ocorrencias').delete().eq('id',x.id);
+  if(error){ toast('Erro: '+error.message,5000); return; }
+  OCORR=OCORR.filter(y=>y.id!==x.id); toast('Ocorrência excluída'); renderOcorrencias();
+}
+async function fotosOc(x){
+  const w=window.open('','_blank');
+  const paths=Array.from({length:x.fotos},(_,i)=>`${pastaCliente()}ocorrencias/${x.id}/${i+1}.jpg`);
+  const {data,error}=await sb.storage.from(FOTOS_BUCKET).createSignedUrls(paths,3600);
+  const urls=(data||[]).filter(r=>r.signedUrl).map(r=>r.signedUrl);
+  if(error||!urls.length){ if(w) w.close(); toast('Não foi possível abrir as fotos.'); return; }
+  const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Fotos da ocorrência</title><style>body{font-family:system-ui,sans-serif;margin:20px}img{max-width:100%;display:block;margin:0 0 16px;border:1px solid #ccc}</style></head><body><h3>${esc(OC_TIPOS[x.tipo]||x.tipo)}</h3><p>${esc(x.localizacao||'')}</p><p>${esc(x.texto)}</p>${urls.map(u=>`<img src="${esc(u)}">`).join('')}</body></html>`;
+  if(w){ w.document.write(html); w.document.close(); } else toast('Libere a abertura de novas abas para ver as fotos.');
+}
+['#ocBusca','#ocFTipo','#ocFSit'].forEach(i=>$(i).addEventListener('input',()=>renderOcorrencias()));
+$('#btnVerOc').addEventListener('click',()=>mostrarAba('oc'));
+
 /* ---------- bens sem cadastro (sobras) ---------- */
 let SOBRAS=[], sobOk=true;
 function renderSobras(){
@@ -2418,7 +2527,7 @@ const COPIA_TABELAS=[
   ['localizacoes','cod','localizações',true],['motivos','cod','motivos',true],['comissoes','cod','comissões',true],
   ['configuracao','id','configuração',true],['bens','codigo','bens',true],['levantamento','codigo','levantamento',true],
   ['reavaliacao','codigo','reavaliações',true],['referencias','chave','referências de preço',true],
-  ['localizacoes_concluidas','cod','localizações concluídas',true],['sobras','id','bens sem cadastro',true],
+  ['localizacoes_concluidas','cod','localizações concluídas',true],['sobras','id','bens sem cadastro',true],['ocorrencias','id','ocorrências do campo',true],
   ['historico','id','histórico',false],['usuarios','user_id','usuários',false]];
 let copiaRodando=false;
 addEventListener('beforeunload',e=>{ if(copiaRodando){ e.preventDefault(); e.returnValue=''; } });
@@ -2656,7 +2765,7 @@ $('#fileCopia').addEventListener('change',async e=>{
     baixarBlob(`antes-de-restaurar_${nomeArq(CLIENTE.nome)}_${carimboArq()}.zip`,await montarZip(arquivosDaCopia(antes,'')));
     // 2) tabelas
     const novoId={};   // sobras levadas para outro cliente ganham identificação nova
-    if(outro) (copia.dados.sobras||[]).forEach(s=>novoId[s.id]=crypto.randomUUID());
+    if(outro) [...(copia.dados.sobras||[]),...(copia.dados.ocorrencias||[])].forEach(s=>novoId[s.id]=crypto.randomUUID());
     const iguais=x=>JSON.stringify(x===undefined?null:x);
     const tabelas=COPIA_TABELAS.filter(t=>t[3]&&Array.isArray(copia.dados[t[0]])&&copia.dados[t[0]].length);
     const result=[], erros=[];
@@ -2668,12 +2777,12 @@ $('#fileCopia').addEventListener('change',async e=>{
       const gravar=[];
       for(const r0 of copia.dados[t]){
         const r=Object.assign({},r0); delete r.cliente_id; if(k!=='id') delete r.id;
-        if(t==='sobras'&&outro) r.id=novoId[r0.id];
+        if((t==='sobras'||t==='ocorrencias')&&outro) r.id=novoId[r0.id];
         const cur=mapa.get(String(r[k]));
         if(cur&&Object.keys(r).every(c=>iguais(r[c])===iguais(cur[c]))) continue;   // já está igual
         gravar.push(comCliente(r));
       }
-      const chave=(t==='sobras'||CLIENTE.id==null)?k:conflito(k);
+      const chave=(t==='sobras'||t==='ocorrencias'||CLIENTE.id==null)?k:conflito(k);
       let ok=0;
       for(let i=0;i<gravar.length;i+=500){
         copiaProg(`Gravando ${nome}: ${Math.min(i+500,gravar.length)} de ${gravar.length}...`,0.1+0.5*(ti+i/gravar.length)/tabelas.length);
@@ -2686,7 +2795,7 @@ $('#fileCopia').addEventListener('change',async e=>{
     let fNovas=0, fExist=0; const fErros=[];
     await emParalelo(fotos,4,async(f,i)=>{
       let rel=f.rel;
-      if(outro) rel=rel.replace(/^sobras\/([^/]+)\//,(m,id)=>'sobras/'+(novoId[id]||id)+'/');
+      if(outro) rel=rel.replace(/^(sobras|ocorrencias)\/([^/]+)\//,(m,p,id)=>p+'/'+(novoId[id]||id)+'/');
       const ext=(rel.match(/\.([a-z0-9]+)$/i)||[])[1]||'', tipo={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',pdf:'application/pdf'}[ext.toLowerCase()]||'image/jpeg';
       try{
         const {error}=await sb.storage.from(FOTOS_BUCKET).upload(pastaCliente()+rel,await f.item.blob(),{contentType:tipo,upsert:false});
@@ -2810,7 +2919,7 @@ function renderUsuarios(){
     <td>${esc(u.nome||'—')}${u.geral?' <span class="pill p-mut" title="Acesso a todos os clientes">empresa</span>':''}${u.nome&&erroNome(u.nome)?' <span class="pill p-pend" title="Cadastro sem nome completo">completar</span>':''}</td>
     <td style="font-variant-numeric:tabular-nums">${u.usuario?esc(u.usuario):'<span style="color:var(--muted)">—</span>'}</td>
     <td>${esc(u.email)}${u.id===USER.id?' <span class="pill p-mut">você</span>':''}${u.protegido?' <span class="pill p-mut" title="Conta do dono: não pode ser excluída nem bloqueada">protegida</span>':''}</td>
-    <td><select class="uPerfil" ${u.id===USER.id||u.protegido?'disabled':''}><option value="campo"${u.perfil!=='admin'?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option></select></td>
+    <td><select class="uPerfil" ${u.id===USER.id||u.protegido?'disabled':''}><option value="campo"${u.perfil==='campo'||!u.perfil?' selected':''}>Equipe de campo</option><option value="admin"${u.perfil==='admin'?' selected':''}>Administrador</option><option value="gestor"${u.perfil==='gestor'?' selected':''}>Gestor (só consulta)</option></select></td>
     <td>${u.ativo?'<span class="pill p-ok">Ativo</span>':'<span class="pill p-no">Bloqueado</span>'}${u.senha_bloqueada_ate?` <span class="pill p-pend" title="Errou a senha 3 vezes">${new Date(u.senha_bloqueada_ate)-Date.now()>86400000?'senha bloqueada: use Liberar acesso':'senha bloqueada até '+new Date(u.senha_bloqueada_ate).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`:''}</td>
     <td>${(()=>{ const p=textoPrazo(u.acesso_ate); return p?`<span class="pill ${p.cls}">${p.txt}</span>`:'<span style="color:var(--muted)">sem prazo</span>'; })()}</td>
     <td style="color:var(--muted);font-variant-numeric:tabular-nums">${fmt(u.ultimo_acesso)}</td>
@@ -3552,6 +3661,71 @@ $('#btnDocSobras').addEventListener('click',()=>{
       <table><thead><tr><th>#</th><th>Descrição</th><th>Placa</th><th>Marca / modelo</th><th>Estado</th><th>Registrado por</th><th>Destinação</th></tr></thead>
       <tbody>${l.sort((a,b)=>a.criado_em<b.criado_em?-1:1).map((x,i)=>`<tr><td class="n">${i+1}</td><td>${esc(x.descricao)}${x.observacao?'<br><span style="font-size:10px">'+esc(x.observacao)+'</span>':''}</td><td>${esc(x.placa||'')}</td><td>${esc([x.marca,x.modelo].filter(Boolean).join(' / '))}</td><td>${esc(x.estado||'')}</td><td>${esc(x.usuario_nome||'')}<br>${dataHoraBR(x.criado_em)}</td><td>${x.situacao==='resolvido'?esc(x.destinacao||'Resolvido'):'Pendente'}</td></tr>`).join('')}</tbody></table>`).join('')}
     ${localData()}<div class="sign"><div>Comissão de levantamento</div><div>Setor de Patrimônio</div></div></div>`,`${SOBRAS.length} bem(ns) sem cadastro`);
+});
+
+/* ---------- relatório executivo ---------- */
+$('#btnDocExec').addEventListener('click',()=>{
+  if(!BENS.length){ toast('Ainda não há bens importados.'); return; }
+  const pct=(a,b)=>b?(a/b*100).toFixed(1).replace('.',',')+'%':'—';
+  const n=x=>Number(x||0).toLocaleString('pt-BR');
+  const enc=BENS.filter(encontrado), nao=BENS.filter(b=>!encontrado(b)), rv=enc.filter(reavOk);
+  const vEnc=enc.reduce((t,b)=>t+(num(b.valor_atual)||0),0), vNao=nao.reduce((t,b)=>t+(num(b.valor_atual)||0),0);
+  const vAnt=rv.reduce((t,b)=>t+(num(b.valor_atual)||0),0), vNovo=rv.reduce((t,b)=>t+(+reav(b).valor_reavaliado||0),0);
+  // localizações (sem a de origem)
+  const m={};
+  BENS.forEach(b=>{ const c=locCod(b); const x=m[c]||(m[c]={cod:c,desc:locDesc(b),total:0,enc:0}); x.total++; if(encontrado(b)) x.enc++; });
+  Object.keys(CONC).forEach(c=>{ if(!m[c]) m[c]={cod:c,desc:CONC[c].descricao||c,total:0,enc:0}; });
+  const origem=m[LOCAL_ORIGEM||'\u0000']; if(origem) delete m[origem.cod];
+  const locs=Object.values(m), concl=locs.filter(x=>CONC[x.cod]), andamento=locs.filter(x=>!CONC[x.cod]&&x.enc), paradas=locs.filter(x=>!CONC[x.cod]&&!x.enc);
+  // equipe e período
+  const levs=enc.map(lev).filter(Boolean), datas=levs.map(l=>l.atualizado_em).filter(Boolean).sort();
+  const eq={}; levs.forEach(l=>{ const k=l.usuario_nome||'Não identificado'; eq[k]=(eq[k]||0)+1; });
+  const equipe=Object.entries(eq).sort((a,b)=>b[1]-a[1]);
+  // estado de conservação dos encontrados
+  const est={}; enc.forEach(b=>{ const k=estDesc(b)||'—'; est[k]=(est[k]||0)+1; });
+  const estados=Object.entries(est).sort((a,b)=>b[1]-a[1]);
+  // sobras e ocorrências
+  const sobPend=SOBRAS.filter(x=>x.situacao!=='resolvido').length;
+  const ocAb=OCORR.filter(x=>x.situacao!=='resolvida'), ocTipos=Object.entries(OC_TIPOS).map(([k,v])=>({v,t:OCORR.filter(x=>x.tipo===k).length,a:ocAb.filter(x=>x.tipo===k).length})).filter(x=>x.t);
+  // pontos de atenção
+  const at=[];
+  if(nao.length) at.push(`<b>${n(nao.length)}</b> bem(ns) ainda não localizados, com valor contábil de <b>${brl(vNao)}</b>${CONC&&concl.length<locs.length?' (parte deles está em localizações ainda não concluídas)':''}.`);
+  if(andamento.length||paradas.length) at.push(`<b>${n(andamento.length+paradas.length)}</b> de ${n(locs.length)} localização(ões) ainda não concluídas${paradas.length?`, sendo ${n(paradas.length)} sem nenhum bem levantado`:''}.`);
+  if(ocAb.length) at.push(`<b>${n(ocAb.length)}</b> ocorrência(s) do campo sem providência registrada${ocAb.filter(x=>x.tipo==='risco').length?`, ${ocAb.filter(x=>x.tipo==='risco').length} delas de risco ou instalação precária`:''}.`);
+  if(sobPend) at.push(`<b>${n(sobPend)}</b> bem(ns) encontrados sem cadastro aguardam destinação.`);
+  const ruins=enc.filter(b=>String(estCod(b))==='4').length;
+  if(ruins) at.push(`<b>${n(ruins)}</b> bem(ns) encontrados em estado péssimo (${pct(ruins,enc.length)} dos encontrados), candidatos a baixa ou recuperação.`);
+  if(enc.length&&rv.length<enc.length) at.push(`<b>${n(enc.length-rv.length)}</b> bem(ns) encontrados ainda sem reavaliação concluída.`);
+  const quadro=(l,v,d)=>`<td style="width:33%;padding:10px 12px;vertical-align:top"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#555">${l}</div><div style="font-size:17px;font-weight:700;margin:2px 0">${v}</div><div style="font-size:10.5px;color:#555">${d||''}</div></td>`;
+  abrirPreview(`<div class="page">${cabecalho()}
+    <h1>Relatório Executivo do Levantamento Patrimonial</h1>
+    <div class="num">${CFG.ato?esc(CFG.ato)+' · ':''}Posição em ${dataHoraBR(new Date().toISOString())}${datas.length?' · Levantamento de '+dataBR(new Date(datas[0]))+' a '+dataBR(new Date(datas[datas.length-1])):''}</div>
+    <h3>Resumo</h3>
+    <table><tbody>
+      <tr>${quadro('Bens no cadastro',n(BENS.length),'base importada do sistema de patrimônio')}${quadro('Encontrados',n(enc.length),pct(enc.length,BENS.length)+' do cadastro')}${quadro('Não localizados',n(nao.length),'valor contábil '+brl(vNao))}</tr>
+      <tr>${quadro('Localizações concluídas',n(concl.length)+' de '+n(locs.length),pct(concl.length,locs.length))}${quadro('Bens sem cadastro (sobras)',n(SOBRAS.length),sobPend?n(sobPend)+' aguardando destinação':'todos com destinação')}${quadro('Ocorrências do campo',n(OCORR.length),n(ocAb.length)+' aberta(s)')}</tr>
+      <tr>${quadro('Valor contábil dos encontrados',brl(vEnc),'conforme o cadastro')}${quadro('Bens reavaliados',n(rv.length),pct(rv.length,enc.length)+' dos encontrados')}${quadro('Valor reavaliado',brl(vNovo),rv.length?'antes: '+brl(vAnt)+' · variação '+(vNovo-vAnt>=0?'+':'')+brl(vNovo-vAnt):'')}</tr>
+    </tbody></table>
+    ${at.length?`<h3>Pontos de atenção</h3><ul style="margin:4px 0 0 18px;padding:0">${at.map(x=>`<li style="margin:3px 0">${x}</li>`).join('')}</ul>`:''}
+    <h3>Estado de conservação dos bens encontrados</h3>
+    <table><thead><tr><th>Estado</th><th>Bens</th><th>Participação</th></tr></thead>
+    <tbody>${estados.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${n(v)}</td><td class="n">${pct(v,enc.length)}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum bem encontrado ainda.</td></tr>'}</tbody></table>
+    <h3>Equipe de campo</h3>
+    <table><thead><tr><th>Pessoa</th><th>Bens levantados</th><th>Participação</th></tr></thead>
+    <tbody>${equipe.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${n(v)}</td><td class="n">${pct(v,enc.length)}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum bem levantado ainda.</td></tr>'}</tbody></table>
+    <h3>Ocorrências registradas em campo</h3>
+    ${OCORR.length?`<table><thead><tr><th>Tipo</th><th>Total</th><th>Abertas</th><th>Resolvidas</th></tr></thead>
+      <tbody>${ocTipos.map(x=>`<tr><td>${esc(x.v)}</td><td class="n">${x.t}</td><td class="n">${x.a}</td><td class="n">${x.t-x.a}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td><td class="n">${OCORR.length}</td><td class="n">${ocAb.length}</td><td class="n">${OCORR.length-ocAb.length}</td></tr></tfoot></table>
+      <table style="margin-top:8px"><thead><tr><th style="width:12%">Data</th><th style="width:16%">Tipo</th><th style="width:18%">Localização / bem</th><th>Ocorrência</th><th style="width:22%">Providência</th></tr></thead>
+      <tbody>${OCORR.slice().sort((a,b)=>a.criado_em<b.criado_em?-1:1).map(x=>`<tr><td>${dataBR(new Date(x.criado_em))}</td><td>${esc(OC_TIPOS[x.tipo]||x.tipo)}</td><td>${esc(x.localizacao||'—')}${x.placa?'<br>Placa '+esc(x.placa):''}</td><td>${esc(x.texto)}<br><span style="font-size:10px">${esc(x.usuario_nome||'')}</span></td><td>${x.situacao==='resolvida'?esc(x.resposta||'Resolvida')+(x.resolvido_em?'<br><span style="font-size:10px">'+dataBR(new Date(x.resolvido_em))+'</span>':''):'<i>Em aberto</i>'}</td></tr>`).join('')}</tbody></table>`
+      :'<p>Nenhuma ocorrência registrada pela equipe de campo.</p>'}
+    <h3>Andamento por localização</h3>
+    <table><thead><tr><th>Localização</th><th>Bens levantados</th><th>Situação</th><th>Concluída em</th></tr></thead>
+    <tbody>${locs.sort((a,b)=>String(a.desc).localeCompare(String(b.desc),'pt-BR')).map(x=>`<tr><td>${esc(x.desc)}</td><td class="n">${n(x.enc)}</td><td>${CONC[x.cod]?'Concluída':x.enc?'Em andamento':'Não iniciada'}</td><td>${CONC[x.cod]?dataBR(new Date(CONC[x.cod].concluido_em))+(CONC[x.cod].concluido_nome?' · '+esc(CONC[x.cod].concluido_nome):''):''}</td></tr>`).join('')}</tbody></table>
+    ${origem?`<p style="font-size:11px">Ainda na localização de origem (${esc(origem.desc)}): ${n(origem.total-origem.enc)} bem(ns). O que restar nela ao final do trabalho é tratado como não localizado.</p>`:''}
+    ${localData(hojeISO())}<div class="sign"><div>Comissão de levantamento</div><div>Setor de Patrimônio</div></div>
+  </div>`,'Relatório executivo');
 });
 
 $('#btnDocHist').addEventListener('click',async()=>{

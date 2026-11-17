@@ -435,6 +435,34 @@
     <div id="searchResults" class="results hidden"></div>
     <button class="btn-ghost btn-block" id="btnLocais" style="margin-top:14px">Concluir uma localização</button>
     <button class="btn-ghost btn-block" id="btnSobra" style="margin-top:8px">Registrar bem sem cadastro</button>
+    <button class="btn-ghost btn-block" id="btnOcor" style="margin-top:8px">Registrar ocorrência</button>
+  </div>
+
+  <!-- OCORRÊNCIA DO CAMPO -->
+  <div class="card hidden" id="ocorCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h3 style="margin:0">Ocorrência</h3><button class="btn-ghost" id="btnFecharOcor" style="flex:none">‹ Voltar</button></div>
+    <p class="hint">Registre o que atrapalhou o trabalho ou o que o órgão precisa saber: sala trancada, bem danificado, risco, divergência no cadastro. Fica guardado com o seu nome e entra no relatório executivo.</p>
+    <label for="ocTipo">Tipo</label>
+    <select id="ocTipo">
+      <option value="">— escolha o tipo —</option>
+      <option value="acesso">Sala trancada ou sem acesso</option>
+      <option value="dano">Bem danificado, quebrado ou sem uso</option>
+      <option value="risco">Risco ou instalação precária</option>
+      <option value="cadastro">Divergência no cadastro</option>
+      <option value="outro">Outro assunto</option>
+    </select>
+    <label for="ocLocal">Localização</label>
+    <select id="ocLocal"></select>
+    <label for="ocBem">Bem relacionado <span style="font-weight:400;color:var(--muted)">(placa ou código, opcional)</span></label>
+    <input type="text" id="ocBem" maxlength="40" inputmode="numeric" placeholder="Número da placa ou código">
+    <label for="ocTexto">O que aconteceu</label>
+    <textarea id="ocTexto" maxlength="1000" rows="4" placeholder="Ex.: Sala 12 trancada. O responsável está de férias até dia 25." style="width:100%;font:inherit;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--txt);resize:vertical;margin-bottom:16px;box-sizing:border-box"></textarea>
+    <label for="ocFotos">Fotos (até 3)</label>
+    <input type="file" id="ocFotos" accept="image/*" capture="environment" multiple>
+    <div class="thumbs" id="ocThumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+    <div id="ocMsg" style="font-size:14px;margin:10px 0"></div>
+    <button class="btn btn-block" id="btnSalvarOcor">Registrar ocorrência</button>
+    <div id="ocLista" style="margin-top:16px"></div>
   </div>
 
   <!-- CONCLUSÃO DE LOCALIZAÇÃO -->
@@ -685,7 +713,7 @@ const LINK_ERRO = (/error_code=([^&]+)/.exec(location.hash)||[])[1]||'';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const FOTOS_BUCKET = 'fotos';
 const MOTIVO_PADRAO = '22'; // Levantamento Patrimonial 2026 (motivo fixo do levantamento)
-const APP_VERSION = 'v2026.11.17-28'; // versão do app (confira na tela de login)
+const APP_VERSION = 'v2026.11.17-29'; // versão do app (confira na tela de login)
 
 /* ====================== ESTADO ====================== */
 const $ = s => document.querySelector(s);
@@ -811,6 +839,7 @@ async function carregarCliente(){
       try{ await sb.auth.signOut(); }catch(_){}
       return false;
     }
+    if(data.perfil==='gestor'){ location.replace('admin.html'); return false; }   // gestor (só leitura) usa o painel
     CLIENTE={id:data.id,nome:data.nome||'',pasta:data.pasta||'',geral:data.geral===true,acesso_ate:data.acesso_ate||null};
     try{ localStorage.setItem('lev_cliente',JSON.stringify(CLIENTE)); }catch(_){}
   }catch(_){ /* sem internet: fica o último cliente conhecido */ }
@@ -830,7 +859,7 @@ async function mostrarEscolhaCliente(trocando){
   const msg=$('#cliMsg'); msg.innerHTML=fila.length?`<span class="err">Há ${fila.length} item(ns) guardados neste celular. Envie antes de trocar de órgão.</span>`:'';
   $('#cliLista').innerHTML=lista.map(c=>`<button class="btn-2 btn-block cli-op${c.id===CLIENTE.id?' atual':''}" data-id="${c.id}"><span>${esc(c.nome)}${c.municipio?'<br><small>'+esc(c.municipio)+'</small>':''}</span>${c.id===CLIENTE.id?'<small>atual</small>':''}</button>`).join('')
     +(trocando?'<button class="btn-ghost btn-block" id="cliCancelar">Continuar no órgão atual</button>':'');
-  ['searchCard','locCard','syncCard','sobraCard','detailCard'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
+  ['searchCard','locCard','syncCard','sobraCard','ocorCard','detailCard'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('hidden'); });
   $('#cliCard').classList.remove('hidden');
   const cancelar=$('#cliCancelar'); if(cancelar) cancelar.onclick=()=>{ $('#cliCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); };
   document.querySelectorAll('#cliLista .cli-op').forEach(b=>b.onclick=async()=>{
@@ -1687,7 +1716,7 @@ async function atualizarFilaUI(){
 }
 function dataHoraBR(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
 async function abrirEnvio(){
-  stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#locCard').classList.add('hidden'); $('#syncCard').classList.remove('hidden');
+  stopScan(); ['searchCard','detailCard','locCard','sobraCard','ocorCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#syncCard').classList.remove('hidden');
   $('#syncMsg').innerHTML='';
   $('#syncModo').innerHTML = OFFLINE()
     ? '<b>Envio offline</b>Os bens ficam guardados no celular e cada item salvo fica aqui até você enviar pela internet ou exportar o arquivo.'
@@ -1706,7 +1735,7 @@ async function abrirEnvio(){
 /* ====== conclusão de localização ====== */
 let LC_SEL=null, LC_FEITAS={}, LC_CONT=null;
 async function abrirLocais(){
-  stopScan(); $('#searchCard').classList.add('hidden'); $('#detailCard').classList.add('hidden'); $('#syncCard').classList.add('hidden'); $('#locCard').classList.remove('hidden');
+  stopScan(); ['searchCard','detailCard','syncCard','sobraCard','ocorCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#locCard').classList.remove('hidden');
   LC_SEL=null; $('#lcBusca').value=''; $('#lcBusca').classList.remove('hidden'); $('#lcDetalhe').classList.add('hidden'); $('#lcMsg').innerHTML='';
   try{ const {data,error}=await sb.from('localizacoes_concluidas').select('cod,concluido_nome,concluido_em'); if(error) throw error; LC_FEITAS={}; (data||[]).forEach(r=>LC_FEITAS[r.cod]=r); }
   catch(e){ if(!ehErroDeRede(e)) $('#lcMsg').innerHTML='<span class="err">A conclusão de localizações ainda não foi instalada no banco (supabase/conclusao.sql).</span>'; }
@@ -1771,7 +1800,7 @@ $('#btnLocais').addEventListener('click',abrirLocais);
 /* ====================== BEM SEM CADASTRO (SOBRA) ====================== */
 let SB_FOTOS=[];
 function abrirSobra(){
-  stopScan(); ['searchCard','detailCard','syncCard','locCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#sobraCard').classList.remove('hidden');
+  stopScan(); ['searchCard','detailCard','syncCard','locCard','ocorCard'].forEach(x=>$('#'+x).classList.add('hidden')); $('#sobraCard').classList.remove('hidden');
   const ultimo=$('#sbLocal').value;
   fillSelect('#sbLocal',LOCS.filter(l=>l.cod!==LOCAL_TEMP).slice().sort((a,b)=>String(a.desc).localeCompare(String(b.desc),'pt-BR')),'— selecione —');
   if(ultimo) $('#sbLocal').value=ultimo;   // quem registra vários bens da mesma sala não escolhe de novo
@@ -1819,6 +1848,56 @@ $('#btnSalvarSobra').addEventListener('click',async()=>{
     const faltou=SB_FOTOS.length-enviadas;
     limparSobra(); msg.innerHTML=faltou?'<span class="err">Bem registrado, mas '+faltou+' foto(s) não foram enviadas.</span>':''; toast('✓ Bem sem cadastro registrado'); listarSobras();
   }catch(e){ msg.innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. O registro de bem sem cadastro precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
+  finally{ btn.disabled=false; }
+});
+/* ====================== OCORRÊNCIAS DO CAMPO ====================== */
+let OC_FOTOS=[];
+const OC_TIPOS={acesso:'Sala trancada ou sem acesso',dano:'Bem danificado, quebrado ou sem uso',risco:'Risco ou instalação precária',cadastro:'Divergência no cadastro',outro:'Outro assunto'};
+function abrirOcorrencia(){
+  stopScan(); CARTOES.forEach(x=>{ const el=$('#'+x); if(el) el.classList.add('hidden'); }); $('#ocorCard').classList.remove('hidden');
+  const ultimo=$('#ocLocal').value;
+  fillSelect('#ocLocal',LOCS.filter(l=>l.cod!==LOCAL_TEMP).slice().sort((a,b)=>String(a.desc).localeCompare(String(b.desc),'pt-BR')),'— selecione (opcional) —');
+  if(ultimo) $('#ocLocal').value=ultimo;
+  $('#ocMsg').innerHTML=''; listarOcorrencias();
+}
+function limparOcorrencia(){ $('#ocTipo').value=''; $('#ocBem').value=''; $('#ocTexto').value=''; $('#ocFotos').value=''; OC_FOTOS=[]; $('#ocThumbs').innerHTML=''; }
+function desenharFotosOcor(){
+  $('#ocThumbs').innerHTML=OC_FOTOS.map((d,i)=>`<div class="thumb"><img src="${d}"><button class="x" data-i="${i}">×</button></div>`).join('');
+  $('#ocThumbs').querySelectorAll('.x').forEach(b=>b.addEventListener('click',()=>{ OC_FOTOS.splice(+b.dataset.i,1); desenharFotosOcor(); }));
+}
+$('#ocFotos').addEventListener('change',async e=>{
+  for(const f of [...e.target.files]){ if(OC_FOTOS.length>=3){ toast('No máximo 3 fotos'); break; } try{ OC_FOTOS.push(await reduzirFoto(f)); }catch(er){ toast(er.message); } }
+  e.target.value=''; desenharFotosOcor();
+});
+async function listarOcorrencias(){
+  const box=$('#ocLista'); box.innerHTML='';
+  try{
+    const {data,error}=await sb.from('ocorrencias').select('id,tipo,texto,localizacao,situacao,resposta,criado_em,usuario_nome').order('criado_em',{ascending:false}).limit(15); if(error) throw error;
+    if(!data.length) return;
+    box.innerHTML='<div class="section-title">Últimas ocorrências</div><div class="sync-list">'+data.map(r=>`<div><span><b>${esc(OC_TIPOS[r.tipo]||r.tipo)}</b>${r.localizacao?' · '+esc(r.localizacao):''}<br>${esc(r.texto)}<br><small>${esc(r.usuario_nome||'')} · ${dataHoraBR(r.criado_em)} · ${r.situacao==='resolvida'?'resolvida':'aberta'}</small>${r.resposta?'<br><small><b>Resposta:</b> '+esc(r.resposta)+'</small>':''}</span></div>`).join('')+'</div>';
+  }catch(e){ if(!ehErroDeRede(e)) $('#ocMsg').innerHTML='<span class="err">O registro de ocorrências ainda não foi instalado no banco (supabase/gestor-ocorrencias.sql).</span>'; }
+}
+$('#btnOcor').addEventListener('click',abrirOcorrencia);
+['ocTipo','ocTexto'].forEach(x=>$('#'+x).addEventListener('input',()=>{ $('#ocMsg').innerHTML=''; }));
+$('#btnFecharOcor').addEventListener('click',()=>{ $('#ocorCard').classList.add('hidden'); $('#searchCard').classList.remove('hidden'); });
+$('#btnSalvarOcor').addEventListener('click',async()=>{
+  const tipo=$('#ocTipo').value, texto=$('#ocTexto').value.trim(), cod=$('#ocLocal').value, ref=$('#ocBem').value.trim(), msg=$('#ocMsg'), btn=$('#btnSalvarOcor');
+  if(!tipo){ msg.innerHTML='<span class="err">Escolha o tipo da ocorrência.</span>'; return; }
+  if(texto.length<5){ msg.innerHTML='<span class="err">Conte em poucas palavras o que aconteceu.</span>'; return; }
+  const loc=LOCS.find(l=>l.cod===cod)||{};
+  btn.disabled=true; msg.innerHTML='<span class="spin"></span> Registrando...';
+  try{
+    let bem=null;
+    if(ref){ try{ const {data:bs}=await sb.from('bens').select('codigo,placa,descricao').or(`placa.eq.${ref.replace(/[^0-9A-Za-z.-]/g,'')},codigo.eq.${ref.replace(/[^0-9A-Za-z.-]/g,'')}`).limit(1); bem=(bs&&bs[0])||null; }catch(_){ } }
+    const {data,error}=await sb.from('ocorrencias').insert({tipo,texto,cod_localizacao:cod||null,localizacao:loc.desc||null,
+      codigo:bem?bem.codigo:null,placa:bem?bem.placa:(ref||null),descricao_bem:bem?bem.descricao:null}).select('id').single();
+    if(error) throw error;
+    let enviadas=0;
+    for(let i=0;i<OC_FOTOS.length;i++){ const r=await sb.storage.from(FOTOS_BUCKET).upload(`${pastaCliente()}ocorrencias/${data.id}/${i+1}.jpg`,dataURLtoBlob(OC_FOTOS[i]),{contentType:'image/jpeg',upsert:false}); if(!r.error) enviadas++; }
+    if(enviadas) await sb.from('ocorrencias').update({fotos:enviadas}).eq('id',data.id);
+    const faltou=OC_FOTOS.length-enviadas;
+    limparOcorrencia(); msg.innerHTML=faltou?'<span class="err">Ocorrência registrada, mas '+faltou+' foto(s) não foram enviadas.</span>':''; toast('✓ Ocorrência registrada'); listarOcorrencias();
+  }catch(e){ msg.innerHTML='<span class="err">'+(ehErroDeRede(e)?'Sem internet. O registro de ocorrência precisa de conexão.':'Erro: '+esc(e.message||e))+'</span>'; }
   finally{ btn.disabled=false; }
 });
 $('#lcBusca').addEventListener('input',listarLocais);
@@ -2043,7 +2122,7 @@ $('#btnLogout').addEventListener('click',()=>fecharFolha('menuFundo'),true);
 // Os avisos ficam no banco (supabase/avisos.sql); a função "avisos" manda a notificação aos aparelhos.
 let AVISOS=[], AV_LIDOS=new Set(), AVISOS_OK=true, MEU_ID=null, PREF={admin:true,sistema:true}, AVISOS_AUTO={};
 try{ AVISOS_AUTO=JSON.parse(localStorage.getItem('lev_avisos_auto')||'{}')||{}; }catch(_){}
-const CARTOES=['searchCard','detailCard','syncCard','locCard','sobraCard','cliCard','avisosCard'];
+const CARTOES=['searchCard','detailCard','syncCard','locCard','sobraCard','ocorCard','cliCard','avisosCard'];
 const naoLidos=()=>AVISOS.filter(a=>!AV_LIDOS.has(a.id)).length;
 const tabelaFalta=e=>/PGRST205|PGRST202|42P01|42883|does not exist|could not find/i.test(((e&&e.code)||'')+' '+((e&&e.message)||''));
 function marcarNaoLidos(){

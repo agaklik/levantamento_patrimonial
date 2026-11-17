@@ -29,6 +29,7 @@ Guia completo de uso, instalação e funcionamento. Para a visão geral, veja o 
 - [Acesso de teste com prazo](#acesso-de-teste-com-prazo)
 - [Base de demonstração](#base-de-demonstração)
 - [Instalar no celular e avisos (notificações)](#instalar-no-celular-e-avisos-notificações)
+- [Painel do gestor e ocorrências do campo](#painel-do-gestor-e-ocorrências-do-campo)
 
 ## O que o app faz
 
@@ -67,6 +68,7 @@ O service worker guarda em cache a "casca" do app (a tela). O envio dos dados se
 | --- | --- |
 | **Equipe de campo** (usuário logado) | Buscar bens pela placa, pela câmera ou pelo nome, registrar o levantamento, tirar fotos, informar placa de bem sem placa e enviar ou exportar o que fez |
 | **Administrador** | Tudo o que a equipe faz, mais a página de administração (`admin.html`): importar CSVs, cadastrar usuários e a comissão, definir o modo de envio, receber arquivos do campo, baixar listas, gerar o `ATUALIZA.csv`, reavaliar e emitir documentos |
+| **Gestor (só consulta)** | Prefeito, secretário ou controlador: vê o painel, as ocorrências e os relatórios (inclusive o executivo) do próprio órgão, sem gravar nada. O bloqueio é feito por políticas restritivas no banco |
 
 Quem é administrador é definido no banco, pela tabela `admins` e pela função `is_admin()`, criadas pelo script [`supabase/seguranca.sql`](../supabase/seguranca.sql). São as regras de acesso do banco que de fato impedem um usuário comum de importar ou excluir dados; as telas só escondem o que ele não pode usar.
 
@@ -511,3 +513,15 @@ Avisos automáticos (cada um pode ser desligado no painel):
 **Instalação no Supabase (uma vez):**
 1. SQL Editor: cole e rode `supabase/avisos.sql` (cria as tabelas, as regras de acesso, o aviso de localização reaberta e o agendador com pg_cron e pg_net).
 2. Edge Functions > Deploy a new function > Via Editor: nome `avisos`, cole `supabase/functions/avisos/index.ts` e publique. Em Details, deixe **Verify JWT desligado**. Não precisa configurar segredo: as chaves das notificações são criadas na primeira chamada e guardadas na tabela `push_config`, que só o servidor lê.
+
+## Painel do gestor e ocorrências do campo
+
+**Ocorrências.** No app de campo, **Registrar ocorrência** guarda o que não é levantamento de um bem: sala trancada ou sem acesso, bem danificado, risco, divergência no cadastro ou outro assunto. Cada registro tem localização, bem (placa ou código, opcional), texto, até 3 fotos, autor e data gravados pelo servidor. Quem registrou corrige enquanto estiver aberta. No painel, a aba **Ocorrências** filtra por tipo e situação; o administrador usa **Responder** para informar a providência (fica resolvida, com nome e data), **Reabrir** ou **Excluir**. A equipe vê a resposta no app.
+
+**Gestor (só consulta).** Perfil para o prefeito, secretário ou controlador. Ele entra no `admin.html` e vê o **Painel do gestor**: Painel, Ocorrências e Documentos. Reavaliação, Usuários, Avisos e Configuração ficam ocultos. O banco recusa qualquer inclusão, alteração ou exclusão feita por um gestor em todas as tabelas do levantamento e no bucket de fotos, e um gestor nunca pode estar na tabela `admins`. Se entrar pelo app de campo, é levado ao painel.
+
+**Relatório executivo.** Em Documentos: resumo em números, pontos de atenção (não localizados, salas não concluídas, ocorrências abertas e de risco, sobras pendentes, bens em estado péssimo, bens ainda não reavaliados), estado de conservação, equipe de campo, ocorrências por tipo com a lista completa e a providência, e andamento por localização.
+
+**Instalação no Supabase (uma vez):**
+1. SQL Editor: cole e rode `supabase/gestor-ocorrencias.sql` depois dos demais scripts.
+2. Atualize a Edge Function `usuarios` com `supabase/functions/usuarios/index.ts` (Verify JWT continua desligado), para o painel poder cadastrar o perfil gestor.

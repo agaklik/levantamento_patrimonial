@@ -13,7 +13,7 @@
 //                                                       o administrador liberar; administrador, 15 minutos)
 //   { acao: 'recuperar', login, redirect }             (sem login; login = e-mail ou nome de usuário)
 //   { acao: 'listar' }                                 (administrador)
-//   { acao: 'criar', nome, usuario?, email, senha, perfil: 'campo'|'admin', enviar_email?, link? }
+//   { acao: 'criar', nome, usuario?, email, senha, perfil: 'campo'|'admin'|'gestor', enviar_email?, link? }
 //   { acao: 'atualizar', id, nome?, usuario?, perfil?, ativo? }
 //   { acao: 'senha', id, senha, enviar_email?, link? }
 //   { acao: 'desbloquear', id }                        (libera quem errou a senha 3 vezes)
@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
           id: u.id, email: u.email,
           nome: p.nome ?? u.user_metadata?.nome ?? '',
           usuario: p.usuario ?? '',
-          perfil: ehAdm.has(u.id) ? 'admin' : 'campo',
+          perfil: ehAdm.has(u.id) ? 'admin' : (p.perfil === 'gestor' ? 'gestor' : 'campo'),
           geral: p.geral === true,
           ativo: !banido && p.ativo !== false,
           senha_bloqueada_ate: travado.get((u.email ?? '').toLowerCase()) ?? null,
@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
       const email = String(b.email ?? '').trim().toLowerCase();
       const usuario = String(b.usuario ?? '').trim().toLowerCase();
       const senha = String(b.senha ?? '');
-      const perfil = b.perfil === 'admin' ? 'admin' : 'campo';
+      const perfil = b.perfil === 'admin' ? 'admin' : b.perfil === 'gestor' ? 'gestor' : 'campo';
       const eN = erroNome(nome); if (eN) return json({ erro: eN }, 400);
       if (!EMAIL.test(email)) return json({ erro: 'Informe um e-mail válido.' }, 400);
       if (usuario && !USUARIO.test(usuario)) return json({ erro: 'Nome de usuário: de 3 a 30 caracteres, só letras minúsculas sem acento, números, ponto e sublinhado.' }, 400);
@@ -317,8 +317,8 @@ Deno.serve(async (req) => {
       const id = String(b.id ?? '');
       if (!id) return json({ erro: 'Usuário não informado.' }, 400);
       if (!(await podeMexer(id))) return negado();
-      if (id === user.id && (b.ativo === false || b.perfil === 'campo')) return json({ erro: 'Você não pode bloquear nem tirar o próprio acesso de administrador.' }, 400);
-      if ((b.ativo === false || b.perfil === 'campo' || b.geral === false || (b.acesso_ate !== undefined && b.acesso_ate !== null && b.acesso_ate !== '')) && (await protegido(id)))
+      if (id === user.id && (b.ativo === false || b.perfil === 'campo' || b.perfil === 'gestor')) return json({ erro: 'Você não pode bloquear nem tirar o próprio acesso de administrador.' }, 400);
+      if ((b.ativo === false || b.perfil === 'campo' || b.perfil === 'gestor' || b.geral === false || (b.acesso_ate !== undefined && b.acesso_ate !== null && b.acesso_ate !== '')) && (await protegido(id)))
         return json({ erro: 'Esta conta é protegida: não pode ser bloqueada, ter prazo nem perder o acesso de administrador.' }, 400);
       const mud: Record<string, unknown> = { user_id: id, atualizado_em: new Date().toISOString() };
       if (b.nome !== undefined) {
@@ -331,13 +331,13 @@ Deno.serve(async (req) => {
         if (usuario && !(await usuarioLivre(usuario, id))) return json({ erro: 'Este nome de usuário já está em uso.' }, 400);
         mud.usuario = usuario || null;
       }
-      if (b.perfil !== undefined) mud.perfil = b.perfil === 'admin' ? 'admin' : 'campo';
+      if (b.perfil !== undefined) mud.perfil = b.perfil === 'admin' ? 'admin' : b.perfil === 'gestor' ? 'gestor' : 'campo';
       if (b.ativo !== undefined) mud.ativo = !!b.ativo;
       if (multi && souGeral && b.geral !== undefined) {
         if (id === user.id && b.geral === false) return json({ erro: 'Você não pode tirar o próprio acesso a todos os clientes.' }, 400);
         mud.geral = b.geral === true;
       }
-      if (multi && mud.perfil === 'campo') mud.geral = false;
+      if (multi && (mud.perfil === 'campo' || mud.perfil === 'gestor')) mud.geral = false;
       if (b.acesso_ate !== undefined) {
         if (!souGeral) return json({ erro: 'Só a equipe da empresa muda o prazo de teste.' }, 403);
         if (!temPrazo) return json({ erro: 'Rode antes o script supabase/acesso-teste.sql no Supabase.' }, 400);
@@ -453,7 +453,7 @@ Deno.serve(async (req) => {
       const { data: meuPerfil } = await adm.from('usuarios').select('nome').eq('user_id', user.id).maybeSingle();
       const linha: Record<string, unknown> = {
         tabela: 'usuarios', codigo: alvo.user.email, acao: 'excluiu',
-        antes: { nome: perfil?.nome ?? alvo.user.user_metadata?.nome ?? null, email: alvo.user.email, perfil: ids.includes(id) ? 'administrador' : 'equipe de campo' },
+        antes: { nome: perfil?.nome ?? alvo.user.user_metadata?.nome ?? null, email: alvo.user.email, perfil: ids.includes(id) ? 'administrador' : perfil?.perfil === 'gestor' ? 'gestor (só leitura)' : 'equipe de campo' },
         usuario: user.id, usuario_nome: meuPerfil?.nome || user.email,
       };
       if (multi) linha.cliente_id = perfil?.geral ? meuCliente : (perfil?.cliente_id ?? meuCliente);
